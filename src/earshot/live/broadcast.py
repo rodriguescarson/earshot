@@ -50,7 +50,7 @@ from earshot.contract.ball import BallSample
 from earshot.contract.events import Event, PeriodEnd, StoppageStart
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.live.audio import AudioStore
-from earshot.live.audioqueue import AudioQueue, Skipped, rank
+from earshot.live.audioqueue import ENCODE_WORKERS, SPEECH_WORKERS, AudioQueue, Skipped, rank
 from earshot.live.director import Cut, Drop, LiveDirector, Start
 from earshot.pipeline.workflow import MatchPipeline, WindowResult, WindowStep
 from earshot.sim.ballpath import ball_path
@@ -170,8 +170,9 @@ class LiveMatch:
         self.info, self.events = info, events
         self.cached_only = cached_only
         self.audio, self.send, self.audio_base = audio, send, audio_base.rstrip("/")
-        self.audioq = AudioQueue()
-        """Speech and encoding, in rank order on threads of their own (``earshot.live.audioqueue``)."""
+        self.speechq = AudioQueue(SPEECH_WORKERS)
+        self.encodeq = AudioQueue(ENCODE_WORKERS)
+        """Speech and encoding, each in rank order on threads of its own (``earshot.live.audioqueue``)."""
         self.speed = speed
         self.budget = SpeechBudget()
         self.ball: list[BallSample] = with_danger(ball_path(events), info.home.team_id)
@@ -447,7 +448,7 @@ class LiveMatch:
                 duration = int(len(line.text) / 14 * 1000) + 300
             else:
                 try:
-                    duration = await self.audioq.run(
+                    duration = await self.speechq.run(
                         f"warm:{line.line_id}", rank(line), self.audio.warm, line
                     )
                 except Exception as e:  # speech failed (e.g. the kill switch): air it as text (DR-5)
@@ -469,7 +470,7 @@ class LiveMatch:
             return line.never_drop or self.match_ms() <= line.deadline_wall_ms
 
         try:
-            await self.audioq.run(
+            await self.encodeq.run(
                 self._serve_key(line, output), rank(line), self.audio.serve, line, output,
                 synthesize=False, wanted=wanted,
             )  # fmt: skip
@@ -480,7 +481,7 @@ class LiveMatch:
 
     async def _publish_line(self, g: Group, start: Start) -> None:
         try:
-            served = await self.audioq.run(
+            served = await self.encodeq.run(
                 self._serve_key(start.line, g.key.output_mode), rank(start.line), self.audio.serve,
                 start.line, g.key.output_mode, synthesize=not self.cached_only(),
             )  # fmt: skip
