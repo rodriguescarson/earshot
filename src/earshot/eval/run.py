@@ -293,6 +293,8 @@ def _virtual_match_class():
             self.moments: dict[str, Moment] = {}
             self.notes: list[str] = []
             self.windows: list[tuple[StoppageStart, Any]] = []
+            self.offered: list[Line] = []
+            """Every line offered to any group (the template evaluators judge real rendered lines)."""
             for p in self.pipelines.values():
                 p.push_moment = self._timed(p.push_moment)  # type: ignore[method-assign]
                 p.run_window = self._windowed(p.run_window)  # type: ignore[method-assign]
@@ -357,6 +359,7 @@ def _virtual_match_class():
             if line.source in (LineSource.ANALYST, LineSource.FALLBACK) and self.timer is not None:
                 wait += self.timer.last_ms
             self.seq += 1
+            self.offered.append(line)
             heapq.heappush(self.offers, (self.vnow + wait, self.seq, g.key.name, line, duration))
 
         def join_profile(self, p: EvalProfile) -> str:

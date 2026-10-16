@@ -101,6 +101,13 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
 
     s = sub.add_parser(
+        "template-eval", help="Foundry fluency and coherence evaluators over every template, per language"
+    )
+    s.add_argument("--seeds", type=seed_range, default=seed_range("26,28,31"))
+    s.add_argument("--tokens-per-hour", type=int, default=400_000, help="judge pace (alert: 500K)")
+    s.add_argument("--out", type=Path, required=True)
+
+    s = sub.add_parser(
         "loadtest", help="N listeners on the deployed live stream: event to first audio byte, per line"
     )
     s.add_argument("--url", required=True, help="the worker's base URL")
@@ -269,6 +276,16 @@ def main(argv: list[str] | None = None) -> None:
         args.out.write_text(json.dumps(summary, indent=1) + "\n")
         brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
         print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
+    elif args.cmd == "template-eval":
+        from earshot.eval.templates_eval import run as judge_templates
+
+        result = judge_templates(args.seeds, args.tokens_per_hour)
+        result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
+        print(
+            json.dumps({k: result[k] for k in ("coverage", "judge_calls", "tokens")} | {"out": str(args.out)})
+        )
     elif args.cmd == "loadtest":
         import asyncio
         import os
