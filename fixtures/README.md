@@ -5,8 +5,9 @@ running the simulator. Every club, player, coach and referee is made up.
 
 ## `clip-demo.json`: one 3-minute action-dense clip
 
-Picked by `earshot clip` from the development seeds 1-40: the densest window that starts in play
-and has a goal 60-90 s in (design DR-8). Regenerate after any engine change:
+Picked by `earshot clip` from the development seeds 1-40: the densest window that starts in play,
+has a scored shot (not an own goal) 60-90 s in (design DR-8), at least one shot saved by the
+keeper, and at least 50 events. Regenerate after any engine change:
 
 ```bash
 uv run earshot clip --seeds 1-40 --out fixtures/clip-demo.json

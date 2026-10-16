@@ -7,6 +7,8 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
   "pydantic>=2.9",
   "numpy>=2.0",
+  "agent-framework-core>=1.21",
+  "agent-framework-foundry>=1.14",
 ]
 
 [project.scripts]

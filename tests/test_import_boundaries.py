@@ -28,6 +28,7 @@ CONSUMERS = (
     "earshot.stats",
     "earshot.contract",
     "earshot.world",
+    "earshot.pipeline",
 )
 
 
