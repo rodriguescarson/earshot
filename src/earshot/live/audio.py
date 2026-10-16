@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import math
+import os
+import uuid
 import wave
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,10 +15,21 @@ import numpy as np
 from earshot.contract import Line, OutputMode
 from earshot.pitch import PAN_BUCKETS
 from earshot.voice.encode import encode_aac
-from earshot.voice.tts import Synthesizer, read_mono, ssml_for, write_stereo
+from earshot.voice.tts import SAMPLE_RATE, Synthesizer, read_mono, ssml_for, write_stereo
 
 EXCITED_PRIORITY = 95
 """Goals, red cards and penalties are voiced with more energy."""
+CENTRE_BITRATE = 64_000
+"""A centred line (one-ear mode, or the centre pan bucket) is encoded mono: half the work."""
+
+
+def write_mono(path: Path, mono: np.ndarray) -> None:
+    pcm = (np.clip(mono, -1.0, 1.0) * 32767).astype("<i2")
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SAMPLE_RATE)
+        w.writeframes(pcm.tobytes())
 
 
 def bucket(pan: float) -> float:
@@ -61,12 +75,23 @@ class AudioStore:
         path = self.out_dir / name
         if not path.exists():
             mono = read_mono(clip.path)
-            theta = (pan + 1) * np.pi / 4
-            stereo = np.stack([mono * np.cos(theta), mono * np.sin(theta)], axis=1)
-            wav = path.with_suffix(".wav")
-            write_stereo(wav, stereo)
-            encode_aac(wav, path)
-            wav.unlink()
+            # Unique scratch names and an atomic rename: two jobs writing the same file (one-ear and
+            # a centre-bucket app-voice line share one) can never see each other's half-written file.
+            tag = uuid.uuid4().hex[:8]
+            wav, tmp = path.with_suffix(f".{tag}.wav"), path.with_suffix(f".{tag}.m4a")
+            try:
+                if pan == 0.0:
+                    # Both channels would be equal: mono at the same level each ear heard before.
+                    write_mono(wav, mono * math.cos(math.pi / 4))
+                    encode_aac(wav, tmp, bitrate=CENTRE_BITRATE)
+                else:
+                    theta = (pan + 1) * np.pi / 4
+                    write_stereo(wav, np.stack([mono * np.cos(theta), mono * np.sin(theta)], axis=1))
+                    encode_aac(wav, tmp)
+                os.replace(tmp, path)
+            finally:
+                wav.unlink(missing_ok=True)
+                tmp.unlink(missing_ok=True)
         return Served(name, clip.duration_ms)
 
     def path(self, name: str) -> Path | None:
