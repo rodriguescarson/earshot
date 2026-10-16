@@ -89,16 +89,16 @@
    "language": "en",
    "mode": "casual",
    "point": "roster_entries",
-   "defects_injected": 180,
+   "defects_injected": 181,
    "recall": 0.0,
    "per_class": {
     "wrong_name_for_id": {
-     "injected": 180,
+     "injected": 181,
      "blocked": 0,
      "recall": 0.0
     }
    },
-   "clean": 8892,
+   "clean": 8891,
    "false_block_rate": 0.0,
    "examples": [
     "missed wrong_name_for_id: ",
@@ -112,23 +112,18 @@
    "language": "en",
    "mode": "casual",
    "point": "roster_entries_auditor",
-   "defects_injected": 180,
-   "recall": 0.9778,
+   "defects_injected": 181,
+   "recall": 1.0,
    "per_class": {
     "wrong_name_for_id": {
-     "injected": 180,
-     "blocked": 176,
-     "recall": 0.9778
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
     }
    },
-   "clean": 8892,
+   "clean": 8891,
    "false_block_rate": 0.0,
-   "examples": [
-    "missed wrong_name_for_id: auditor",
-    "missed wrong_name_for_id: auditor",
-    "missed wrong_name_for_id: auditor",
-    "missed wrong_name_for_id: auditor"
-   ]
+   "examples": []
   },
   {
    "language": "en",
@@ -157,6 +152,28 @@
     "missed name_in_fixed_text: ",
     "missed name_in_fixed_text: "
    ]
+  },
+  {
+   "language": "en",
+   "mode": "casual",
+   "point": "template_strings_auditor",
+   "defects_injected": 639,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 99,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": []
   },
   {
    "language": "en",
@@ -199,16 +216,16 @@
    "language": "en",
    "mode": "analyst",
    "point": "roster_entries",
-   "defects_injected": 180,
+   "defects_injected": 181,
    "recall": 0.0,
    "per_class": {
     "wrong_name_for_id": {
-     "injected": 180,
+     "injected": 181,
      "blocked": 0,
      "recall": 0.0
     }
    },
-   "clean": 8892,
+   "clean": 8891,
    "false_block_rate": 0.0,
    "examples": [
     "missed wrong_name_for_id: ",
@@ -222,23 +239,18 @@
    "language": "en",
    "mode": "analyst",
    "point": "roster_entries_auditor",
-   "defects_injected": 180,
-   "recall": 0.9778,
+   "defects_injected": 181,
+   "recall": 1.0,
    "per_class": {
     "wrong_name_for_id": {
-     "injected": 180,
-     "blocked": 176,
-     "recall": 0.9778
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
     }
    },
-   "clean": 8892,
+   "clean": 8891,
    "false_block_rate": 0.0,
-   "examples": [
-    "missed wrong_name_for_id: auditor",
-    "missed wrong_name_for_id: auditor",
-    "missed wrong_name_for_id: auditor",
-    "missed wrong_name_for_id: auditor"
-   ]
+   "examples": []
   },
   {
    "language": "en",
@@ -267,7 +279,791 @@
     "missed name_in_fixed_text: ",
     "missed name_in_fixed_text: "
    ]
+  },
+  {
+   "language": "en",
+   "mode": "analyst",
+   "point": "template_strings_auditor",
+   "defects_injected": 633,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 50,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "es",
+   "mode": "casual",
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "es",
+   "mode": "casual",
+   "point": "roster_entries",
+   "defects_injected": 181,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ]
+  },
+  {
+   "language": "es",
+   "mode": "casual",
+   "point": "roster_entries_auditor",
+   "defects_injected": 181,
+   "recall": 1.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "es",
+   "mode": "casual",
+   "point": "template_strings",
+   "defects_injected": 639,
+   "recall": 0.8451,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ]
+  },
+  {
+   "language": "es",
+   "mode": "casual",
+   "point": "template_strings_auditor",
+   "defects_injected": 639,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 99,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "es",
+   "mode": "analyst",
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "es",
+   "mode": "analyst",
+   "point": "roster_entries",
+   "defects_injected": 181,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ]
+  },
+  {
+   "language": "es",
+   "mode": "analyst",
+   "point": "roster_entries_auditor",
+   "defects_injected": 181,
+   "recall": 1.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "es",
+   "mode": "analyst",
+   "point": "template_strings",
+   "defects_injected": 633,
+   "recall": 0.921,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ]
+  },
+  {
+   "language": "es",
+   "mode": "analyst",
+   "point": "template_strings_auditor",
+   "defects_injected": 633,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 50,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "ar",
+   "mode": "casual",
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "ar",
+   "mode": "casual",
+   "point": "roster_entries",
+   "defects_injected": 181,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ]
+  },
+  {
+   "language": "ar",
+   "mode": "casual",
+   "point": "roster_entries_auditor",
+   "defects_injected": 181,
+   "recall": 1.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "ar",
+   "mode": "casual",
+   "point": "template_strings",
+   "defects_injected": 639,
+   "recall": 0.8451,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ]
+  },
+  {
+   "language": "ar",
+   "mode": "casual",
+   "point": "template_strings_auditor",
+   "defects_injected": 639,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 99,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "ar",
+   "mode": "analyst",
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "ar",
+   "mode": "analyst",
+   "point": "roster_entries",
+   "defects_injected": 181,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ]
+  },
+  {
+   "language": "ar",
+   "mode": "analyst",
+   "point": "roster_entries_auditor",
+   "defects_injected": 181,
+   "recall": 1.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "ar",
+   "mode": "analyst",
+   "point": "template_strings",
+   "defects_injected": 633,
+   "recall": 0.921,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ]
+  },
+  {
+   "language": "ar",
+   "mode": "analyst",
+   "point": "template_strings_auditor",
+   "defects_injected": 633,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 50,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "hi",
+   "mode": "casual",
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "hi",
+   "mode": "casual",
+   "point": "roster_entries",
+   "defects_injected": 181,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ]
+  },
+  {
+   "language": "hi",
+   "mode": "casual",
+   "point": "roster_entries_auditor",
+   "defects_injected": 181,
+   "recall": 1.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "hi",
+   "mode": "casual",
+   "point": "template_strings",
+   "defects_injected": 639,
+   "recall": 0.8451,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ]
+  },
+  {
+   "language": "hi",
+   "mode": "casual",
+   "point": "template_strings_auditor",
+   "defects_injected": 639,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 99,
+     "blocked": 99,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 540,
+     "blocked": 540,
+     "recall": 1.0
+    }
+   },
+   "clean": 8433,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "hi",
+   "mode": "analyst",
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "hi",
+   "mode": "analyst",
+   "point": "roster_entries",
+   "defects_injected": 181,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ]
+  },
+  {
+   "language": "hi",
+   "mode": "analyst",
+   "point": "roster_entries_auditor",
+   "defects_injected": 181,
+   "recall": 1.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 181,
+     "blocked": 181,
+     "recall": 1.0
+    }
+   },
+   "clean": 8891,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "language": "hi",
+   "mode": "analyst",
+   "point": "template_strings",
+   "defects_injected": 633,
+   "recall": 0.921,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ]
+  },
+  {
+   "language": "hi",
+   "mode": "analyst",
+   "point": "template_strings_auditor",
+   "defects_injected": 633,
+   "recall": 1.0,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 50,
+     "blocked": 50,
+     "recall": 1.0
+    },
+    "stray_numeral": {
+     "injected": 583,
+     "blocked": 583,
+     "recall": 1.0
+    }
+   },
+   "clean": 8439,
+   "false_block_rate": 0.0,
+   "examples": []
   }
  ],
- "command": "uv run earshot planted --seeds 1-10 --out /private/tmp/claude-501/-Users-carson-Projects-inside-the-game--claude-worktrees-stream2-engine-dc91a9/07ef6734-4bea-4d28-b74f-31cfd81f3611/scratchpad/planted-dev2.json"
+ "command": "uv run earshot planted --seeds 1-10 --languages en,es,ar,hi --out /private/tmp/claude-501/-Users-carson-Projects-inside-the-game--claude-worktrees-stream2-engine-dc91a9/07ef6734-4bea-4d28-b74f-31cfd81f3611/scratchpad/planted-dev-all.json"
 }
