@@ -83,7 +83,7 @@
       "analyst": "¡Penalti a favor de {club}!"
     },
     "red_card.1": {
-      "casual": "¡Tarjeta roja! {player} se va expulsado. {club} se queda con {count} jugadores.",
+      "casual": "¡Tarjeta roja! {player} se va expulsado. {club} se queda en inferioridad.",
       "analyst": "¡Tarjeta roja! {player} se va expulsado. {club} se queda con {count} jugadores."
     },
     "yellow_card.1": {

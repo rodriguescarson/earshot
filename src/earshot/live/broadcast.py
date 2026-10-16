@@ -51,7 +51,7 @@ from earshot.contract.events import Event, PeriodEnd, StoppageStart
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.live.audio import AudioStore
 from earshot.live.director import Cut, Drop, LiveDirector, Start
-from earshot.pipeline.workflow import MatchPipeline, WindowResult
+from earshot.pipeline.workflow import MatchPipeline, WindowResult, WindowStep
 from earshot.sim.ballpath import ball_path
 from earshot.stats.danger import with_danger
 from earshot.tools.snapshots import MatchView
@@ -300,7 +300,11 @@ class LiveMatch:
                 self._stat_lines(c)
             if isinstance(ev, PeriodEnd) and ev.period_id in (1, 2):
                 self._recaps("half_time" if ev.period_id == 1 else "full_time", ev)
-            results = [(script, await p.push(ev, final=last)) for script, p in self.pipelines.items()]
+            # The moment run only: the Analyst's window runs on its own task, so a card shown just
+            # after a foul is not held behind it (Stream 2's ET11 measured 4.4 s of delay otherwise).
+            results = [
+                (script, p, await p.push_moment(ev, final=last)) for script, p in self.pipelines.items()
+            ]
             if (before.home_score, before.away_score, before.status) != (
                 self.state.home_score,
                 self.state.away_score,
@@ -308,13 +312,24 @@ class LiveMatch:
             ):
                 for g in list(self.groups.values()):
                     self._spawn(self._send_state(g))
-            for script, (moment, window) in results:
+            for script, p, (moment, wstep) in results:
                 for line in moment.lines:
                     for g in self._groups_for(line.language, line.listening_mode):
                         self._spawn(self._offer(g, line))
-                if window is not None and script == "latin":
+                # Claims are language-neutral: only the Latin pipeline (the one with the Analyst) runs
+                # windows, and _window_lines renders them for every group in its own language.
+                if wstep is not None and script == "latin":
                     assert isinstance(ev, StoppageStart)
-                    self._window_lines(ev, window)
+                    await self._start_window(p, wstep, ev)
+
+    async def _start_window(self, pipeline: MatchPipeline, wstep: WindowStep, ev: StoppageStart) -> None:
+        """Start a window run without waiting for it (a virtual clock may override this to run inline)."""
+        self._spawn(self._run_window(pipeline, wstep, ev))
+
+    async def _run_window(self, pipeline: MatchPipeline, wstep: WindowStep, ev: StoppageStart) -> None:
+        window = await pipeline.run_window(wstep)
+        if window is not None:
+            self._window_lines(ev, window)
 
     def _groups_for(self, language: Language, mode: ListeningMode) -> list[Group]:
         return [
@@ -434,9 +449,13 @@ class LiveMatch:
                 log.debug("cut %s", act.line.text)
 
     async def _publish_line(self, g: Group, start: Start) -> None:
-        served = await asyncio.to_thread(
-            self.audio.serve, start.line, g.key.output_mode, synthesize=not self.cached_only()
-        )
+        try:
+            served = await asyncio.to_thread(
+                self.audio.serve, start.line, g.key.output_mode, synthesize=not self.cached_only()
+            )
+        except Exception as e:  # speech or encoding failed: the line still airs, as text (DR-5)
+            log.warning("audio failed for %s (%s): airs as text", start.line.line_id, e)
+            served = None
         msg = LineMsg(
             id=start.line.line_id,
             priority=start.line.priority,

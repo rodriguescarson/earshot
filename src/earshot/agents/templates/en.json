@@ -71,7 +71,7 @@
       "analyst": "Penalty to {club}!"
     },
     "red_card.1": {
-      "casual": "Red card! {player} is sent off. {club} are down to {count} players.",
+      "casual": "Red card! {player} is sent off. {club} are short-handed now.",
       "analyst": "Red card! {player} is sent off. {club} are down to {count} players."
     },
     "yellow_card.1": {

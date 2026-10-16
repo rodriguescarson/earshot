@@ -83,7 +83,7 @@
       "analyst": "ركلة جزاء لفريق {club}!"
     },
     "red_card.1": {
-      "casual": "بطاقة حمراء! طرد {player}. فريق {club} يكمل بـ{count} لاعبين.",
+      "casual": "بطاقة حمراء! طرد {player}. فريق {club} يكمل منقوص العدد.",
       "analyst": "بطاقة حمراء! طرد {player}. فريق {club} يكمل بـ{count} لاعبين."
     },
     "yellow_card.1": {

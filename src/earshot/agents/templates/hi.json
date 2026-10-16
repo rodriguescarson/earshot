@@ -83,7 +83,7 @@
       "analyst": "{club} को पेनल्टी!"
     },
     "red_card.1": {
-      "casual": "रेड कार्ड! {player} बाहर। {club} के पास अब {count} खिलाड़ी।",
+      "casual": "रेड कार्ड! {player} बाहर। {club} अब कम खिलाड़ियों के साथ खेलेगी।",
       "analyst": "रेड कार्ड! {player} बाहर। {club} के पास अब {count} खिलाड़ी।"
     },
     "yellow_card.1": {

@@ -25,8 +25,8 @@ penalty, the action just before the stoppage).
 
 Profiles (``docs/designs/earshot.md``, evaluation profiles): P1 Casual app voice; P2 Analyst app
 voice following the home club and its first-named forward; P3 Casual screen reader; P4 Analyst one
-ear following shot speed; P5 Analyst app voice. Focus stats are not live yet (``LiveMatch`` refuses
-the group), so P4 runs without its stat and the result says so.
+ear following shot speed; P5 Analyst app voice. If ``LiveMatch`` refuses a profile's group, the
+profile runs without its focus stat and the result says so.
 
 Entry point: ``uv run earshot evaluate``; 8 worker processes by default (ET11).
 """
@@ -244,18 +244,23 @@ def _virtual_match_class():
             self.moments: dict[str, Moment] = {}
             self.notes: list[str] = []
             for p in self.pipelines.values():
-                p.push = self._timed(p.push)  # type: ignore[method-assign]
+                p.push_moment = self._timed(p.push_moment)  # type: ignore[method-assign]
 
-        def _timed(self, push):
+        def _timed(self, push_moment):
             async def timed(ev: Event, *, final: bool = False):
                 t0 = time.perf_counter()
-                moment, window = await push(ev, final=final)
+                moment, wstep = await push_moment(ev, final=final)
                 self.push_ms += int((time.perf_counter() - t0) * 1000)
                 for m in moment.moments:
                     self.moments[m.moment_id] = m
-                return moment, window
+                return moment, wstep
 
             return timed
+
+        async def _start_window(self, pipeline, wstep, ev) -> None:
+            # The live broadcaster runs windows on their own task; on the virtual clock the run is
+            # awaited here and its cost lands in timer.last_ms ("inline" then holds the feeder).
+            await self._run_window(pipeline, wstep, ev)
 
         # The live loop's time, transport and housekeeping, replaced:
         def match_ms(self) -> int:
