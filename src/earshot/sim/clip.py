@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from itertools import pairwise
 
 from earshot.contract.ball import BallSample
 from earshot.contract.events import Action, Card, Event, Restart, StoppageKind, StoppageStart
@@ -21,6 +22,7 @@ from earshot.stats.danger import with_danger
 from earshot.world.clubs import world
 
 CLIP_MS = 180_000
+MIN_EVENTS = 50
 FIXTURE_VERSION = 1
 
 
@@ -41,7 +43,7 @@ def _weight(ev: Event) -> float:
             return 6.0
         if t in (ActionType.CROSS, ActionType.CORNER_CROSSED, ActionType.TAKE_ON):
             return 1.0
-        return 0.1
+        return 0.3
     if isinstance(ev, Card):
         return 3.0 if ev.color == "red" else 2.0
     if isinstance(ev, StoppageStart) and ev.kind in (StoppageKind.CORNER, StoppageKind.PENALTY):
@@ -54,8 +56,19 @@ def _is_goal(ev: Event) -> bool:
     return isinstance(ev, Action) and ActionType(ev.type) in SHOT_TYPES and ev.result == "success"
 
 
+def _has_save(ev: list[Event]) -> bool:
+    return any(
+        isinstance(a, Action)
+        and ActionType(a.type) in SHOT_TYPES
+        and isinstance(b, Action)
+        and b.type == "keeper_save"
+        for a, b in pairwise(ev)
+    )
+
+
 def best_clip(result: MatchResult, goal_from_ms: int = 60_000, goal_to_ms: int = 90_000) -> Clip | None:
-    """The densest window that starts at an in-play action and has a scored shot 60-90 s in."""
+    """The densest window that starts at an in-play action, has a scored shot 60-90 s in, at least
+    one save, and at least MIN_EVENTS events."""
     ev = result.events
     best: Clip | None = None
     for gi, g in enumerate(ev):
@@ -85,7 +98,12 @@ def best_clip(result: MatchResult, goal_from_ms: int = 60_000, goal_to_ms: int =
                 if isinstance(ev[ei], Restart):
                     open_stop = None
                     ei = min(ei + 1, len(ev) - 1)
-            if any(e.period_id != s.period_id for e in ev[si : ei + 1]):
+            window = ev[si : ei + 1]
+            if (
+                any(e.period_id != s.period_id for e in window)
+                or len(window) < MIN_EVENTS
+                or not _has_save(window)
+            ):
                 continue
             score = sum(_weight(e) for e in ev[si : ei + 1])
             if best is None or score > best.score:
