@@ -249,3 +249,25 @@ def test_add_persists_off_the_callers_thread(tmp_path):
         if t.name == "spend-persist":
             t.join(5)
     assert json.loads((tmp_path / "flags.json").read_text())["spend"]["chars"] == 10
+
+
+def test_client_ip_ignores_what_the_caller_wrote_into_x_forwarded_for():
+    from earshot.api.ratelimit import client_ip
+
+    # The ingress appends the address it saw; anything before that is the caller's own text.
+    assert client_ip({"x-forwarded-for": "198.51.100.7, 203.0.113.9"}, "10.0.0.1") == "203.0.113.9"
+    assert client_ip({"x-forwarded-for": "203.0.113.9"}, "10.0.0.1") == "203.0.113.9"
+    assert client_ip({}, "10.0.0.1") == "10.0.0.1"
+
+
+def test_spoofed_forwarded_for_does_not_buy_more_sessions(tmp_path):
+    app, _, _ = app_with(tmp_path)
+    real = {"x-forwarded-for": "203.0.113.9"}
+    with TestClient(app) as c:
+        assert all(
+            c.post("/api/negotiate", json=BODY, headers=real).status_code == 200
+            for _ in range(SESSIONS_PER_IP)
+        )
+        for i in range(3):  # what the deployed limiter let through before: a new made-up hop per request
+            spoof = {"x-forwarded-for": f"198.51.100.{i}, 203.0.113.9"}
+            assert c.post("/api/negotiate", json=BODY, headers=spoof).status_code == 429
