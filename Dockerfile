@@ -10,14 +10,17 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 RUN uv sync --frozen --no-dev
 
-# The MCP app's demo match when no worker is publishing snapshots: public events and the roster
-# only. The simulator's truth log is never written into the image.
+# Stored matches: the MCP app's demo match (when no worker is publishing snapshots) and the live
+# broadcaster's rotation. Development seeds only (held-out seeds wait for eval-freeze); public
+# events, headers and the roster only. The simulator's truth log is never written into the image.
 RUN uv run --no-dev earshot sim --seed 26 --out data/mcp-replay >/dev/null \
  && uv run --no-dev earshot roster --out data/mcp-replay/roster.json \
+ && for s in 26 28 31; do uv run --no-dev earshot sim --seed $s --out data/matches >/dev/null; done \
  && test ! -e data/hidden
 
-ENV PATH=/app/.venv/bin:$PATH PORT=8080 EARSHOT_MCP_REPLAY=/app/data/mcp-replay
+ENV PATH=/app/.venv/bin:$PATH PORT=8080 EARSHOT_MCP_REPLAY=/app/data/mcp-replay \
+    EARSHOT_MATCH_DIR=/app/data/matches EARSHOT_AUDIO_DIR=/app/data/live-audio EARSHOT_TTS_CACHE=/app/data/tts-cache
 RUN useradd --uid 10001 --no-create-home earshot && chown -R earshot /app/data
 USER 10001
 EXPOSE 8080
-CMD ["uvicorn", "earshot.api.worker:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uvicorn", "earshot.api.server:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*"]
