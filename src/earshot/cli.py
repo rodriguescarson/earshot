@@ -94,7 +94,10 @@ def main(argv: list[str] | None = None) -> None:
         "--real-analyst", action="store_true", help="real Analyst calls (Foundry) in every analysis window"
     )
     s.add_argument(
-        "--tokens-per-hour", type=int, default=400_000, help="pace for --real-analyst (alert: 500K)"
+        "--tokens-per-hour",
+        type=int,
+        default=200_000,
+        help="pace for --real-analyst; the alert is 500K for all use",
     )
     s.add_argument("--max-calls", type=int, default=None, help="cap Analyst calls per match (trial runs)")
     s.add_argument("--resume", action="store_true", help="keep finished rows next to --out and run the rest")
@@ -114,7 +117,10 @@ def main(argv: list[str] | None = None) -> None:
         "template-eval", help="Foundry fluency and coherence evaluators over every template, per language"
     )
     s.add_argument("--seeds", type=seed_range, default=seed_range("26,28,31"))
-    s.add_argument("--tokens-per-hour", type=int, default=400_000, help="judge pace (alert: 500K)")
+    s.add_argument(
+        "--tokens-per-hour", type=int, default=200_000, help="judge pace; the alert is 500K for all use"
+    )
+    s.add_argument("--previous", type=Path, default=None, help="an earlier result: re-judge only failed rows")
     s.add_argument("--out", type=Path, required=True)
 
     s = sub.add_parser(
@@ -305,7 +311,8 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "template-eval":
         from earshot.eval.templates_eval import run as judge_templates
 
-        result = judge_templates(args.seeds, args.tokens_per_hour)
+        previous = json.loads(args.previous.read_text()) if args.previous else None
+        result = judge_templates(args.seeds, args.tokens_per_hour, previous)
         result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
