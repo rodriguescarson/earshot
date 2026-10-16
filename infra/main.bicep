@@ -246,7 +246,9 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'worker'
           image: empty(workerImage) ? placeholder : workerImage
-          resources: { cpu: json('0.5'), memory: '1Gi' }
+          // The smallest Container Apps size (Carson, 2026-10-17). Measured on 0.5 vCPU / 1 GiB under 30
+          // listeners: memory peak 412 MiB, CPU peak 307 millicores, so load will be CPU-throttled here.
+          resources: { cpu: json('0.25'), memory: '0.5Gi' }
           env: [
             { name: 'AZURE_CLIENT_ID', value: workerId.properties.clientId }
             { name: 'EARSHOT_STORAGE_URL', value: storage.properties.primaryEndpoints.blob }
