@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
-from earshot.contract import Line, ListeningMode, OutputMode
+from earshot.contract import FocusStat, Line, LineSource, ListeningMode, OutputMode
 
 READY_DELAY_MS = 350
 """Event-to-ready latency used offline (pipeline plus cached audio); live uses measured times."""
@@ -24,6 +24,8 @@ class Profile:
     output_mode: OutputMode = OutputMode.APP_VOICE
     club: str | None = None
     player: str | None = None
+    stat: FocusStat | None = None
+    """"Follow one stat" (Analyst mode only): StatWatcher lines air only for the followed stat."""
     rate: float = 1.0
 
 
@@ -69,7 +71,19 @@ def can_preempt(incoming: Line, current: Line, profile: Profile) -> bool:
 Rule = Callable[[Line, int, Profile], str | None]
 """A drop rule: returns a reason to drop the line at ``now``, or None to keep it."""
 
+
+def not_followed(line: Line, profile: Profile) -> bool:
+    if line.source is not LineSource.STATWATCHER:
+        return False
+    return (
+        profile.listening_mode is not ListeningMode.ANALYST
+        or profile.stat is None
+        or line.stat_tag is not profile.stat
+    )
+
+
 DROP_RULES: list[Rule] = [
+    lambda line, _now, p: "stat not followed" if not_followed(line, p) else None,
     lambda line, now, _p: "stale" if is_stale(line, now) else None,
 ]
 

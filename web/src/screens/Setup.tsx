@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGES, type Lang, setLanguage } from "../i18n";
-import type { Choices, Mode, Output } from "../player/choices";
+import { type Choices, type Mode, type Output, STATS, type Stat } from "../player/choices";
 
-type Step = "language" | "output" | "mode";
-const STEPS: Step[] = ["language", "output", "mode"];
+type Step = "language" | "output" | "mode" | "stat";
+const NO_STAT = "none";
 
 /** One decision per screen (DR-15): the heading takes focus, Back keeps the choice. */
 export function Setup({ initial, onDone }: { initial: Choices; onDone: (c: Choices) => void }) {
@@ -12,6 +12,8 @@ export function Setup({ initial, onDone }: { initial: Choices; onDone: (c: Choic
   const [step, setStep] = useState<Step>("language");
   const [c, setC] = useState<Choices>(initial);
   const heading = useRef<HTMLHeadingElement>(null);
+  // "Follow one stat?" exists only after Analyst is chosen (one decision per screen, DR-15).
+  const STEPS: Step[] = ["language", "output", "mode", ...(c.mode === "analyst" ? (["stat"] as const) : [])];
   const index = STEPS.indexOf(step);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: focus moves to the heading on every step change
@@ -29,12 +31,25 @@ export function Setup({ initial, onDone }: { initial: Choices; onDone: (c: Choic
             label: t(`setup.output.${o}`),
             hint: t(`setup.output.${o}Hint`),
           }))
-        : (["casual", "analyst"] as Mode[]).map((m) => ({
-            value: m,
-            label: t(`setup.mode.${m}`),
-            hint: t(`setup.mode.${m}Hint`),
-          }));
-  const current = step === "language" ? c.lang : step === "output" ? c.output : c.mode;
+        : step === "mode"
+          ? (["casual", "analyst"] as Mode[]).map((m) => ({
+              value: m,
+              label: t(`setup.mode.${m}`),
+              hint: t(`setup.mode.${m}Hint`),
+            }))
+          : [NO_STAT, ...STATS].map((v) => ({
+              value: v,
+              label: t(`setup.stat.${v}`),
+              hint: t(`setup.stat.${v}Hint`),
+            }));
+  const current =
+    step === "language"
+      ? c.lang
+      : step === "output"
+        ? c.output
+        : step === "mode"
+          ? c.mode
+          : (c.stat ?? NO_STAT);
 
   return (
     <main className="setup">
@@ -64,7 +79,8 @@ export function Setup({ initial, onDone }: { initial: Choices; onDone: (c: Choic
                     setC({ ...c, lang: o.value as Lang });
                     void setLanguage(o.value as Lang);
                   } else if (step === "output") setC({ ...c, output: o.value as Output });
-                  else setC({ ...c, mode: o.value as Mode });
+                  else if (step === "mode") setC({ ...c, mode: o.value as Mode });
+                  else setC({ ...c, stat: o.value === NO_STAT ? null : (o.value as Stat) });
                 }}
               />
               <span className="choice__label" lang={o.lang}>

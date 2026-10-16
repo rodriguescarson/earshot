@@ -29,13 +29,13 @@ from earshot.contract.line import (
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo, Roster, TeamSheet
 from earshot.contract.moment import NEVER_DROP_KINDS, Moment, MomentKind
 from earshot.contract.truth import TruthChange
-from earshot.contract.wire import BallMsg, LineMsg, StateMsg, WireMsg
+from earshot.contract.wire import BallMsg, LineMsg, RecapMsg, StateMsg, WireMsg
 
 __all__ = [
     "BALL_HZ", "EVENT_MODELS", "NEVER_DROP_KINDS", "Action", "AnalystResponse", "BallMsg", "BallSample",
     "Card", "CauseLabel", "Claim", "ClubInfo", "Direction", "Event", "FocusStat", "Injury", "Kickoff",
     "Language", "Line", "LineMsg", "LineSource", "ListeningMode", "MatchInfo", "Metric", "Moment",
-    "MomentKind", "OutputMode", "PeriodEnd", "PlayerInfo", "Restart", "Roster", "StateMsg",
+    "MomentKind", "OutputMode", "PeriodEnd", "PlayerInfo", "RecapMsg", "Restart", "Roster", "StateMsg",
     "StoppageKind", "StoppageStart", "Substitution", "TeamSheet", "TruthChange", "VarCheck", "VoiceRole",
     "WireMsg", "check_stream",
 ]  # fmt: skip

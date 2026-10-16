@@ -8,7 +8,7 @@ import pytest
 from pydantic import TypeAdapter
 
 from earshot.agents.caller import Caller
-from earshot.agents.catalog import literal_violations, load, number_words_in, placeholders
+from earshot.agents.catalog import NUMERIC_SLOTS, literal_violations, load, number_words_in, placeholders
 from earshot.agents.checker import check_caller_line
 from earshot.agents.director import Director, Profile
 from earshot.agents.spotter import Spotter
@@ -224,3 +224,24 @@ def test_followed_club_wins_ties():
 )
 def test_spoken_minute(period, clock, said):
     assert spoken_minute(period, clock) == said
+
+
+@pytest.mark.parametrize("lang", list(Language))
+def test_casual_templates_speak_only_the_score_the_minute_and_fast_shots(lang):
+    # Pre-registered (EVALUATION.md, "Casual vs Analyst"): Casual airs no number other than the score,
+    # the minute and shot speeds of 100 km/h or more (the Caller only fills speed then).
+    import json
+    import string
+    from pathlib import Path
+
+    allowed = {"home_score", "away_score", "minute", "speed"}
+    path = Path(__file__).parent.parent / "src/earshot/agents/templates" / f"{lang.value}.json"
+    bad = []
+    for tid, modes in json.loads(path.read_text())["templates"].items():
+        casual = modes.get("casual")
+        if casual is None:
+            continue
+        names = {f for _, f, _, _ in string.Formatter().parse(casual) if f}
+        if (names & NUMERIC_SLOTS) - allowed:
+            bad.append(tid)
+    assert bad == []

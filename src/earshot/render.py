@@ -15,6 +15,7 @@ import numpy as np
 from pydantic import TypeAdapter
 
 from earshot.agents.analyst import Analyst, timeout_for
+from earshot.agents.auditor import Auditor
 from earshot.agents.caller import Caller
 from earshot.agents.catalog import load
 from earshot.agents.checker import check_caller_line
@@ -31,8 +32,10 @@ from earshot.agents.claims import (
 from earshot.agents.director import Director, Profile
 from earshot.agents.spotter import Spotter
 from earshot.agents.state import MatchState, Roster, is_goal, spoken_minute
+from earshot.agents.statwatcher import StatWatcher, check_stat_line, stat_line
 from earshot.contract import (
     Event,
+    FocusStat,
     Language,
     Line,
     LineSource,
@@ -124,6 +127,7 @@ def render_fixture(
     cache: Path,
     analyst: bool = True,
     replay: bool = True,
+    stat: FocusStat | None = None,
 ) -> dict:
     d = json.loads(fixture.read_text())
     match = MatchInfo(**d["match"])
@@ -323,6 +327,49 @@ def render_fixture(
             pending.clear()
     voice_moments(spotter.flush(), state)
     lines.extend(pending)
+    if stat is not None and mode is ListeningMode.ANALYST:
+        clubs, players = localized(d, language)
+        watcher = StatWatcher(match.home.team_id, match.away.team_id)
+        for ev in all_events:
+            if ev.wall_ms > clip["end_wall_ms"]:
+                break
+            for c in watcher.push(ev):
+                if c.stat is not stat or c.wall_ms < t0:
+                    continue
+                view = MatchView.of(match, clubs, players, all_events, c.wall_ms + 1)
+                ln = stat_line(c, view, language)
+                log(ln.wall_ms, "StatWatcher", f"{c.stat.value} crossing: {ln.text}")
+                v = check_stat_line(ln, view)
+                if v.ok:
+                    lines.append(ln)
+                    log(ln.wall_ms, "Checker", "passed: recomputed from the events", "ok")
+                else:
+                    blocked.append({"line": ln.text, "reason": v.reason})
+                    log(ln.wall_ms, "Checker", f"blocked: {v.reason}", "block")
+
+    # The independent auditor (a separate code path) re-reads every line against the reviewed
+    # templates and roster and the whole event log; anything it finds never airs.
+    clubs_l, players_l = localized(d, language)
+    auditor = Auditor(match, full_match_events(d), clubs_l, players_l)
+    audit = {"lines": 0, "findings": []}
+    kept: list[Line] = []
+    for ln in lines:
+        audit["lines"] += 1
+        findings = auditor.audit(ln, ssml_for(ln))
+        if findings:
+            audit["findings"] += [{"line": ln.text, "kind": f.kind, "detail": f.detail} for f in findings]
+            blocked.append({"line": ln.text, "reason": f"auditor: {findings[0].detail}"})
+            log(ln.wall_ms, "Auditor", f"blocked: {findings[0].detail}", "block")
+        else:
+            kept.append(ln)
+            if ln.template_id != REPLAY_TEMPLATE:
+                log(
+                    ln.wall_ms,
+                    "Auditor",
+                    "passed: re-read against the reviewed templates, roster and event log",
+                    "ok",
+                )
+    lines = kept
 
     ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     synth = Synthesizer(cache)
@@ -336,7 +383,7 @@ def render_fixture(
             goal_id = ln.line_id.split("-replay-")[0]
             clips[ln.line_id] = replay_clip(synth, ln, by_id[goal_id].wall_ms, ball, cache)
     director = Director(
-        Profile(listening_mode=mode), duration_ms=lambda line: clips[line.line_id].duration_ms
+        Profile(listening_mode=mode, stat=stat), duration_ms=lambda line: clips[line.line_id].duration_ms
     )
     aired = director.run(lines)
     for x in director.dropped:
@@ -414,6 +461,7 @@ def render_fixture(
             "tts_characters_sent": synth.characters,
         },
         "blocked": blocked,
+        "audit": audit,
         "agents": agents,
         "analyst_windows": windows,
     }
@@ -432,6 +480,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--arms", default="speech,pan,full,bed,mono")
     p.add_argument("--cache", type=Path, default=Path("data/tts-cache"))
     p.add_argument("--no-analyst", action="store_true", help="Caller only (no model calls)")
+    p.add_argument("--stat", type=FocusStat, default=None, help="follow one stat (Analyst mode)")
     a = p.parse_args(argv)
     m = render_fixture(
         a.fixture,
@@ -440,6 +489,8 @@ def main(argv: list[str] | None = None) -> None:
         mode=a.mode,
         arms=[Arm(x) for x in a.arms.split(",")],
         cache=a.cache,
+        analyst=not a.no_analyst,
+        stat=a.stat,
     )
     print(json.dumps(m["stats"]), json.dumps(m["audio"]))
 

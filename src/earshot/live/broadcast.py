@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from earshot.agents.analyst import AnalystResult
+from earshot.agents.auditor import Auditor
 from earshot.agents.claims import (
     check_claim_line,
     claim_key,
@@ -31,7 +32,9 @@ from earshot.agents.claims import (
     window_summary_line,
 )
 from earshot.agents.director import Profile
+from earshot.agents.recap import Period, check_recap_line, recap_lines
 from earshot.agents.state import MatchState, Roster, spoken_minute
+from earshot.agents.statwatcher import Crossing, StatWatcher, check_stat_line, stat_line
 from earshot.contract import (
     BallMsg,
     FocusStat,
@@ -40,17 +43,19 @@ from earshot.contract import (
     LineMsg,
     ListeningMode,
     OutputMode,
+    RecapMsg,
     StateMsg,
 )
 from earshot.contract.ball import BallSample
-from earshot.contract.events import Event, StoppageStart
+from earshot.contract.events import Event, PeriodEnd, StoppageStart
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.live.audio import AudioStore
 from earshot.live.director import Cut, Drop, LiveDirector, Start
-from earshot.pipeline.workflow import MatchPipeline, WindowResult
+from earshot.pipeline.workflow import MatchPipeline, WindowResult, WindowStep
 from earshot.sim.ballpath import ball_path
 from earshot.stats.danger import with_danger
 from earshot.tools.snapshots import MatchView
+from earshot.voice.tts import ssml_for
 from earshot.world.localize import roster as local_roster
 
 log = logging.getLogger("earshot.live")
@@ -191,6 +196,9 @@ class LiveMatch:
             self.pipelines[script] = MatchPipeline.from_agents(
                 info, c, p, targets, analyst if script == "latin" else None
             )
+        self.watcher = StatWatcher(info.home.team_id, info.away.team_id)
+        self.audited: dict[tuple[str, str], bool] = {}
+        self.seen: list[Event] = []
         self._tasks: set[asyncio.Task] = set()
 
     # ----- groups --------------------------------------------------------------------------------
@@ -205,6 +213,7 @@ class LiveMatch:
                 output_mode=key.output_mode,
                 club=key.club,
                 player=key.player,
+                stat=key.stat,
             )
             g = Group(key, LiveDirector(profile))
             self.groups[key.name] = g
@@ -220,8 +229,8 @@ class LiveMatch:
             raise GroupError("unknown club")
         if key.player is not None and key.player not in self.roster.players:
             raise GroupError("unknown player")
-        if key.stat is not None:
-            raise GroupError("focus stats are not live yet")
+        if key.stat is not None and key.listening_mode is not ListeningMode.ANALYST:
+            raise GroupError("following a stat needs Analyst mode")
         if len(self.groups) >= MAX_GROUPS:
             raise GroupError("too many listening groups")
 
@@ -286,7 +295,16 @@ class LiveMatch:
             last = final and n == len(batch) - 1
             before = self.state
             self.state = self.state.apply(ev, self.roster)
-            results = [(script, await p.push(ev, final=last)) for script, p in self.pipelines.items()]
+            self.seen.append(ev)
+            for c in self.watcher.push(ev):
+                self._stat_lines(c)
+            if isinstance(ev, PeriodEnd) and ev.period_id in (1, 2):
+                self._recaps("half_time" if ev.period_id == 1 else "full_time", ev)
+            # The moment run only: the Analyst's window runs on its own task, so a card shown just
+            # after a foul is not held behind it (Stream 2's ET11 measured 4.4 s of delay otherwise).
+            results = [
+                (script, p, await p.push_moment(ev, final=last)) for script, p in self.pipelines.items()
+            ]
             if (before.home_score, before.away_score, before.status) != (
                 self.state.home_score,
                 self.state.away_score,
@@ -294,13 +312,24 @@ class LiveMatch:
             ):
                 for g in list(self.groups.values()):
                     self._spawn(self._send_state(g))
-            for script, (moment, window) in results:
+            for script, p, (moment, wstep) in results:
                 for line in moment.lines:
                     for g in self._groups_for(line.language, line.listening_mode):
                         self._spawn(self._offer(g, line))
-                if window is not None and script == "latin":
+                # Claims are language-neutral: only the Latin pipeline (the one with the Analyst) runs
+                # windows, and _window_lines renders them for every group in its own language.
+                if wstep is not None and script == "latin":
                     assert isinstance(ev, StoppageStart)
-                    self._window_lines(ev, window)
+                    await self._start_window(p, wstep, ev)
+
+    async def _start_window(self, pipeline: MatchPipeline, wstep: WindowStep, ev: StoppageStart) -> None:
+        """Start a window run without waiting for it (a virtual clock may override this to run inline)."""
+        self._spawn(self._run_window(pipeline, wstep, ev))
+
+    async def _run_window(self, pipeline: MatchPipeline, wstep: WindowStep, ev: StoppageStart) -> None:
+        window = await pipeline.run_window(wstep)
+        if window is not None:
+            self._window_lines(ev, window)
 
     def _groups_for(self, language: Language, mode: ListeningMode) -> list[Group]:
         return [
@@ -347,7 +376,63 @@ class LiveMatch:
             for ln in lines:
                 self._spawn(self._offer(g, ln))
 
+    def _view(self, language: Language, as_of_ms: int) -> MatchView:
+        clubs, players = self.views[language]
+        return MatchView.of(self.info, clubs, players, self.seen, as_of_ms)
+
+    def _stat_lines(self, c: Crossing) -> None:
+        """A stat crossing goes only to groups that follow that stat (Analyst mode), after the Checker."""
+        for g in list(self.groups.values()):
+            if g.key.stat is not c.stat or g.key.listening_mode is not ListeningMode.ANALYST:
+                continue
+            view = self._view(g.key.language, c.wall_ms + 1)
+            line = stat_line(c, view, g.key.language)
+            verdict = check_stat_line(line, view)
+            if verdict.ok:
+                self._spawn(self._offer(g, line))
+            else:
+                log.warning("stat line blocked: %s (%s)", line.text, verdict.reason)
+
+    def _recaps(self, period: Period, ev: PeriodEnd) -> None:
+        """One recap per language and mode present, shared by every group with that pair."""
+        built: dict[tuple[Language, ListeningMode], list[Line]] = {}
+        for g in list(self.groups.values()):
+            pair = (g.key.language, g.key.listening_mode)
+            if pair not in built:
+                view = self._view(pair[0], ev.wall_ms + 1)
+                lines = recap_lines(view, period, pair[0], pair[1], wall_ms=self.now_ms)
+                ok = [ln for ln in lines if check_recap_line(ln, view, period).ok]
+                if len(ok) != len(lines):
+                    log.warning("recap %s %s: %d lines blocked", period, pair, len(lines) - len(ok))
+                built[pair] = ok
+            lines = built[pair]
+            if not lines:
+                continue
+            msg = RecapMsg(
+                period=period, text=" ".join(ln.text for ln in lines), lines=[ln.text for ln in lines]
+            )
+            self._spawn(self.send(g.key.name, msg.model_dump(mode="json")))
+            if g.key.output_mode is OutputMode.SCREEN_READER:
+                continue  # the screen shows it under Recaps; it never goes through the live region
+            for ln in lines:
+                self._spawn(self._offer(g, ln))
+
+    def _audit_ok(self, line: Line) -> bool:
+        """The independent auditor over the events so far; a line with any finding never airs."""
+        key = (line.line_id, line.text)
+        ok = self.audited.get(key)
+        if ok is None:
+            clubs, players = self.views[line.language]
+            findings = Auditor(self.info, self.seen, clubs, players).audit(line, ssml_for(line))
+            ok = not findings
+            self.audited[key] = ok
+            if findings:
+                log.warning("auditor blocked %s: %s", line.text, findings[0].detail)
+        return ok
+
     async def _offer(self, g: Group, line: Line) -> None:
+        if not self._audit_ok(line):
+            return
         if g.key.output_mode is OutputMode.SCREEN_READER:
             duration = int(len(line.text) / 14 * 1000) + 300  # the reader speaks it; estimate its airtime
         else:
@@ -364,9 +449,13 @@ class LiveMatch:
                 log.debug("cut %s", act.line.text)
 
     async def _publish_line(self, g: Group, start: Start) -> None:
-        served = await asyncio.to_thread(
-            self.audio.serve, start.line, g.key.output_mode, synthesize=not self.cached_only()
-        )
+        try:
+            served = await asyncio.to_thread(
+                self.audio.serve, start.line, g.key.output_mode, synthesize=not self.cached_only()
+            )
+        except Exception as e:  # speech or encoding failed: the line still airs, as text (DR-5)
+            log.warning("audio failed for %s (%s): airs as text", start.line.line_id, e)
+            served = None
         msg = LineMsg(
             id=start.line.line_id,
             priority=start.line.priority,

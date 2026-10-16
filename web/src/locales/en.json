@@ -43,7 +43,15 @@
     "outputAppHint": "Earshot speaks every line, with the ball placed in sound.",
     "outputReaderHint": "Lines go to your screen reader at your own speed. The ball sound keeps playing.",
     "close": "Back to the match",
-    "reconnecting": "Reconnecting to the match…"
+    "reconnecting": "Reconnecting to the match…",
+    "recapReady": {
+      "half_time": "Half-time recap ready.",
+      "full_time": "Full-time recap ready."
+    },
+    "recapTitle": {
+      "half_time": "Half-time",
+      "full_time": "Full-time"
+    }
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",
@@ -72,6 +80,21 @@
       "casualHint": "What happened and who did it. Numbers only for the score, the minute and the hardest shots.",
       "analyst": "Analyst",
       "analystHint": "The same, plus the numbers: pass lengths, shot speeds and how each team's tactics are changing."
+    },
+    "stat": {
+      "title": "Follow one stat?",
+      "none": "No, just Analyst",
+      "noneHint": "Every Analyst line, with no stat singled out.",
+      "press_height": "Press height",
+      "press_heightHint": "Told when a team presses 5 metres higher or lower than before.",
+      "danger": "Danger",
+      "dangerHint": "Told when a team has one of its most threatening spells.",
+      "pass_difficulty": "Pass difficulty",
+      "pass_difficultyHint": "Every very hard pass, and whether it came off.",
+      "shot_speed": "Shot speed",
+      "shot_speedHint": "The speed of every shot.",
+      "possession": "Possession",
+      "possessionHint": "Told when a team's share of the ball jumps by 10 points."
     }
   },
   "languages": {
@@ -82,7 +105,7 @@
   },
   "agents": {
     "title": "Behind the voice",
-    "lede": "Six agents share one audio channel. This is what each one last decided.",
+    "lede": "These agents share one audio channel; a separate auditor re-checks every line. This is what each one last decided.",
     "airtime": "On air {{seconds}} s of the last minute.",
     "legendCaller": "play-by-play",
     "legendAnalyst": "analysis",

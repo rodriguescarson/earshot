@@ -356,9 +356,22 @@ class MatchPipeline:
     def __post_init__(self) -> None:
         self._moments = moment_workflow(self.spotter, self.caller, self.check, self.targets)
         self._windows = window_workflow(self.analyst, self.verify, self.timeout_scale)
+        self._window_lock = asyncio.Lock()
 
     async def push(self, ev: Event, *, final: bool = False) -> tuple[MomentResult, WindowResult | None]:
-        """Feed one event: one moment run, plus one window run if the event opens an analysis window."""
+        """Feed one event: one moment run, plus one window run if the event opens an analysis window.
+
+        This waits for the window run (an Analyst call of up to its budget + 1.5 s) before it
+        returns, so a caller that pushes events in order holds every later event behind it. A live
+        caller should use ``push_moment`` and run the window on its own task instead.
+        """
+        moment, wstep = await self.push_moment(ev, final=final)
+        return moment, (await self.run_window(wstep) if wstep is not None else None)
+
+    async def push_moment(self, ev: Event, *, final: bool = False) -> tuple[MomentResult, WindowStep | None]:
+        """The moment run for one event; if the event opens an analysis window, also the step to
+        hand to ``run_window``. The step holds the history up to this event only (a snapshot), so a
+        window run that finishes after later pushes still sees nothing past its stoppage."""
         before = self.state
         after = self.step_state(before, ev)
         self.events.append(ev)
@@ -366,16 +379,21 @@ class MatchPipeline:
         step = EventStep(ev, before, after, Shared(self._seen), final)
         outputs = (await self._moments.run(step)).get_outputs()
         moment = outputs[0] if outputs else MomentResult(ev.event_id)
-        window = None
+        wstep = None
         if opens_window(ev):
             assert isinstance(ev, StoppageStart)
             wstep = WindowStep(
                 ev, after, Shared(tuple(self.events)), self.home_id, self.away_id, Shared(self.positions)
             )
-            wout = (await self._windows.run(wstep)).get_outputs()
-            window = wout[0] if wout else None
         self.state = after
-        return moment, window
+        return moment, wstep
+
+    async def run_window(self, wstep: WindowStep) -> WindowResult | None:
+        """One window run (Analyst, then the claim check). Overlapping calls run one after another:
+        a workflow instance runs one message at a time."""
+        async with self._window_lock:
+            wout = (await self._windows.run(wstep)).get_outputs()
+        return wout[0] if wout else None
 
     async def replay(self, events: Sequence[Event]) -> list[tuple[MomentResult, WindowResult | None]]:
         out = []

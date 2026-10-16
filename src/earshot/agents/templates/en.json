@@ -71,7 +71,7 @@
       "analyst": "Penalty to {club}!"
     },
     "red_card.1": {
-      "casual": "Red card! {player} is sent off. {club} are down to {count} players.",
+      "casual": "Red card! {player} is sent off. {club} are short-handed now.",
       "analyst": "Red card! {player} is sent off. {club} are down to {count} players."
     },
     "yellow_card.1": {
@@ -301,6 +301,62 @@
     "replay.1": {
       "casual": "Here it is again, in sound.",
       "analyst": "Here it is again, in sound."
+    },
+    "recap.half_time.1": {
+      "casual": "Half-time recap. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Half-time recap. {home} {home_score}, {away} {away_score}."
+    },
+    "recap.full_time.1": {
+      "casual": "Full-time recap. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Full-time recap. {home} {home_score}, {away} {away_score}."
+    },
+    "recap.goal.1": {
+      "casual": "{player} scored for {club}, minute {minute}.",
+      "analyst": "{player} scored for {club}, minute {minute}."
+    },
+    "recap.own_goal.1": {
+      "casual": "An own goal by {player} counted for {club}, minute {minute}.",
+      "analyst": "An own goal by {player} counted for {club}, minute {minute}."
+    },
+    "recap.no_goals.1": {
+      "casual": "No goals were scored.",
+      "analyst": "No goals were scored."
+    },
+    "recap.red_card.1": {
+      "casual": "{player} of {club} was sent off, minute {minute}.",
+      "analyst": "{player} of {club} was sent off, minute {minute}."
+    },
+    "recap.shots.1": {
+      "casual": "{club} had more shots.",
+      "analyst": "Shots: {home} {home_shots}, {away} {away_shots}."
+    },
+    "recap.shots_level.1": {
+      "casual": "The shot count was level."
+    },
+    "recap.possession.1": {
+      "casual": "{club} had more of the ball.",
+      "analyst": "{club} had {percent} percent of the ball."
+    },
+    "stat.shot_speed.1": {
+      "analyst": "Shot speed: {player}, {speed} kilometres an hour."
+    },
+    "stat.pass_difficulty.made.1": {
+      "analyst": "A very hard pass from {player}, difficulty {value}, and it comes off."
+    },
+    "stat.pass_difficulty.missed.1": {
+      "analyst": "A very hard pass from {player}, difficulty {value}, and it does not come off."
+    },
+    "stat.press_height.up.1": {
+      "analyst": "Press height: {club} up from {before} to {after} metres over the last {window_min} minutes."
+    },
+    "stat.press_height.down.1": {
+      "analyst": "Press height: {club} down from {before} to {after} metres over the last {window_min} minutes."
+    },
+    "stat.possession.up.1": {
+      "analyst": "Possession: {club} up from {before} to {after} percent over the last {window_min} minutes."
+    },
+    "stat.danger.1": {
+      "analyst": "Danger: {club} are carrying real threat over the last {window_min} minutes."
     }
   }
 }
