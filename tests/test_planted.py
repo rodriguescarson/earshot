@@ -74,3 +74,20 @@ def test_template_numerals_are_blocked_and_names_in_fixed_text_are_not():
     assert per["stray_numeral"]["recall"] == 1.0, s
     assert per["name_in_fixed_text"]["recall"] == 0.0, s  # by design: only the auditor can catch it
     assert s["false_block_rate"] == 0.0, s
+
+
+@agents
+def test_names_planted_in_template_text_are_the_auditors_catch():
+    from earshot.agents.auditor import Auditor
+
+    checker = planted.template_point(
+        matches(2), clubs_of, players_of, Language.EN, ListeningMode.CASUAL
+    ).summary()
+    audited = planted.template_point(
+        matches(2), clubs_of, players_of, Language.EN, ListeningMode.CASUAL,
+        auditor=lambda i, e, c, p: Auditor(i, e, c, p).audit,
+    ).summary()  # fmt: skip
+    assert checker["per_class"]["name_in_fixed_text"]["recall"] == 0.0  # the Checker shares the catalogue
+    assert audited["point"] == "template_strings_auditor"
+    assert audited["recall"] == 1.0
+    assert audited["false_block_rate"] == 0.0

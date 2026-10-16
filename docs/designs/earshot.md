@@ -2899,6 +2899,20 @@ The fix is the `permissions` block on that job, already in #2.
   Encoding after the Director's start is the biggest part.
 - Real-Analyst trial: 2 of 28 cause labels correct.
 
+**Incident, 2026-10-16:**
+- **What happened:** the hourly token kill switch (`kill-tokens-hourly`, 500K tokens an hour)
+  fired at 13:54 UTC.
+- **Cause:** my template-evaluator pass was paced at 400K tokens an hour, which left too little
+  room for live use and the other sessions' testing.
+- **Effect:**
+  - The AI account was disabled and the worker went cached-only.
+  - The evaluator lost every Arabic and Hindi judgement (403s).
+  - It also showed that a speech failure in `LiveMatch._offer` drops a cache-miss line instead of
+    airing it as text. Reported to Stream 1.
+- **Recovery:** the alert had resolved. At 14:24 I ran `restore-ai.sh` and turned cached-only
+  off; live lines with audio were back at 14:28.
+- **Change:** background evaluator and Analyst runs now default to 200K tokens an hour.
+
 **Not done, and why:**
 - `eval-freeze`, held-out seeds 9001-9040, and the runs of record: they wait on Stream 1 finalising
   the Analyst prompt and claim templates. The held-out Analyst run needs about 3.5 days of pacing

@@ -228,26 +228,29 @@ seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11
 had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 
 ### Planted-defect harness (development run, not of record)
-`uv run earshot planted --seeds 1-10` (2026-10-16, branch `feat/eval-run`), English, both modes,
-25% injection rate, against Stream 1's Caller, Checker and auditor. Summary in
+`uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
+branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
+independent auditor. 41 rows; every row has at least 7,914 clean lines. Summary in
 `reports/planted-dev.json`.
 
-| Injection point | Defects | Recall | False-block | Notes |
+| Injection point | Defects (per language and mode) | Recall | False-block | Notes |
 |---|---|---|---|---|
 | Analyst JSON | 660 | 1.0 | 0.0 | |
-| Slot values, Casual | 1,158 | 1.0 | 0.0 | |
-| Slot values, Analyst | 1,158 | 1.0 | 0.0 | |
-| Roster entries, Checker alone | 180 per mode | 0.0 | 0.0 | By design: the Checker reads the same roster. |
-| Roster entries, with the auditor (`reference_blocked`, reviewed roster) | 180 per mode | **0.978** | 0.0 | See below. |
-| Template strings, Casual | 639 | 0.845 | 0.0 | Stray numerals 1.0; names typed into fixed text 0.0. |
-| Template strings, Analyst | 633 | 0.921 | 0.0 | Same split. |
+| Slot values | 1,158 | 1.0 | 0.0 | |
+| Roster entries, Checker alone | 181 | 0.0 | 0.0 | By design: the Checker reads the same roster. |
+| Roster entries, auditor (`reference_blocked`, reviewed roster) | 181 | **1.0** | 0.0 | |
+| Template strings, Checker alone | 639 (Casual) / 633 (Analyst) | 0.845 / 0.921 | 0.0 | Numerals 1.0; names typed into fixed text 0.0, by design. |
+| Template strings, auditor (`Auditor.audit`, reviewed template files) | 639 / 633 | **1.0** | 0.0 | |
 
-- **The auditor's roster misses:** all 4 per mode are `substitution.1` lines. `reference_blocked`
-  checks the `player` and `keeper` slots, while a substitution names its players in `on` and `off`.
-  Reported to Stream 1.
-- **Names typed into fixed text** are the auditor's job, through its exact match against the
-  reviewed templates (Stream 1's section below).
-- The run of record is on the held-out seeds.
+**How the auditor reached 1.0 on roster swaps:**
+- The first run (English) gave 0.978. All 4 misses per mode were substitution lines, whose names sit
+  in the `on`/`off` slots, which the auditor did not bind to ids.
+- Stream 1 fixed that in `96df838`: `ID_SLOTS`, a test over every substitution of seed 4.
+- In the same commit, Stream 1 corrected the harness's label: a line is defective when the swapped
+  player is any named role, not only the first. Before that, a correct block counted as a false
+  block.
+
+The run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.
 
 ### G8 on the render match (frames, CEO-4)
 2026-10-16, `uv run earshot frames --seed 26 --out data/frames/m00026.frames.npz` (numbers in
