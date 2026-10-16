@@ -4,7 +4,8 @@ Run locally:  uv run uvicorn earshot.live.app:app --port 8787
 Configuration:
 - ``EARSHOT_MATCH_DIR``: stored match logs (``<match>.events.jsonl`` + ``.info.json``), played in a loop.
 - ``EARSHOT_AUDIO_DIR`` / ``EARSHOT_TTS_CACHE``: served line audio and the speech cache.
-- ``EARSHOT_WEBPUBSUB_ENDPOINT`` + ``EARSHOT_WEBPUBSUB_HUB``: also publish to Web PubSub (keyless).
+- ``EARSHOT_WEBPUBSUB_ENDPOINT`` + ``EARSHOT_WEBPUBSUB_HUB`` + ``EARSHOT_WEBPUBSUB_PUBLISH=1``: also
+  publish lines, state and recaps (not ball samples) to Web PubSub, keyless and off the match loop.
 - ``EARSHOT_LIVE_SPEED``: 1.0 is real time.
 - ``EARSHOT_ALLOWED_ORIGINS``: comma-separated origins for CORS.
 The SSE stream is both the local transport and a fallback when Web PubSub is unavailable.
@@ -46,24 +47,48 @@ ONDEMAND_GAP_S = 3.0
 
 
 class Hub:
-    """Fan-out of published messages: SSE subscribers per group, plus Web PubSub when configured."""
+    """Fan-out of published messages: SSE subscribers per group, plus Web PubSub when enabled.
 
-    def __init__(self) -> None:
+    The match loop never waits on Web PubSub: messages go to a bounded outbox drained by one
+    background task, and ball samples (2 a second per group) are never mirrored there. Publishing
+    is opt-in (``EARSHOT_WEBPUBSUB_PUBLISH=1``) because the client listens over SSE and every Web
+    PubSub message counts against the service's daily quota.
+    """
+
+    OUTBOX = 500
+
+    def __init__(self, wps=None) -> None:
         self.subscribers: dict[str, set[asyncio.Queue[str]]] = defaultdict(set)
-        self.wps = None
+        self.wps = wps
         endpoint, hub = os.environ.get("EARSHOT_WEBPUBSUB_ENDPOINT"), os.environ.get("EARSHOT_WEBPUBSUB_HUB")
-        if endpoint and hub:
+        if wps is None and endpoint and hub and os.environ.get("EARSHOT_WEBPUBSUB_PUBLISH") == "1":
             from azure.identity import DefaultAzureCredential
             from azure.messaging.webpubsubservice import WebPubSubServiceClient
 
             self.wps = WebPubSubServiceClient(endpoint=endpoint, hub=hub, credential=DefaultAzureCredential())
+        self.outbox: asyncio.Queue[tuple[str, dict]] | None = None
+        self._publisher: asyncio.Task | None = None
+        self.dropped = 0
 
     async def send(self, group: str, message: dict) -> None:
         data = json.dumps(message, ensure_ascii=False)
         for q in list(self.subscribers.get(group, ())):
             with contextlib.suppress(asyncio.QueueFull):
                 q.put_nowait(data)
-        if self.wps is not None:
+        if self.wps is None or message.get("kind") == "ball":
+            return
+        if self.outbox is None:
+            self.outbox = asyncio.Queue(maxsize=self.OUTBOX)
+            self._publisher = asyncio.create_task(self._publish())
+        try:
+            self.outbox.put_nowait((group, message))
+        except asyncio.QueueFull:
+            self.dropped += 1
+
+    async def _publish(self) -> None:
+        assert self.outbox is not None and self.wps is not None
+        while True:
+            group, message = await self.outbox.get()
             try:
                 await asyncio.to_thread(
                     self.wps.send_to_group, group, message, content_type="application/json"

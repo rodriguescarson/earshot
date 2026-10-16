@@ -225,3 +225,35 @@ def test_stat_lines_reach_followers_and_recaps_reach_every_group(match26):
     recaps = {g: msg for g, msg in sent if msg["kind"] == "recap"}
     assert set(recaps) == {follow.key.name, plain.key.name, reader.key.name}
     assert recaps[reader.key.name]["text"].startswith("ملخص الاستراحة")
+
+
+def test_a_slow_web_pubsub_never_stalls_the_match_loop():
+    import time
+
+    from earshot.live.app import Hub
+
+    class SlowWps:
+        def __init__(self):
+            self.sent: list[str] = []
+
+        def send_to_group(self, group, message, content_type):
+            time.sleep(0.5)
+            self.sent.append(message["kind"])
+
+    wps = SlowWps()
+    hub = Hub(wps=wps)
+    q: asyncio.Queue[str] = asyncio.Queue()
+    hub.subscribers["g"].add(q)
+
+    async def go():
+        t = time.perf_counter()
+        for kind in ("ball", "line", "ball", "state"):
+            await hub.send("g", {"kind": kind})
+        took = time.perf_counter() - t
+        await asyncio.sleep(1.2)
+        return took
+
+    took = asyncio.run(go())
+    assert took < 0.05
+    assert q.qsize() == 4  # SSE gets everything, at once
+    assert wps.sent == ["line", "state"]  # ball samples never go to Web PubSub
