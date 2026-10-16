@@ -30,6 +30,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
+from earshot.contract import Language, ListeningMode
 from earshot.contract.claim import Claim, Direction, Metric
 from earshot.contract.events import Event, StoppageStart
 from earshot.contract.match import MatchInfo
@@ -319,3 +320,41 @@ def template_point(matches, clubs_of, players_of, language, mode, seed: int = 4,
                 v = check_caller_line(ln, m, trig, st, roster)
                 res.add(plan.get(ln.template_id), not v.ok, v.reason)
     return res
+
+
+def run_all(
+    seeds: Sequence[int],
+    languages: Sequence[Language] = (Language.EN,),
+    modes: Sequence[ListeningMode] = tuple(ListeningMode),
+    rate: float = DEFECT_RATE,
+) -> dict[str, Any]:
+    """Every injection point over ``seeds``, per language and mode. The roster point runs twice:
+    against the Checker alone (which reads the same roster, so about zero by design) and with the
+    independent auditor checking the reviewed roster (``earshot.agents.auditor.reference_blocked``)."""
+    from earshot.agents.auditor import reference_blocked  # pyright: ignore[reportMissingImports]
+    from earshot.sim.match import simulate
+    from earshot.world.localize import roster as local_roster
+
+    results = [simulate(s) for s in seeds]
+    matches = [(list(r.events), r.info) for r in results]
+    positions = {p.player_id: p.position for p in local_roster(Language.EN).players}
+    points: list[dict[str, Any]] = [analyst_json_point(matches, positions, rate=rate).summary()]
+    for language in languages:
+        table = local_roster(language)
+
+        def clubs_of(info: MatchInfo, table=table) -> list:
+            return [c for c in table.clubs if c.team_id in (info.home.team_id, info.away.team_id)]
+
+        def players_of(info: MatchInfo, table=table) -> list:
+            return [p for p in table.players if p.team_id in (info.home.team_id, info.away.team_id)]
+
+        for mode in modes:
+            tag = {"language": language.value, "mode": mode.value}
+            for res in (
+                slot_values_point(matches, clubs_of, players_of, language, mode, rate=rate),
+                roster_point(matches, clubs_of, players_of, language, mode),
+                roster_point(matches, clubs_of, players_of, language, mode, auditor=reference_blocked),
+                template_point(matches, clubs_of, players_of, language, mode, rate=rate),
+            ):
+                points.append(tag | res.summary())
+    return {"seeds": list(seeds), "rate": rate, "points": points}

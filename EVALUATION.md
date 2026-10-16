@@ -228,12 +228,26 @@ seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11
 had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 
 ### Planted-defect harness (development run, not of record)
-`reports/planted-dev.json`: seeds 1-10, 25% injection rate, against Stream 1's Caller and Checker
-(throwaway local merge with `feat/agents-core`). Analyst JSON 660 defects, recall 1.0, false-block
-0.0 on 2,136 clean claims. Slot values (en, ar) 1,158 defects, recall 1.0, false-block 0.0 on
-7,914 clean lines. Roster entries recall 0.0 and names typed into template text recall 0.0: both
-by design (the Checker reads the same roster and templates), and the auditor's job. Template
-numerals recall 1.0. The run of record is on the held-out seeds.
+`uv run earshot planted --seeds 1-10` (2026-10-16, branch `feat/eval-run`), English, both modes,
+25% injection rate, against Stream 1's Caller, Checker and auditor. Summary in
+`reports/planted-dev.json`.
+
+| Injection point | Defects | Recall | False-block | Notes |
+|---|---|---|---|---|
+| Analyst JSON | 660 | 1.0 | 0.0 | |
+| Slot values, Casual | 1,158 | 1.0 | 0.0 | |
+| Slot values, Analyst | 1,158 | 1.0 | 0.0 | |
+| Roster entries, Checker alone | 180 per mode | 0.0 | 0.0 | By design: the Checker reads the same roster. |
+| Roster entries, with the auditor (`reference_blocked`, reviewed roster) | 180 per mode | **0.978** | 0.0 | See below. |
+| Template strings, Casual | 639 | 0.845 | 0.0 | Stray numerals 1.0; names typed into fixed text 0.0. |
+| Template strings, Analyst | 633 | 0.921 | 0.0 | Same split. |
+
+- **The auditor's roster misses:** all 4 per mode are `substitution.1` lines. `reference_blocked`
+  checks the `player` and `keeper` slots, while a substitution names its players in `on` and `off`.
+  Reported to Stream 1.
+- **Names typed into fixed text** are the auditor's job, through its exact match against the
+  reviewed templates (Stream 1's section below).
+- The run of record is on the held-out seeds.
 
 ### G8 on the render match (frames, CEO-4)
 2026-10-16, `uv run earshot frames --seed 26 --out data/frames/m00026.frames.npz` (numbers in

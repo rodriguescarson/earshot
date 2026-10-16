@@ -104,6 +104,13 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
 
     s = sub.add_parser(
+        "planted", help="the planted-defect harness: every injection point, Checker and auditor"
+    )
+    s.add_argument("--seeds", type=seed_range, default=seed_range("1-10"))
+    s.add_argument("--languages", default="en", help="comma-separated: en,es,ar,hi")
+    s.add_argument("--out", type=Path, required=True)
+
+    s = sub.add_parser(
         "template-eval", help="Foundry fluency and coherence evaluators over every template, per language"
     )
     s.add_argument("--seeds", type=seed_range, default=seed_range("26,28,31"))
@@ -283,6 +290,18 @@ def main(argv: list[str] | None = None) -> None:
         args.out.write_text(json.dumps(summary, indent=1) + "\n")
         brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
         print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
+    elif args.cmd == "planted":
+        from earshot.contract import Language
+        from earshot.eval.planted import run_all
+
+        result = run_all(args.seeds, [Language(x) for x in args.languages.split(",")])
+        result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
+        for pt in result["points"]:
+            where = f"{pt.get('language', '')} {pt.get('mode', '')}".strip()
+            print(f"{pt['point']:28} {where:14} injected {pt['defects_injected']:5} recall {pt['recall']}"
+                  f" false-block {pt.get('false_block_rate')}")  # fmt: skip
     elif args.cmd == "template-eval":
         from earshot.eval.templates_eval import run as judge_templates
 

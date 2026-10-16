@@ -1,7 +1,17 @@
 {
- "seeds": "1-10 (development, not of record)",
+ "seeds": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10
+ ],
  "rate": 0.25,
- "stream1_commit": "fd5504c",
  "points": [
   {
    "point": "analyst_json",
@@ -39,6 +49,8 @@
    "examples": []
   },
   {
+   "language": "en",
+   "mode": "casual",
    "point": "slot_values",
    "defects_injected": 1158,
    "recall": 1.0,
@@ -71,21 +83,22 @@
    },
    "clean": 7914,
    "false_block_rate": 0.0,
-   "examples": [],
-   "language": "en"
+   "examples": []
   },
   {
+   "language": "en",
+   "mode": "casual",
    "point": "roster_entries",
-   "defects_injected": 140,
+   "defects_injected": 180,
    "recall": 0.0,
    "per_class": {
     "wrong_name_for_id": {
-     "injected": 140,
+     "injected": 180,
      "blocked": 0,
      "recall": 0.0
     }
    },
-   "clean": 8932,
+   "clean": 8892,
    "false_block_rate": 0.0,
    "examples": [
     "missed wrong_name_for_id: ",
@@ -93,26 +106,49 @@
     "missed wrong_name_for_id: ",
     "missed wrong_name_for_id: ",
     "missed wrong_name_for_id: "
-   ],
-   "language": "en"
+   ]
   },
   {
+   "language": "en",
+   "mode": "casual",
+   "point": "roster_entries_auditor",
+   "defects_injected": 180,
+   "recall": 0.9778,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 180,
+     "blocked": 176,
+     "recall": 0.9778
+    }
+   },
+   "clean": 8892,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: auditor",
+    "missed wrong_name_for_id: auditor",
+    "missed wrong_name_for_id: auditor",
+    "missed wrong_name_for_id: auditor"
+   ]
+  },
+  {
+   "language": "en",
+   "mode": "casual",
    "point": "template_strings",
-   "defects_injected": 707,
-   "recall": 0.8472,
+   "defects_injected": 639,
+   "recall": 0.8451,
    "per_class": {
     "name_in_fixed_text": {
-     "injected": 108,
+     "injected": 99,
      "blocked": 0,
      "recall": 0.0
     },
     "stray_numeral": {
-     "injected": 599,
-     "blocked": 599,
+     "injected": 540,
+     "blocked": 540,
      "recall": 1.0
     }
    },
-   "clean": 8365,
+   "clean": 8433,
    "false_block_rate": 0.0,
    "examples": [
     "missed name_in_fixed_text: ",
@@ -120,10 +156,11 @@
     "missed name_in_fixed_text: ",
     "missed name_in_fixed_text: ",
     "missed name_in_fixed_text: "
-   ],
-   "language": "en"
+   ]
   },
   {
+   "language": "en",
+   "mode": "analyst",
    "point": "slot_values",
    "defects_injected": 1158,
    "recall": 1.0,
@@ -156,21 +193,22 @@
    },
    "clean": 7914,
    "false_block_rate": 0.0,
-   "examples": [],
-   "language": "ar"
+   "examples": []
   },
   {
+   "language": "en",
+   "mode": "analyst",
    "point": "roster_entries",
-   "defects_injected": 140,
+   "defects_injected": 180,
    "recall": 0.0,
    "per_class": {
     "wrong_name_for_id": {
-     "injected": 140,
+     "injected": 180,
      "blocked": 0,
      "recall": 0.0
     }
    },
-   "clean": 8932,
+   "clean": 8892,
    "false_block_rate": 0.0,
    "examples": [
     "missed wrong_name_for_id: ",
@@ -178,26 +216,49 @@
     "missed wrong_name_for_id: ",
     "missed wrong_name_for_id: ",
     "missed wrong_name_for_id: "
-   ],
-   "language": "ar"
+   ]
   },
   {
+   "language": "en",
+   "mode": "analyst",
+   "point": "roster_entries_auditor",
+   "defects_injected": 180,
+   "recall": 0.9778,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 180,
+     "blocked": 176,
+     "recall": 0.9778
+    }
+   },
+   "clean": 8892,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: auditor",
+    "missed wrong_name_for_id: auditor",
+    "missed wrong_name_for_id: auditor",
+    "missed wrong_name_for_id: auditor"
+   ]
+  },
+  {
+   "language": "en",
+   "mode": "analyst",
    "point": "template_strings",
-   "defects_injected": 707,
-   "recall": 0.8472,
+   "defects_injected": 633,
+   "recall": 0.921,
    "per_class": {
     "name_in_fixed_text": {
-     "injected": 108,
+     "injected": 50,
      "blocked": 0,
      "recall": 0.0
     },
     "stray_numeral": {
-     "injected": 599,
-     "blocked": 599,
+     "injected": 583,
+     "blocked": 583,
      "recall": 1.0
     }
    },
-   "clean": 8365,
+   "clean": 8439,
    "false_block_rate": 0.0,
    "examples": [
     "missed name_in_fixed_text: ",
@@ -205,8 +266,8 @@
     "missed name_in_fixed_text: ",
     "missed name_in_fixed_text: ",
     "missed name_in_fixed_text: "
-   ],
-   "language": "ar"
+   ]
   }
- ]
+ ],
+ "command": "uv run earshot planted --seeds 1-10 --out /private/tmp/claude-501/-Users-carson-Projects-inside-the-game--claude-worktrees-stream2-engine-dc91a9/07ef6734-4bea-4d28-b74f-31cfd81f3611/scratchpad/planted-dev2.json"
 }
