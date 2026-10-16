@@ -26,6 +26,8 @@ class Arm(StrEnum):
     """Speech panned to where the ball is."""
     FULL = "full"
     """Speech with pan plus the continuous ball tone and crowd layer."""
+    BED = "bed"
+    """The continuous layer alone: screen-reader mode, where the reader speaks the lines."""
 
 
 @dataclass(frozen=True)
@@ -88,7 +90,7 @@ def mix(
     out = np.zeros((n, 2), np.float32)
     speech_ctl = np.zeros(n // (SAMPLE_RATE // CONTROL_HZ) + 1, np.float32)
     fade = int(0.03 * SAMPLE_RATE)
-    for a in aired:
+    for a in aired if arm is not Arm.BED else ():
         x = read_mono(clips[a.line.line_id].path)
         if a.cut_at_ms is not None:
             keep = max(0, int((a.cut_at_ms - a.start_ms) / 1000 * SAMPLE_RATE))
@@ -106,7 +108,7 @@ def mix(
         c0, c1 = i0 // (SAMPLE_RATE // CONTROL_HZ), (i0 + len(x)) // (SAMPLE_RATE // CONTROL_HZ)
         speech_ctl[c0 : c1 + 1] = 1.0
 
-    if arm is Arm.FULL and ball:
+    if arm in (Arm.FULL, Arm.BED) and ball:
         rng = np.random.default_rng(seed)
         t_ctl = start_ms + np.arange(len(speech_ctl)) * (1000 / CONTROL_HZ)
         bt = np.array([b.wall_ms for b in ball], np.float64)

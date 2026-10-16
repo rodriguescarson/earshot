@@ -1,0 +1,49 @@
+{
+  "landing": {
+    "wordmark": "Earshot",
+    "tagline": "Live football you can follow by ear.",
+    "fiction": "A made-up match between made-up clubs.",
+    "screenReader": "Earshot speaks in its own voice. Using a screen reader? Switch to text after you start.",
+    "listen": "Listen now",
+    "headphones": "Best with headphones. You'll hear left, then right.",
+    "connecting": "Connecting…"
+  },
+  "listen": {
+    "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}.",
+    "status": {
+      "live": "Live",
+      "dead": "Ball out of play",
+      "recorded": "Recorded clip",
+      "paused": "Paused",
+      "ended": "Clip over"
+    },
+    "onAir": "On air now",
+    "waiting": "Waiting for the next line",
+    "pause": "Pause",
+    "resume": "Resume",
+    "whereBall": "Where's the ball?",
+    "catchUp": "Catch me up",
+    "howTalks": "How Earshot talks",
+    "settings": "Settings",
+    "transcript": "What Earshot said",
+    "transcriptEmpty": "Lines appear here as they're spoken.",
+    "recaps": "Recaps",
+    "recapsEmpty": "The half-time and full-time recaps appear here.",
+    "ended": "End of the clip. {{home}} {{homeScore}}, {{away}} {{awayScore}}.",
+    "again": "Play it again",
+    "restore": "Tap to restore sound",
+    "soundBlocked": "Sound is blocked. Tap to restore sound.",
+    "giveUp": "Couldn't reach the match. Try again.",
+    "tryAgain": "Try again",
+    "analysisPrefix": "Analysis:",
+    "outputApp": "Earshot's voice",
+    "outputReader": "My screen reader",
+    "outputAppHint": "Earshot speaks every line, with the ball placed in sound.",
+    "outputReaderHint": "Lines go to your screen reader at your own speed. The ball sound keeps playing.",
+    "close": "Back to the match"
+  },
+  "media": {
+    "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",
+    "artist": "Earshot"
+  }
+}
