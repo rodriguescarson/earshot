@@ -63,6 +63,7 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--reason", default="set by hand")
     s.add_argument("--add-judge-code", default=None, help="add a judge code (only its SHA-256 is stored)")
     s.add_argument("--rotate-judge-codes", action="store_true", help="remove every existing judge code first")
+    s.add_argument("--remove-judge-code", default=None, help="remove one judge code (matched by its SHA-256)")
 
     s = sub.add_parser(
         "frames", help="player frames at 10 Hz for the render match (CEO-4), and its G8 numbers"
@@ -90,6 +91,14 @@ def main(argv: list[str] | None = None) -> None:
         help="inline: the broadcaster as built; background: window runs off the event feeder",
     )
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
+
+    s = sub.add_parser(
+        "loadtest", help="N listeners on the deployed live stream: event to first audio byte, per line"
+    )
+    s.add_argument("--url", required=True, help="the worker's base URL")
+    s.add_argument("--listeners", type=int, default=20)
+    s.add_argument("--minutes", type=float, default=10.0)
+    s.add_argument("--out", type=Path, required=True, help="summary JSON; the latency model goes next to it")
 
     args = parser.parse_args(argv)
     if args.cmd == "schemas":
@@ -201,12 +210,13 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit("set --storage-url or EARSHOT_STORAGE_URL")
         flags = Flags(BlobFlags(url))
         flags.refresh()
-        if args.rotate_judge_codes or args.add_judge_code:
+        if args.rotate_judge_codes or args.add_judge_code or args.remove_judge_code:
             added = [code_hash(args.add_judge_code)] if args.add_judge_code else []
+            removed = {code_hash(args.remove_judge_code)} if args.remove_judge_code else set()
 
             def codes(cur: dict) -> dict:
                 kept = [] if args.rotate_judge_codes else list(cur.get("judge_code_sha256", []))
-                return {**cur, "judge_code_sha256": sorted(set(kept + added))}
+                return {**cur, "judge_code_sha256": sorted(set(kept + added) - removed)}
 
             flags.source.update(codes)
             flags.refresh()
@@ -243,6 +253,35 @@ def main(argv: list[str] | None = None) -> None:
         rows.write_text("".join(json.dumps(m) + "\n" for m in matches))
         brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
         print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
+    elif args.cmd == "loadtest":
+        import asyncio
+        import os
+
+        from earshot.eval.loadtest import run as load
+
+        code = os.environ.get("EARSHOT_LOADTEST_CODE")
+        if not code:
+            sys.exit("set EARSHOT_LOADTEST_CODE to a judge code (it is never written anywhere)")
+        result = asyncio.run(load(args.url.rstrip("/"), code, args.listeners, args.minutes))
+        result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        model = result.pop("latency_model")
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=1) + "\n")
+        latency = args.out.with_suffix(".latency.json")
+        latency.write_text(json.dumps(model) + "\n")
+        keys = (
+            "listeners",
+            "minutes",
+            "received_lines",
+            "event_to_first_audio_byte_ms",
+            "p95_under_2s",
+            "errors",
+        )
+        print(
+            json.dumps(
+                {k: result[k] for k in keys} | {"out": str(args.out), "latency": str(latency)}, indent=1
+            )
+        )
 
 
 if __name__ == "__main__":
