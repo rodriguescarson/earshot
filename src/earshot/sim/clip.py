@@ -17,6 +17,7 @@ from earshot.contract.spadl import SHOT_TYPES, ActionType
 from earshot.sim.ballpath import ball_path
 from earshot.sim.match import ENGINE_VERSION, MatchResult, simulate
 from earshot.stats.aggregates import goals
+from earshot.stats.danger import with_danger
 from earshot.world.clubs import world
 
 CLIP_MS = 180_000
@@ -110,7 +111,8 @@ def fixture(result: MatchResult, clip: Clip) -> dict:
     start, end = ev[0].wall_ms, ev[-1].wall_ms
     before = result.events[: clip.start_index]
     h, a = goals(before, result.info.home.team_id, result.info.away.team_id)
-    ball: list[BallSample] = [b for b in ball_path(result.events) if start <= b.wall_ms <= end]
+    window = [b for b in ball_path(result.events) if start <= b.wall_ms <= end]
+    ball: list[BallSample] = with_danger(window, result.info.home.team_id)
     w = world()
     clubs = [w.club(result.info.home.team_id), w.club(result.info.away.team_id)]
     return {

@@ -6,6 +6,20 @@
       "title": "Clock Ms",
       "type": "integer"
     },
+    "danger": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Danger"
+    },
     "in_play": {
       "title": "In Play",
       "type": "boolean"

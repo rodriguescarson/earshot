@@ -28,3 +28,5 @@ class BallSample(BaseModel):
     """False during a stoppage (between ``stoppage_start`` and ``restart``) and at half-time."""
     team_id: str | None
     """Team in possession, or None while the ball is dead or loose."""
+    danger: Annotated[float, Field(ge=0.0, le=1.0)] | None = None
+    """0-1 expected-threat danger for the team in possession (``earshot.stats.danger``), or None."""

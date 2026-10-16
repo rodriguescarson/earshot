@@ -45,16 +45,18 @@ from earshot.sim.stoppages import DEAD_TIME, EXTRA, FREE_KICK_DANGEROUS
 from earshot.world.clubs import Club, Fixture, Player, World, fixture_for_seed, world
 
 K = StoppageKind
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "1.1.0"
 PERIOD_MS = 45 * 60_000
 GOAL_LO, GOAL_HI = 30.34, 37.66
 BOX_X = 88.5
 BOX_HALF_W = 20.16
 
 # Global calibration settings (tuned on the development seeds; see EVALUATION.md, G3).
-SHOT_BIAS = 4.2
-PASS_BASE = 3.35
-HOME_EDGE = 0.04
+SHOT_BIAS = 4.85
+PASS_BASE = 3.8
+HOME_EDGE = 0.10
+CARD_YELLOW = 0.185
+CARD_STRAIGHT_RED = 0.0015
 
 SET_PIECE_NEAR = {
     "pass": (9.15, 13.0),  # kick-off and dropped balls
@@ -291,10 +293,10 @@ class MatchSim:
             # Between our back line and the opponents' last line (attackers hold the offside line).
             front = PL - self.defensive_line(_other(side), PL - bax) - 1.0
             back = min(_clamp(16 + 24 * s["line_height"] + 0.32 * (bax - 40), 10, 58), front - 25)
-            wscale = 0.78 + 0.45 * s["width"]
+            wscale = 0.40 + 1.2 * s["width"]
         else:
             back = self.defensive_line(side, bax)
-            front = back + 28 + 18 * s["press_height"]
+            front = back + 22 + 30 * s["press_height"]
             wscale = 0.70
         out = {}
         for pid, slot in team.slots.items():
@@ -476,7 +478,7 @@ class MatchSim:
         carrier = self.carrier
         # Time on the ball before the next action: tempo sets it.
         self.t += int(
-            max(250, (1700 - 1150 * s["tempo"]) * math.exp(0.5 * float(self.rng.standard_normal())))
+            max(250, (2300 - 2100 * s["tempo"]) * math.exp(0.5 * float(self.rng.standard_normal())))
         )
         if self.rng.random() < 0.0004:
             self.injury_stoppage(side, ax, ay)
@@ -484,7 +486,7 @@ class MatchSim:
         intensity = self.press_intensity(so, ax)
         near = _clamp((7.5 - 6.0 * intensity) * math.exp(0.45 * float(self.rng.standard_normal())), 0.3, 25.0)
         pressured = near < 3.0
-        if self.challenge(side, opp, ax, ay, near, pressured):
+        if self.challenge(side, opp, ax, ay, near, pressured, intensity):
             return
         choice = self.choose(side, s, ax, ay, pressured)
         if choice == "short":
@@ -504,8 +506,8 @@ class MatchSim:
 
     def press_intensity(self, so: dict[str, float], ax: float) -> float:
         dist_from_def_goal = PL - ax
-        press_line = 30 + 50 * so["press_height"]
-        i = 0.12 + 0.72 * _sig((press_line - dist_from_def_goal) / 7.0)
+        press_line = 15 + 80 * so["press_height"]
+        i = 0.05 + 0.90 * _sig((press_line - dist_from_def_goal) / 4.0)
         if dist_from_def_goal < 30:
             i = max(i, 0.62 + 0.25 * (30 - dist_from_def_goal) / 30)
         return i
@@ -514,11 +516,11 @@ class MatchSim:
         role = self.teams[side].slots[self.carrier].role
         rating = self.players[self.carrier].rating
         opts: dict[str, float] = {
-            "short": 1.7 + 0.9 * (1 - s["directness"]) - (0.5 if pressured else 0.0),
-            "long": -0.6 + 2.0 * s["directness"] + (0.5 if ax < 50 else 0.0) - (1.6 if ax > 78 else 0.0),
+            "short": 1.4 + 1.5 * (1 - s["directness"]) - (0.5 if pressured else 0.0),
+            "long": -2.1 + 5.0 * s["directness"] + (0.5 if ax < 50 else 0.0) - (1.6 if ax > 78 else 0.0),
         }
         if role != "GK":
-            opts["dribble"] = 0.7 + (-0.5 if pressured else 0.5) + (0.3 if 30 < ax < 85 else 0.0)
+            opts["dribble"] = 0.5 + (-0.5 if pressured else 0.5) + (0.3 if 30 < ax < 85 else 0.0)
             opts["take_on"] = (
                 -1.7 + (0.9 if pressured else 0.0) + (0.6 if ax > 70 else 0.0) + 1.5 * (rating - 0.5)
             )
@@ -535,14 +537,16 @@ class MatchSim:
 
     # ----- duels and fouls ---------------------------------------------------------------------
 
-    def challenge(self, side: str, opp: str, ax: float, ay: float, near: float, pressured: bool) -> bool:
-        p_try = (0.20 if pressured else 0.025) * (1.5 if ax > 75 else 1.0)
+    def challenge(
+        self, side: str, opp: str, ax: float, ay: float, near: float, pressured: bool, intensity: float
+    ) -> bool:
+        p_try = (0.02 + 0.36 * intensity**3) * (1.5 if ax > 75 else 1.0)
         if self.rng.random() >= p_try:
             return False
         dax, day = PL - ax, PW - ay
         defender = self.nearest(opp, dax, day, False, roles=("DF", "MF", "FW"))
         box = in_box(ax, ay)
-        p_foul = 0.16 * (0.07 if box else 1.0) * (1.2 if self.minute() > 70 else 1.0)
+        p_foul = 0.095 * (0.07 if box else 1.0) * (1.2 if self.minute() > 70 else 1.0)
         if defender in self.teams[opp].yellow:
             p_foul *= 0.6
         duel = _clamp(
@@ -572,11 +576,11 @@ class MatchSim:
         team = self.teams[opp]
         r = self.rng.random()
         color, reason = None, None
-        if r < 0.002:
+        if r < CARD_STRAIGHT_RED:
             color = CardColor.RED
             reason = CardReason.DENYING_GOAL_CHANCE if (box or ax > 80) else CardReason.FOUL
-        elif r < 0.002 + 0.165 * (1.3 if self.minute() > 60 else 1.0) * (
-            0.45 if fouler in team.yellow else 1.0
+        elif r < CARD_STRAIGHT_RED + CARD_YELLOW * (1.3 if self.minute() > 60 else 1.0) * (
+            0.3 if fouler in team.yellow else 1.0
         ):
             if fouler in team.yellow:
                 color, reason = CardColor.RED, CardReason.SECOND_YELLOW
@@ -629,6 +633,8 @@ class MatchSim:
                 if d < 18:
                     continue
                 w = math.exp(-(((d - 34) / 12) ** 2)) * math.exp((0.04 + 0.05 * s["directness"]) * fwd)
+            # Width: wide teams look for the flanks, narrow teams for the middle.
+            w *= math.exp(2.4 * (s["width"] - 0.5) * (abs(py - PW / 2) - 14) / 10)
             best.append((pid, w))
         if not best:
             best = [(pid, 1.0) for pid in pos if pid != passer]
@@ -666,7 +672,7 @@ class MatchSim:
         opp_line_in_ours = PL - self.defensive_line(opp, PL - ax)
         no_offside = type_ in ("throw_in", "goal_kick", "corner_short")
         if not no_offside and fwd > 5 and tx > opp_line_in_ours + 1 and tx > PL / 2:
-            p_off = (0.03 + 0.07 * so["line_height"]) if long_ball else 0.006
+            p_off = (0.02 + 0.05 * so["line_height"]) if long_ball else 0.004
             if self.rng.random() < p_off:
                 self.act(side, passer, type_, "offside", (ax, ay), (tx, ty), flight_ms=flight, near=near)
                 self.t += flight
@@ -696,7 +702,7 @@ class MatchSim:
         """A pass or cross that does not reach a team-mate: out of play, or intercepted."""
         opp = _other(side)
         edge = min(ty, PW - ty)
-        if self.rng.random() < (0.65 if edge < 4 else 0.50 if edge < 12 else 0.14):
+        if self.rng.random() < (0.72 if edge < 4 else 0.58 if edge < 12 else 0.17):
             oy = 0.0 if ty < PW / 2 else PW
             ox = _clamp(tx, 1.0, PL - 1.0)
             self.act(side, passer, type_, "fail", (ax, ay), (ox, oy), flight_ms=flight, near=near)
@@ -815,7 +821,7 @@ class MatchSim:
                 self.own_goal(opp, dfd, PL - tx, PW - ty)
                 return
             self.clearance(
-                opp, dfd, PL - tx, PW - ty, float(self.rng.uniform(0.5, 2.0)), retain=0.4, corner=0.30
+                opp, dfd, PL - tx, PW - ty, float(self.rng.uniform(0.5, 2.0)), retain=0.4, corner=0.36
             )
             return
         # Over everyone and out behind the goal.
@@ -890,7 +896,7 @@ class MatchSim:
             q = 0.6 * xg(ax, ay, False, False)
         else:
             q = xg(ax, ay, header, pressured)
-        finish = 0.85 + 0.6 * (self.players[shooter].rating - 0.5) + (HOME_EDGE if side == "home" else 0.0)
+        finish = 1.1 + 0.6 * (self.players[shooter].rating - 0.5) + (HOME_EDGE if side == "home" else 0.0)
         keeper = 1.1 - 0.4 * (self.players[self.gk(opp)].rating - 0.5)
         p_goal = _clamp(q * finish * keeper, 0.005, 0.95)
         p_on = min(0.97, 0.27 + 0.9 * q) if type_ != "shot_penalty" else 0.94
@@ -981,7 +987,7 @@ class MatchSim:
             )
             self.t += max(80, int(bd / speed * 1000))
             v = self.rng.random()
-            if v < 0.45:
+            if v < 0.52:
                 self.poss = side
                 self.dead(K.CORNER, side, PL, 0.0 if ay < PW / 2 else PW)
             elif v < 0.62:
