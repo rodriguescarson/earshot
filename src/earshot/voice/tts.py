@@ -82,18 +82,24 @@ class Synthesizer:
         path = self.cache_dir / f"{key}.wav"
         if not path.exists():
             r: httpx.Response | None = None
-            for attempt in range(4):
-                r = self._http.post(
-                    f"{self.endpoint}/tts/cognitiveservices/v1",
-                    headers={
-                        "Authorization": f"Bearer {self._bearer()}",
-                        "Content-Type": "application/ssml+xml",
-                        "X-Microsoft-OutputFormat": OUTPUT_FORMAT,
-                        "User-Agent": "earshot",
-                    },
-                    content=ssml.encode(),
-                )
-                if r.status_code == 429 and attempt < 3:
+            for attempt in range(5):
+                try:
+                    r = self._http.post(
+                        f"{self.endpoint}/tts/cognitiveservices/v1",
+                        headers={
+                            "Authorization": f"Bearer {self._bearer()}",
+                            "Content-Type": "application/ssml+xml",
+                            "X-Microsoft-OutputFormat": OUTPUT_FORMAT,
+                            "User-Agent": "earshot",
+                        },
+                        content=ssml.encode(),
+                    )
+                except httpx.TransportError:  # timeouts and dropped connections are transient
+                    if attempt == 4:
+                        raise
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                if (r.status_code == 429 or r.status_code >= 500) and attempt < 4:
                     time.sleep(1.5 * (attempt + 1))
                     continue
                 r.raise_for_status()
