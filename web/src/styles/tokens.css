@@ -1,0 +1,36 @@
+/*
+  Tactile Plate tokens (docs/designs/listening-screen-brief.md).
+  Two colours plus one spot; the spot only ever means "on air now". Every ratio below was measured on 2026-10-16 (WCAG relative luminance).
+*/
+:root {
+  color-scheme: light;
+  --ground: #f1f3f2;
+  --ink: #1f2427;
+  --ink-soft: #3f474c; /* 8.5:1 on ground */
+  --plate: #1f2427; /* reversed plate */
+  --on-plate: #f1f3f2; /* 14.06:1 on plate */
+  --on-plate-soft: #c9cfcc; /* 9.91:1 on plate */
+  --spot: #c42b21; /* on light surfaces, 5.07:1 on ground */
+  --spot-on-plate: #ff6b5e; /* 5.61:1 on the charcoal plate */
+  --seam: #6c7479; /* 4.27:1 on ground (UI part, needs 3:1) */
+  --dot: color-mix(in oklab, var(--ink) 12%, var(--ground));
+  --cell: 0.5rem;
+  --radius: 2px;
+  --font: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ground: #121618;
+    --ink: #eef1ef;
+    --ink-soft: #bcc3bf; /* 10.14:1 on ground */
+    --plate: #eef1ef; /* reversed plate is chalk in the dark */
+    --on-plate: #121618; /* 16:1 */
+    --on-plate-soft: #3c4448; /* 8.74:1 on chalk */
+    --spot: #ff6b5e; /* 6.52:1 on ground */
+    --spot-on-plate: #c42b21; /* 4.97:1 on chalk */
+    --seam: #7d878c; /* 4.95:1 on ground */
+    --dot: color-mix(in oklab, var(--ink) 10%, var(--ground));
+  }
+}

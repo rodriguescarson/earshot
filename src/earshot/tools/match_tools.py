@@ -27,7 +27,7 @@ from earshot.contract.events import (
 )
 from earshot.contract.spadl import SHOT_TYPES, ActionType
 from earshot.stats.aggregates import goals
-from earshot.stats.claims import window_values
+from earshot.stats.claims import THRESHOLD, window_values
 from earshot.stats.passes import OPEN_PLAY_PASS, speed_kmh
 from earshot.tools.snapshots import MatchView
 
@@ -307,3 +307,136 @@ def recap(view: MatchView) -> dict:
         "cards": [m for m in moments if m["kind"].endswith("_card")],
         "teams": teams,
     }
+
+
+# ----- claim tools: what the Analyst needs to make a checkable claim (Stream 1) ------------------
+# These share the Checker's definitions (earshot.stats.claims), so "notable" here and the
+# Checker's threshold can never disagree.
+
+WINDOW_MINUTES = (5, 10)
+UNIT: dict[Metric, str] = {
+    Metric.PRESS_HEIGHT: "metres from own goal",
+    Metric.TEMPO: "on-ball actions per minute",
+    Metric.DIRECTNESS: "share of open-play passes that go long and forward",
+    Metric.WIDTH: "metres from the middle",
+    Metric.LINE_HEIGHT: "metres from own goal",
+    Metric.POSSESSION_SHARE: "share of possession",
+    Metric.SHOT_COUNT: "shots",
+}
+TABLE_KEYS = ("team_id", "metric", "before", "after", "change", "threshold", "notable", "evidence_event_ids")
+
+
+def _home_away(view: MatchView) -> tuple[str, str]:
+    return view.info.home.team_id, view.info.away.team_id
+
+
+def _positions(view: MatchView) -> dict[str, str]:
+    return {pid: p.position for pid, p in view.players.items()}
+
+
+def match_context(view: MatchView) -> dict:
+    """Score, each team's score state (ahead, level, behind), red cards, minute and the last goal."""
+    home, away = _home_away(view)
+    score = {home: 0, away: 0}
+    reds = {home: 0, away: 0}
+    last_goal = None
+    period, clock = 1, 0
+    for e in view.events:
+        period, clock = e.period_id, e.clock_ms
+        if (
+            isinstance(e, Action)
+            and e.team_id is not None
+            and ((ActionType(e.type) in SHOT_TYPES and e.result == "success") or e.result == "owngoal")
+        ):
+            t = (away if e.team_id == home else home) if e.result == "owngoal" else e.team_id
+            score[t] += 1
+            last_goal = {
+                "team_id": t,
+                "minute": spoken_minute(e.period_id, e.clock_ms),
+                "event_id": e.event_id,
+            }
+        if isinstance(e, Card) and e.color == "red" and e.team_id in reds:
+            reds[e.team_id] += 1
+
+    def side(t: str, o: str) -> dict:
+        state = "ahead" if score[t] > score[o] else "behind" if score[t] < score[o] else "level"
+        return {
+            "team_id": t,
+            "name": _club(view, t),
+            "score": score[t],
+            "red_cards": reds[t],
+            "score_state": state,
+        }
+
+    return {
+        "home": side(home, away),
+        "away": side(away, home),
+        "minute": spoken_minute(period, clock),
+        "period": period,
+        "last_goal": last_goal,
+        **as_of(view),
+    }
+
+
+def metric_change(view: MatchView, team_id: str, metric: Metric, minutes: int = 5) -> dict:
+    """One metric for one team: the last ``minutes`` against the equal window before it."""
+    if minutes not in WINDOW_MINUTES:
+        raise ToolInputError(f"minutes must be one of {WINDOW_MINUTES}")
+    home, away = _home_away(view)
+    if team_id not in (home, away):
+        raise ToolInputError(f"unknown team {team_id}")
+    span = minutes * 60_000
+    now = view.as_of_wall_ms
+    past = [e for e in view.events if e.wall_ms < now]
+    before, after = window_values(metric, past, team_id, now - span, now, home, _positions(view))
+    change = None if before is None or after is None else after - before
+    evidence = [
+        e.event_id for e in past if isinstance(e, Action) and e.team_id == team_id and e.wall_ms >= now - span
+    ][-5:]
+    return {
+        "team_id": team_id,
+        "metric": metric.value,
+        "unit": UNIT[metric],
+        "minutes": minutes,
+        "window_start_ms": now - span,
+        "window_end_ms": now,
+        "before": None if before is None else round(before, 3),
+        "after": None if after is None else round(after, 3),
+        "change": None if change is None else round(change, 3),
+        "threshold": THRESHOLD[metric],
+        "notable": change is not None and abs(change) >= THRESHOLD[metric],
+        "evidence_event_ids": evidence,
+    }
+
+
+def metric_table(view: MatchView, minutes: int = 5) -> dict:
+    """Every claim metric for both teams: the Analyst's usual first call (the window is shared)."""
+    rows = [metric_change(view, t, m, minutes) for t in _home_away(view) for m in Metric]
+    return {
+        "window_start_ms": rows[0]["window_start_ms"],
+        "window_end_ms": rows[0]["window_end_ms"],
+        "minutes": minutes,
+        "units": {m.value: UNIT[m] for m in Metric},
+        "rows": [{k: r[k] for k in TABLE_KEYS} for r in rows],
+    }
+
+
+def recent_events(
+    view: MatchView, team_id: str | None = None, minutes: int = 5, limit: int = 20
+) -> list[dict]:
+    """Recent events with ids, so a claim can cite them."""
+    lo = view.as_of_wall_ms - minutes * 60_000
+    out = []
+    for e in view.events:
+        if e.wall_ms < lo or e.wall_ms >= view.as_of_wall_ms or (team_id and e.team_id != team_id):
+            continue
+        item: dict[str, Any] = {
+            "event_id": e.event_id,
+            "type": e.type,
+            "team_id": e.team_id,
+            "minute": spoken_minute(e.period_id, e.clock_ms),
+        }
+        if isinstance(e, Action):
+            item["result"] = str(e.result)
+        out.append(item)
+    return out[-_limit(limit) :]

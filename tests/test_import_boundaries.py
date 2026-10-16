@@ -23,6 +23,7 @@ PKG = SRC / "earshot"
 SIM_ALLOWED = {"earshot.sim", "earshot.sim.stoppages", "earshot.sim.io", "earshot.sim.ballpath"}
 CONSUMERS = (
     "earshot.agents",
+    "earshot.live",
     "earshot.tools",
     "earshot.api",
     "earshot.stats",

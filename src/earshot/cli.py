@@ -75,6 +75,22 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("roster", help="write the league roster (clubs and players) as JSON")
     s.add_argument("--out", type=Path, required=True)
 
+    s = sub.add_parser(
+        "evaluate", help="the accelerated evaluation run (ET11): matches through the live broadcaster"
+    )
+    s.add_argument("--seeds", type=seed_range, default=seed_range("1-380"))
+    s.add_argument("--workers", type=int, default=8)
+    s.add_argument(
+        "--latency", type=Path, default=None, help="load-test latency samples (JSON); default: provisional"
+    )
+    s.add_argument(
+        "--windows",
+        choices=["inline", "background"],
+        default="inline",
+        help="inline: the broadcaster as built; background: window runs off the event feeder",
+    )
+    s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
+
     args = parser.parse_args(argv)
     if args.cmd == "schemas":
         from earshot.contract.schemas import write
@@ -186,10 +202,13 @@ def main(argv: list[str] | None = None) -> None:
         flags = Flags(BlobFlags(url))
         flags.refresh()
         if args.rotate_judge_codes or args.add_judge_code:
-            hashes = [] if args.rotate_judge_codes else list(flags.values.get("judge_code_sha256", []))
-            if args.add_judge_code:
-                hashes.append(code_hash(args.add_judge_code))
-            flags.source.write({**flags.source.read(), "judge_code_sha256": sorted(set(hashes))})
+            added = [code_hash(args.add_judge_code)] if args.add_judge_code else []
+
+            def codes(cur: dict) -> dict:
+                kept = [] if args.rotate_judge_codes else list(cur.get("judge_code_sha256", []))
+                return {**cur, "judge_code_sha256": sorted(set(kept + added))}
+
+            flags.source.update(codes)
             flags.refresh()
         if args.cached_only:
             flags.set_cached_only(args.cached_only == "on", args.reason)
@@ -212,6 +231,18 @@ def main(argv: list[str] | None = None) -> None:
 
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(world().roster().model_dump_json(indent=1) + "\n")
+    elif args.cmd == "evaluate":
+        from earshot.eval.run import LatencyModel, run_season
+
+        latency = LatencyModel.load(args.latency) if args.latency else LatencyModel.provisional_default()
+        summary, matches = run_season(args.seeds, latency, workers=args.workers, windows=args.windows)
+        summary["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(summary, indent=1) + "\n")
+        rows = args.out.with_suffix(".matches.jsonl")
+        rows.write_text("".join(json.dumps(m) + "\n" for m in matches))
+        brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
+        print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
 
 
 if __name__ == "__main__":

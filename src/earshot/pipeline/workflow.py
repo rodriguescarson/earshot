@@ -356,9 +356,22 @@ class MatchPipeline:
     def __post_init__(self) -> None:
         self._moments = moment_workflow(self.spotter, self.caller, self.check, self.targets)
         self._windows = window_workflow(self.analyst, self.verify, self.timeout_scale)
+        self._window_lock = asyncio.Lock()
 
     async def push(self, ev: Event, *, final: bool = False) -> tuple[MomentResult, WindowResult | None]:
-        """Feed one event: one moment run, plus one window run if the event opens an analysis window."""
+        """Feed one event: one moment run, plus one window run if the event opens an analysis window.
+
+        This waits for the window run (an Analyst call of up to its budget + 1.5 s) before it
+        returns, so a caller that pushes events in order holds every later event behind it. A live
+        caller should use ``push_moment`` and run the window on its own task instead.
+        """
+        moment, wstep = await self.push_moment(ev, final=final)
+        return moment, (await self.run_window(wstep) if wstep is not None else None)
+
+    async def push_moment(self, ev: Event, *, final: bool = False) -> tuple[MomentResult, WindowStep | None]:
+        """The moment run for one event; if the event opens an analysis window, also the step to
+        hand to ``run_window``. The step holds the history up to this event only (a snapshot), so a
+        window run that finishes after later pushes still sees nothing past its stoppage."""
         before = self.state
         after = self.step_state(before, ev)
         self.events.append(ev)
@@ -366,16 +379,21 @@ class MatchPipeline:
         step = EventStep(ev, before, after, Shared(self._seen), final)
         outputs = (await self._moments.run(step)).get_outputs()
         moment = outputs[0] if outputs else MomentResult(ev.event_id)
-        window = None
+        wstep = None
         if opens_window(ev):
             assert isinstance(ev, StoppageStart)
             wstep = WindowStep(
                 ev, after, Shared(tuple(self.events)), self.home_id, self.away_id, Shared(self.positions)
             )
-            wout = (await self._windows.run(wstep)).get_outputs()
-            window = wout[0] if wout else None
         self.state = after
-        return moment, window
+        return moment, wstep
+
+    async def run_window(self, wstep: WindowStep) -> WindowResult | None:
+        """One window run (Analyst, then the claim check). Overlapping calls run one after another:
+        a workflow instance runs one message at a time."""
+        async with self._window_lock:
+            wout = (await self._windows.run(wstep)).get_outputs()
+        return wout[0] if wout else None
 
     async def replay(self, events: Sequence[Event]) -> list[tuple[MomentResult, WindowResult | None]]:
         out = []
@@ -404,14 +422,13 @@ class MatchPipeline:
         from earshot.agents.state import MatchState, Roster  # pyright: ignore[reportMissingImports]
 
         roster = Roster.build(info, list(clubs), list(players))
-        names = {c.team_id: c.short_name for c in clubs}
 
         def check(line: Line, moment: Moment, ev: Event, state: Any) -> tuple[bool, str]:
             v = check_caller_line(line, moment, ev, state, roster)
             return v.ok, v.reason
 
         def verify(claim: Claim, step: WindowStep) -> tuple[bool, str]:
-            v = verify_claim(claim, tool_view(step, names))
+            v = verify_claim(claim, tool_view(step, info, clubs, players))
             return v.ok, v.reason
 
         return cls(
@@ -424,30 +441,28 @@ class MatchPipeline:
             caller=Caller(roster),
             check=check,
             targets=targets,
-            analyst=analyst_from_agents(analyst, names) if analyst is not None else no_analyst,
+            analyst=analyst_from_agents(analyst, info, clubs, players) if analyst is not None else no_analyst,
             verify=verify,
             timeout_scale=timeout_scale,
         )
 
 
-def tool_view(step: WindowStep, names: Mapping[str, str]) -> Any:
-    """The match as Stream 1's in-process tools see it (``earshot.tools.match.MatchView``)."""
-    from earshot.tools.match import MatchView, Teams  # pyright: ignore[reportMissingImports]
+def tool_view(step: WindowStep, info: Any, clubs: Sequence[Any], players: Sequence[Any]) -> Any:
+    """The match as the shared match tools see it (``earshot.tools.snapshots.MatchView``)."""
+    from earshot.tools.snapshots import MatchView
 
-    return MatchView(
-        events=step.events.value,
-        teams=Teams(step.home_id, step.away_id, names),
-        positions=step.positions.value,
-        now_wall_ms=step.stoppage.wall_ms + 1,
-    )
+    return MatchView.of(info, list(clubs), list(players), list(step.events.value), step.stoppage.wall_ms + 1)
 
 
-def analyst_from_agents(analyst: Any, names: Mapping[str, str]) -> AnalystFn:
+def analyst_from_agents(analyst: Any, info: Any, clubs: Sequence[Any], players: Sequence[Any]) -> AnalystFn:
     """Wrap ``Analyst.run`` (blocking HTTP) as an ``AnalystFn``, run off the event loop."""
 
     async def run(step: WindowStep, budget_ms: int) -> AnalystOutcome:
         res = await asyncio.to_thread(
-            analyst.run, tool_view(step, names), f"{step.stoppage.event_id}-w", step.stoppage.expected_dead_ms
+            analyst.run,
+            tool_view(step, info, clubs, players),
+            f"{step.stoppage.event_id}-w",
+            step.stoppage.expected_dead_ms,
         )
         failure = "timeout" if res.timed_out else (f"error: {res.error}" if res.error else None)
         if failure is None and res.invalid:

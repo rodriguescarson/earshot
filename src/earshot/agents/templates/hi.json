@@ -1,0 +1,362 @@
+{
+  "_meta": {
+    "language": "hi",
+    "locale": "hi-IN",
+    "reviewed": "drafted 2026-10-16 by the model; native review pending (stated limit)"
+  },
+  "lexicon": {
+    "zone": {
+      "defensive_left": "पीछे बाईं ओर",
+      "defensive_centre": "अपने हाफ़ में",
+      "defensive_right": "पीछे दाईं ओर",
+      "middle_left": "मिडफ़ील्ड में बाईं ओर",
+      "middle_centre": "मिडफ़ील्ड में",
+      "middle_right": "मिडफ़ील्ड में दाईं ओर",
+      "attacking_left": "बाएँ फ़्लैंक पर",
+      "attacking_centre": "बॉक्स के पास",
+      "attacking_right": "दाएँ फ़्लैंक पर"
+    },
+    "side": {
+      "left": "बाईं ओर से",
+      "right": "दाईं ओर से",
+      "centre": "बीच से"
+    },
+    "stoppage": {
+      "throw_in": "थ्रो-इन",
+      "goal_kick": "गोल किक",
+      "corner": "कॉर्नर",
+      "free_kick": "फ़्री किक",
+      "penalty": "पेनल्टी",
+      "offside": "ऑफ़साइड"
+    },
+    "var_subject": {
+      "goal": "गोल",
+      "penalty": "पेनल्टी",
+      "red_card": "रेड कार्ड",
+      "offside": "ऑफ़साइड"
+    },
+    "plus": "प्लस"
+  },
+  "templates": {
+    "goal.1": {
+      "casual": "गोल! {player} ने {club} के लिए गोल किया! {home} {home_score}, {away} {away_score}।",
+      "analyst": "गोल! {player} ने {club} के लिए गोल किया! {home} {home_score}, {away} {away_score}।"
+    },
+    "goal.2": {
+      "casual": "गेंद जाल में! {player}, {club} के लिए! {home} {home_score}, {away} {away_score}।",
+      "analyst": "गेंद जाल में! {player}, {club} के लिए! {home} {home_score}, {away} {away_score}।"
+    },
+    "goal_speed.1": {
+      "casual": "गोल! {club} के लिए {player} का ज़बरदस्त शॉट, {speed} किलोमीटर प्रति घंटे! {home} {home_score}, {away} {away_score}।",
+      "analyst": "गोल! {player}, {club} के लिए, {speed} किलोमीटर प्रति घंटे की रफ़्तार से! {home} {home_score}, {away} {away_score}।"
+    },
+    "own_goal.1": {
+      "casual": "आत्मघाती गोल! {player} ने अपने ही गोल में डाल दिया। {home} {home_score}, {away} {away_score}।",
+      "analyst": "आत्मघाती गोल! {player} ने अपने ही गोल में डाल दिया। {home} {home_score}, {away} {away_score}।"
+    },
+    "shot.1": {
+      "casual": "{player} का शॉट!",
+      "analyst": "{player} का शॉट!"
+    },
+    "shot.2": {
+      "casual": "{player} ने कोशिश की!",
+      "analyst": "{player} ने कोशिश की!"
+    },
+    "shot_speed.1": {
+      "casual": "{player} का ज़ोरदार शॉट! {speed} किलोमीटर प्रति घंटे।",
+      "analyst": "{player} का शॉट! {speed} किलोमीटर प्रति घंटे।"
+    },
+    "save.1": {
+      "casual": "{player} का शॉट, और {keeper} ने बचा लिया!",
+      "analyst": "{player} का शॉट, और {keeper} ने बचा लिया!"
+    },
+    "save.2": {
+      "casual": "{player} की कोशिश, {keeper} ने रोक दिया!",
+      "analyst": "{player} की कोशिश, {keeper} ने रोक दिया!"
+    },
+    "save_speed.1": {
+      "casual": "{player} का {speed} किलोमीटर प्रति घंटे का शॉट, {keeper} ने बचा लिया!",
+      "analyst": "{player} का {speed} किलोमीटर प्रति घंटे का शॉट, {keeper} ने बचा लिया!"
+    },
+    "penalty.1": {
+      "casual": "{club} को पेनल्टी!",
+      "analyst": "{club} को पेनल्टी!"
+    },
+    "red_card.1": {
+      "casual": "रेड कार्ड! {player} बाहर। {club} अब कम खिलाड़ियों के साथ खेलेगी।",
+      "analyst": "रेड कार्ड! {player} बाहर। {club} के पास अब {count} खिलाड़ी।"
+    },
+    "yellow_card.1": {
+      "casual": "{player} को येलो कार्ड, {club}।",
+      "analyst": "{player} को येलो कार्ड, {club}।"
+    },
+    "attack.1": {
+      "casual": "{club} का हमला, {player} {zone}।",
+      "analyst": "{club} का हमला, {player} {zone}।"
+    },
+    "attack.2": {
+      "casual": "{player} गेंद लेकर आगे, {club} के लिए, {zone}।",
+      "analyst": "{player} गेंद लेकर आगे, {club} के लिए, {zone}।"
+    },
+    "cross.1": {
+      "casual": "{player} का क्रॉस {side}।",
+      "analyst": "{player} का क्रॉस {side}।"
+    },
+    "turnover.1": {
+      "casual": "{player} ने {club} के लिए गेंद छीन ली।",
+      "analyst": "{player} ने {club} के लिए गेंद छीन ली।"
+    },
+    "turnover.2": {
+      "casual": "{club} ने गेंद वापस ली, {player}।",
+      "analyst": "{club} ने गेंद वापस ली, {player}।"
+    },
+    "on_ball.1": {
+      "casual": "{player}, {zone}।",
+      "analyst": "{player}, {zone}।"
+    },
+    "on_ball.2": {
+      "casual": "गेंद {club} के पास, {player} {zone}।",
+      "analyst": "गेंद {club} के पास, {player} {zone}।"
+    },
+    "long_pass.1": {
+      "casual": "{player} का लंबा पास।",
+      "analyst": "{player} का लंबा पास, {distance} मीटर।"
+    },
+    "tackle.1": {
+      "casual": "{player} का बढ़िया टैकल।",
+      "analyst": "{player} का बढ़िया टैकल।"
+    },
+    "foul.1": {
+      "casual": "{player} का फ़ाउल।",
+      "analyst": "{player} का फ़ाउल।"
+    },
+    "stoppage.1": {
+      "casual": "{stoppage}, {club}।",
+      "analyst": "{stoppage}, {club}।"
+    },
+    "offside.1": {
+      "casual": "{club} ऑफ़साइड।",
+      "analyst": "{club} ऑफ़साइड।"
+    },
+    "kickoff.1": {
+      "casual": "{club} किक-ऑफ़ करेंगे।",
+      "analyst": "{club} किक-ऑफ़ करेंगे।"
+    },
+    "kickoff_after_goal.1": {
+      "casual": "{club} फिर से खेल शुरू करते हैं। {home} {home_score}, {away} {away_score}।",
+      "analyst": "{club} फिर से खेल शुरू करते हैं। {home} {home_score}, {away} {away_score}, मिनट {minute}।"
+    },
+    "substitution.1": {
+      "casual": "{club} में बदलाव: {on} अंदर, {off} बाहर।",
+      "analyst": "{club} में बदलाव: {on} अंदर, {off} बाहर।"
+    },
+    "injury.1": {
+      "casual": "{player} मैदान पर गिरे हैं, इलाज की ज़रूरत है।",
+      "analyst": "{player} मैदान पर गिरे हैं, इलाज की ज़रूरत है।"
+    },
+    "var_check.1": {
+      "casual": "VAR {var_subject} की जाँच कर रहा है।",
+      "analyst": "VAR {var_subject} की जाँच कर रहा है।"
+    },
+    "var_stands.1": {
+      "casual": "फ़ैसला बरकरार।",
+      "analyst": "फ़ैसला बरकरार।"
+    },
+    "var_overturned.1": {
+      "casual": "VAR ने फ़ैसला पलट दिया।",
+      "analyst": "VAR ने फ़ैसला पलट दिया।"
+    },
+    "half_time.1": {
+      "casual": "हाफ़-टाइम। {home} {home_score}, {away} {away_score}।",
+      "analyst": "हाफ़-टाइम। {home} {home_score}, {away} {away_score}।"
+    },
+    "full_time.1": {
+      "casual": "मैच ख़त्म। {home} {home_score}, {away} {away_score}।",
+      "analyst": "मैच ख़त्म। {home} {home_score}, {away} {away_score}।"
+    },
+    "where.1": {
+      "casual": "गेंद {club} के पास, {zone}।",
+      "analyst": "गेंद {club} के पास, {zone}, मिनट {minute}।"
+    },
+    "where_dead.1": {
+      "casual": "गेंद खेल से बाहर। {stoppage}, {club}।",
+      "analyst": "गेंद खेल से बाहर। {stoppage}, {club}।"
+    },
+    "catch_up.1": {
+      "casual": "मिनट {minute}। {home} {home_score}, {away} {away_score}।",
+      "analyst": "मिनट {minute}। {home} {home_score}, {away} {away_score}।"
+    },
+    "late.1": {
+      "casual": "कुछ देर पहले: ",
+      "analyst": "कुछ देर पहले: "
+    },
+    "claim.press_height.up.1": {
+      "casual": "{club} ऊपर जाकर प्रेस कर रहे हैं।",
+      "analyst": "{club} ऊपर प्रेस कर रहे हैं: पिछले {window_min} मिनट में अपने गोल से {before} से {after} मीटर तक।"
+    },
+    "claim.press_height.down.1": {
+      "casual": "{club} पीछे हट गए हैं।",
+      "analyst": "{club} पीछे हट गए हैं: पिछले {window_min} मिनट में प्रेस {before} से घटकर {after} मीटर।"
+    },
+    "claim.tempo.up.1": {
+      "casual": "{club} ने रफ़्तार बढ़ा दी है।",
+      "analyst": "{club} ने रफ़्तार बढ़ाई: {before} से {after} टच प्रति मिनट।"
+    },
+    "claim.tempo.down.1": {
+      "casual": "{club} ने खेल धीमा कर दिया है।",
+      "analyst": "{club} ने खेल धीमा किया: {before} से {after} टच प्रति मिनट।"
+    },
+    "claim.directness.up.1": {
+      "casual": "{club} अब लंबे और सीधे पास खेल रहे हैं।",
+      "analyst": "{club} ज़्यादा सीधा खेल रहे हैं: अब {after} प्रतिशत पास लंबे और आगे की ओर, पहले {before}।"
+    },
+    "claim.directness.down.1": {
+      "casual": "{club} छोटे पास खेल रहे हैं।",
+      "analyst": "{club} छोटे पास खेल रहे हैं: लंबे आगे के पास {before} से घटकर {after} प्रतिशत।"
+    },
+    "claim.width.up.1": {
+      "casual": "{club} खेल को चौड़ा कर रहे हैं।",
+      "analyst": "{club} चौड़ा खेल रहे हैं: बीच से {before} से {after} मीटर।"
+    },
+    "claim.width.down.1": {
+      "casual": "{club} खेल को सिकोड़ रहे हैं।",
+      "analyst": "{club} तंग खेल रहे हैं: बीच से {before} से {after} मीटर।"
+    },
+    "claim.line_height.up.1": {
+      "casual": "{club} की डिफ़ेंस लाइन आगे बढ़ी है।",
+      "analyst": "{club} के डिफ़ेंडर आगे आए: {before} से {after} मीटर।"
+    },
+    "claim.line_height.down.1": {
+      "casual": "{club} की डिफ़ेंस लाइन पीछे हटी है।",
+      "analyst": "{club} के डिफ़ेंडर पीछे हटे: {before} से {after} मीटर।"
+    },
+    "claim.possession_share.up.1": {
+      "casual": "{club} के पास गेंद ज़्यादा है।",
+      "analyst": "पिछले {window_min} मिनट में {club} के पास {after} प्रतिशत गेंद रही, पहले {before}।"
+    },
+    "claim.possession_share.down.1": {
+      "casual": "{club} के पास गेंद कम है।",
+      "analyst": "{club} का कब्ज़ा घटकर {after} प्रतिशत, पहले {before}।"
+    },
+    "claim.shot_count.up.1": {
+      "casual": "{club} ज़्यादा शॉट लगा रहे हैं।",
+      "analyst": "पिछले {window_min} मिनट में {club} के {after} शॉट, पहले {before}।"
+    },
+    "claim.shot_count.down.1": {
+      "casual": "{club} के शॉट थम गए हैं।",
+      "analyst": "पिछले {window_min} मिनट में {club} के {after} शॉट, पहले {before}।"
+    },
+    "summary.possession.1": {
+      "casual": "हाल में गेंद ज़्यादातर {club} के पास रही है।",
+      "analyst": "पिछले {window_min} मिनट में {club} के पास {percent} प्रतिशत गेंद रही।"
+    },
+    "cause.PRESS_HIGHER.1": {
+      "casual": "लगता है वे जानबूझकर ऊपर गेंद छीनना चाहते हैं।",
+      "analyst": "लगता है वे जानबूझकर ऊपर गेंद छीनना चाहते हैं।"
+    },
+    "cause.DROP_DEEPER.1": {
+      "casual": "लगता है उन्होंने पीछे रहकर खेलना चुना है।",
+      "analyst": "लगता है उन्होंने पीछे रहकर खेलना चुना है।"
+    },
+    "cause.GO_DIRECT.1": {
+      "casual": "लगता है वे लंबी गेंदों की ओर मुड़ गए हैं।",
+      "analyst": "लगता है वे लंबी गेंदों की ओर मुड़ गए हैं।"
+    },
+    "cause.RAISE_TEMPO.1": {
+      "casual": "लगता है वे तेज़ खेलना चाहते हैं।",
+      "analyst": "लगता है वे तेज़ खेलना चाहते हैं।"
+    },
+    "cause.SLOW_TEMPO.1": {
+      "casual": "लगता है वे खेल को धीमा कर रहे हैं।",
+      "analyst": "लगता है वे खेल को धीमा कर रहे हैं।"
+    },
+    "cause.WIDEN.1": {
+      "casual": "लगता है वे डिफ़ेंस को फैलाना चाहते हैं।",
+      "analyst": "लगता है वे डिफ़ेंस को फैलाना चाहते हैं।"
+    },
+    "cause.NARROW.1": {
+      "casual": "लगता है वे बीच में भीड़ बना रहे हैं।",
+      "analyst": "लगता है वे बीच में भीड़ बना रहे हैं।"
+    },
+    "cause.PARK_THE_BUS.1": {
+      "casual": "लगता है वे पूरी टीम के साथ बचाव कर रहे हैं।",
+      "analyst": "लगता है वे पूरी टीम के साथ बचाव कर रहे हैं।"
+    },
+    "cause.ALL_OUT_ATTACK.1": {
+      "casual": "लगता है वे सब कुछ झोंककर हमला कर रहे हैं।",
+      "analyst": "लगता है वे सब कुछ झोंककर हमला कर रहे हैं।"
+    },
+    "cause.RED_CARD_REORG.1": {
+      "casual": "यह रेड कार्ड के बाद का बदलाव है।",
+      "analyst": "यह रेड कार्ड के बाद का बदलाव है।"
+    },
+    "cause.CHASING_GAME.1": {
+      "casual": "लगता है वे स्कोर बराबर करने की कोशिश में हैं।",
+      "analyst": "लगता है वे स्कोर बराबर करने की कोशिश में हैं।"
+    },
+    "cause.PROTECTING_LEAD.1": {
+      "casual": "लगता है वे बढ़त बचाने में लगे हैं।",
+      "analyst": "लगता है वे बढ़त बचाने में लगे हैं।"
+    },
+    "replay.1": {
+      "casual": "फिर से सुनिए, आवाज़ में।",
+      "analyst": "फिर से सुनिए, आवाज़ में।"
+    },
+    "recap.half_time.1": {
+      "casual": "हाफ़-टाइम सार। {home} {home_score}, {away} {away_score}।",
+      "analyst": "हाफ़-टाइम सार। {home} {home_score}, {away} {away_score}।"
+    },
+    "recap.full_time.1": {
+      "casual": "फ़ुल-टाइम सार। {home} {home_score}, {away} {away_score}।",
+      "analyst": "फ़ुल-टाइम सार। {home} {home_score}, {away} {away_score}।"
+    },
+    "recap.goal.1": {
+      "casual": "{player} ने {club} के लिए गोल किया, मिनट {minute}।",
+      "analyst": "{player} ने {club} के लिए गोल किया, मिनट {minute}।"
+    },
+    "recap.own_goal.1": {
+      "casual": "{player} का आत्मघाती गोल {club} के खाते में गया, मिनट {minute}।",
+      "analyst": "{player} का आत्मघाती गोल {club} के खाते में गया, मिनट {minute}।"
+    },
+    "recap.no_goals.1": {
+      "casual": "कोई गोल नहीं हुआ।",
+      "analyst": "कोई गोल नहीं हुआ।"
+    },
+    "recap.red_card.1": {
+      "casual": "{club} के {player} को बाहर भेजा गया, मिनट {minute}।",
+      "analyst": "{club} के {player} को बाहर भेजा गया, मिनट {minute}।"
+    },
+    "recap.shots.1": {
+      "casual": "{club} ने ज़्यादा शॉट लगाए।",
+      "analyst": "शॉट: {home} {home_shots}, {away} {away_shots}।"
+    },
+    "recap.shots_level.1": {
+      "casual": "शॉट बराबर रहे।"
+    },
+    "recap.possession.1": {
+      "casual": "गेंद ज़्यादातर {club} के पास रही।",
+      "analyst": "{club} के पास {percent} प्रतिशत गेंद रही।"
+    },
+    "stat.shot_speed.1": {
+      "analyst": "शॉट की रफ़्तार: {player}, {speed} किलोमीटर प्रति घंटा।"
+    },
+    "stat.pass_difficulty.made.1": {
+      "analyst": "{player} का बहुत मुश्किल पास, कठिनाई {value}, और पास सफल।"
+    },
+    "stat.pass_difficulty.missed.1": {
+      "analyst": "{player} का बहुत मुश्किल पास, कठिनाई {value}, पर पास नाकाम।"
+    },
+    "stat.press_height.up.1": {
+      "analyst": "प्रेस की ऊँचाई: पिछले {window_min} मिनट में {club} {before} से बढ़कर {after} मीटर।"
+    },
+    "stat.press_height.down.1": {
+      "analyst": "प्रेस की ऊँचाई: पिछले {window_min} मिनट में {club} {before} से घटकर {after} मीटर।"
+    },
+    "stat.possession.up.1": {
+      "analyst": "कब्ज़ा: पिछले {window_min} मिनट में {club} {before} से बढ़कर {after} प्रतिशत।"
+    },
+    "stat.danger.1": {
+      "analyst": "ख़तरा: पिछले {window_min} मिनट में {club} बहुत ख़तरनाक रहे हैं।"
+    }
+  }
+}

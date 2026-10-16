@@ -1,0 +1,120 @@
+{
+  "landing": {
+    "wordmark": "Earshot",
+    "tagline": "Live football you can follow by ear.",
+    "fiction": "A made-up match between made-up clubs.",
+    "screenReader": "Earshot speaks in its own voice. Using a screen reader? Switch to text after you start.",
+    "listen": "Listen now",
+    "headphones": "Best with headphones. You'll hear left, then right.",
+    "connecting": "Connecting…",
+    "choose": "Choose language and style",
+    "live": "Join the live match"
+  },
+  "listen": {
+    "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}.",
+    "status": {
+      "live": "Live",
+      "dead": "Ball out of play",
+      "recorded": "Recorded clip",
+      "paused": "Paused",
+      "ended": "Clip over"
+    },
+    "onAir": "On air now",
+    "waiting": "Waiting for the next line",
+    "pause": "Pause",
+    "resume": "Resume",
+    "whereBall": "Where's the ball?",
+    "catchUp": "Catch me up",
+    "howTalks": "How Earshot talks",
+    "settings": "Settings",
+    "transcript": "What Earshot said",
+    "transcriptEmpty": "Lines appear here as they're spoken.",
+    "recaps": "Recaps",
+    "recapsEmpty": "The half-time and full-time recaps appear here.",
+    "ended": "End of the clip. {{home}} {{homeScore}}, {{away}} {{awayScore}}.",
+    "again": "Play it again",
+    "restore": "Tap to restore sound",
+    "soundBlocked": "Sound is blocked. Tap to restore sound.",
+    "giveUp": "Couldn't reach the match. Try again.",
+    "tryAgain": "Try again",
+    "analysisPrefix": "Analysis:",
+    "outputApp": "Earshot's voice",
+    "outputReader": "My screen reader",
+    "outputAppHint": "Earshot speaks every line, with the ball placed in sound.",
+    "outputReaderHint": "Lines go to your screen reader at your own speed. The ball sound keeps playing.",
+    "close": "Back to the match",
+    "reconnecting": "Reconnecting to the match…",
+    "recapReady": {
+      "half_time": "Half-time recap ready.",
+      "full_time": "Full-time recap ready."
+    },
+    "recapTitle": {
+      "half_time": "Half-time",
+      "full_time": "Full-time"
+    }
+  },
+  "media": {
+    "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",
+    "artist": "Earshot"
+  },
+  "setup": {
+    "step": "Step {{n}} of {{m}}",
+    "back": "Back",
+    "next": "Next",
+    "listen": "Listen",
+    "language": {
+      "title": "Which language?"
+    },
+    "output": {
+      "title": "How should Earshot talk to you?",
+      "app": "Earshot's voice",
+      "appHint": "Earshot speaks every line, with the ball placed in sound. Best with headphones.",
+      "reader": "My screen reader",
+      "readerHint": "Lines go to your screen reader at your own speed. The ball sound keeps playing.",
+      "oneEar": "One ear only",
+      "oneEarHint": "Everything centred, for one earbud or one good ear."
+    },
+    "mode": {
+      "title": "How much detail?",
+      "casual": "Casual",
+      "casualHint": "What happened and who did it. Numbers only for the score, the minute and the hardest shots.",
+      "analyst": "Analyst",
+      "analystHint": "The same, plus the numbers: pass lengths, shot speeds and how each team's tactics are changing."
+    },
+    "stat": {
+      "title": "Follow one stat?",
+      "none": "No, just Analyst",
+      "noneHint": "Every Analyst line, with no stat singled out.",
+      "press_height": "Press height",
+      "press_heightHint": "Told when a team presses 5 metres higher or lower than before.",
+      "danger": "Danger",
+      "dangerHint": "Told when a team has one of its most threatening spells.",
+      "pass_difficulty": "Pass difficulty",
+      "pass_difficultyHint": "Every very hard pass, and whether it came off.",
+      "shot_speed": "Shot speed",
+      "shot_speedHint": "The speed of every shot.",
+      "possession": "Possession",
+      "possessionHint": "Told when a team's share of the ball jumps by 10 points."
+    }
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "ar": "العربية",
+    "hi": "हिन्दी"
+  },
+  "agents": {
+    "title": "Behind the voice",
+    "lede": "These agents share one audio channel; a separate auditor re-checks every line. This is what each one last decided.",
+    "airtime": "On air {{seconds}} s of the last minute.",
+    "legendCaller": "play-by-play",
+    "legendAnalyst": "analysis",
+    "legendFallback": "code summary",
+    "agent": "Agent",
+    "decision": "Latest decision",
+    "time": "Clip time",
+    "blocked": "Blocked:",
+    "onAir": "On air:",
+    "idle": "Waiting"
+  }
+}

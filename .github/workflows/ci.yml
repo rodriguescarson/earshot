@@ -26,6 +26,23 @@ jobs:
       # SEC3: fail on known vulnerabilities in the locked runtime dependencies.
       - run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
       - run: uvx pip-audit==2.9.0 -r requirements.txt --strict --progress-spinner off
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec biome check .
+      - run: pnpm exec tsc -b --noEmit
+      - run: pnpm exec vitest run
+      - run: pnpm exec vite build
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 5

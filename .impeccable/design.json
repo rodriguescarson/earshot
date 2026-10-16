@@ -1,0 +1,252 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-10-16T12:05:17+00:00",
+ "title": "Design System: Earshot",
+ "extensions": {
+  "colorMeta": {
+   "chalk-ground": {
+    "role": "neutral",
+    "displayName": "Chalk Ground",
+    "canonical": "#f1f3f2"
+   },
+   "charcoal-ink": {
+    "role": "neutral",
+    "displayName": "Charcoal Ink",
+    "canonical": "#1f2427"
+   },
+   "slate-soft-ink": {
+    "role": "neutral",
+    "displayName": "Slate Soft Ink",
+    "canonical": "#3f474c"
+   },
+   "on-plate-soft": {
+    "role": "neutral",
+    "displayName": "Plate Soft",
+    "canonical": "#c9cfcc"
+   },
+   "seam-grey": {
+    "role": "neutral",
+    "displayName": "Seam Grey",
+    "canonical": "#6c7479"
+   },
+   "signal-red": {
+    "role": "primary",
+    "displayName": "Signal Red",
+    "canonical": "#c42b21"
+   },
+   "signal-red-bright": {
+    "role": "primary",
+    "displayName": "Signal Red, bright (on dark)",
+    "canonical": "#ff6b5e"
+   },
+   "night-ground": {
+    "role": "neutral",
+    "displayName": "Night Ground (dark theme)",
+    "canonical": "#121618"
+   },
+   "night-ink": {
+    "role": "neutral",
+    "displayName": "Night Ink (dark theme)",
+    "canonical": "#eef1ef"
+   },
+   "night-soft-ink": {
+    "role": "neutral",
+    "displayName": "Night Soft Ink (dark theme)",
+    "canonical": "#bcc3bf"
+   },
+   "night-plate-soft": {
+    "role": "neutral",
+    "displayName": "Night Plate Soft (dark theme)",
+    "canonical": "#3c4448"
+   },
+   "night-seam": {
+    "role": "neutral",
+    "displayName": "Night Seam (dark theme)",
+    "canonical": "#7d878c"
+   }
+  },
+  "typographyMeta": {
+   "display": {
+    "displayName": "Display",
+    "purpose": "The Earshot wordmark on the landing plate only."
+   },
+   "headline": {
+    "displayName": "Score",
+    "purpose": "The score line; always the largest type on the listening screen, tabular figures."
+   },
+   "title": {
+    "displayName": "Step title",
+    "purpose": "One setup question per screen."
+   },
+   "on-air": {
+    "displayName": "On air",
+    "purpose": "The line on air now; reserves two lines so the panel does not jump."
+   },
+   "body": {
+    "displayName": "Body",
+    "purpose": "Transcript lines, recaps (65ch), running text."
+   },
+   "label": {
+    "displayName": "Label",
+    "purpose": "Buttons, choice labels, status lines."
+   },
+   "small": {
+    "displayName": "Small",
+    "purpose": "Hints, notes, table cells, captions."
+   }
+  },
+  "shadows": [],
+  "motion": [
+   {
+    "name": "press",
+    "value": "transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+    "purpose": "Lift-button press: moves down 2px."
+   },
+   {
+    "name": "transcript-fade",
+    "value": "color 300ms ease-out",
+    "purpose": "Earlier transcript lines fade to soft ink."
+   },
+   {
+    "name": "reduced-motion",
+    "value": "none",
+    "purpose": "All transitions and animations are removed under prefers-reduced-motion."
+   }
+  ],
+  "breakpoints": [
+   {
+    "name": "narrow",
+    "value": "22rem",
+    "purpose": "Controls collapse to one column below this."
+   },
+   {
+    "name": "short-landscape",
+    "value": "(orientation: landscape) and (max-height: 32rem)",
+    "purpose": "Listening column widens to 64rem and splits in two."
+   },
+   {
+    "name": "producer",
+    "value": "64rem",
+    "purpose": "The producer column (agent table and airtime bar) appears at 1024px and wider."
+   }
+  ]
+ },
+ "components": [
+  {
+   "name": "Primary Button",
+   "kind": "button",
+   "refersTo": "button-primary",
+   "description": "A lift-button plate; one per screen.",
+   "html": "<button class=\"ds-btn-primary\">Listen now</button>",
+   "css": ".ds-btn-primary{min-height:3rem;padding:1rem 1.5rem;border-radius:2px;background:var(--plate,#1f2427);color:var(--on-plate,#f1f3f2);border:2px solid var(--plate,#1f2427);font:700 1.125rem/1.5 'Atkinson Hyperlegible Next',system-ui,sans-serif;text-align:start;cursor:pointer;transition:transform 120ms cubic-bezier(0.2,0.8,0.2,1)}.ds-btn-primary:active{transform:translateY(2px)}.ds-btn-primary:focus-visible{outline:3px solid var(--spot,#c42b21);outline-offset:3px}"
+  },
+  {
+   "name": "Secondary Button",
+   "kind": "button",
+   "refersTo": "button-secondary",
+   "description": "Seam-outlined plate for on-demand questions.",
+   "html": "<button class=\"ds-btn-secondary\">Where's the ball?</button>",
+   "css": ".ds-btn-secondary{min-height:3rem;padding:1rem 1.5rem;border-radius:2px;background:var(--ground,#f1f3f2);color:var(--ink,#1f2427);border:2px solid var(--seam,#6c7479);font:700 1.125rem/1.5 'Atkinson Hyperlegible Next',system-ui,sans-serif;text-align:start;cursor:pointer;transition:transform 120ms cubic-bezier(0.2,0.8,0.2,1)}.ds-btn-secondary:active{transform:translateY(2px)}.ds-btn-secondary:focus-visible{outline:3px solid var(--spot,#c42b21);outline-offset:3px}"
+  },
+  {
+   "name": "Link Button",
+   "kind": "button",
+   "refersTo": "button-link",
+   "description": "The quiet second path on a screen.",
+   "html": "<button class=\"ds-link\">Choose language and style</button>",
+   "css": ".ds-link{min-height:3rem;padding:0;background:none;border:0;color:var(--ink,#1f2427);font:700 1.125rem/1.5 'Atkinson Hyperlegible Next',system-ui,sans-serif;text-decoration:underline;text-underline-offset:0.25em;text-decoration-thickness:2px;cursor:pointer}.ds-link:focus-visible{outline:3px solid var(--spot,#c42b21);outline-offset:3px}"
+  },
+  {
+   "name": "Choice",
+   "kind": "input",
+   "refersTo": "choice",
+   "description": "A radio plate: label and hint; selection thickens the border.",
+   "html": "<label class=\"ds-choice\"><input type=\"radio\" name=\"ds\" checked><span class=\"ds-choice__label\">Earshot's voice</span><span class=\"ds-choice__hint\">Earshot speaks every line. Best with headphones.</span></label>",
+   "css": ".ds-choice{display:grid;grid-template-columns:auto 1fr;column-gap:1rem;padding:1rem;border:2px solid var(--seam,#6c7479);border-radius:2px;cursor:pointer;font-family:'Atkinson Hyperlegible Next',system-ui,sans-serif;color:var(--ink,#1f2427)}.ds-choice:has(input:checked){border:3px solid var(--ink,#1f2427)}.ds-choice input{width:1.5rem;height:1.5rem;margin:0.1rem 0 0;accent-color:var(--ink,#1f2427);grid-row:span 2}.ds-choice__label{font-weight:700;font-size:1.125rem}.ds-choice__hint{color:var(--ink-soft,#3f474c);font-size:1rem}"
+  },
+  {
+   "name": "Score Plate",
+   "kind": "card",
+   "refersTo": "plate",
+   "description": "Reversed charcoal plate with the score line and status.",
+   "html": "<section class=\"ds-plate\"><h1 class=\"ds-score\">Sparkwheel 1, Saltwings 0. Minute 63.<span class=\"ds-score__status\">Live</span></h1></section>",
+   "css": ".ds-plate{background:var(--plate,#1f2427);color:var(--on-plate,#f1f3f2);border-radius:2px;padding:1.5rem}.ds-score{margin:0;font:800 clamp(2rem,8vw,3.25rem)/1.1 'Atkinson Hyperlegible Next',system-ui,sans-serif;font-variant-numeric:tabular-nums}.ds-score__status{display:block;margin-top:0.5rem;font-size:1.125rem;font-weight:700;color:var(--on-plate-soft,#c9cfcc)}"
+  },
+  {
+   "name": "On-air Panel",
+   "kind": "custom",
+   "refersTo": "on-air-panel",
+   "description": "The line on air now, with the state dot (filled = on air).",
+   "html": "<section class=\"ds-onair\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"9\" r=\"7\" fill=\"#c42b21\"/></svg><p class=\"ds-onair__text\">Throw-in, Sparkwheel.</p></section>",
+   "css": ".ds-onair{display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;padding:1.5rem;border:2px solid var(--ink,#1f2427);border-radius:2px;background:var(--ground,#f1f3f2);color:var(--ink,#1f2427)}.ds-onair svg{margin-top:0.35rem}.ds-onair__text{margin:0;font:700 clamp(1.375rem,5vw,1.75rem)/1.3 'Atkinson Hyperlegible Next',system-ui,sans-serif;min-height:2.6em}"
+  },
+  {
+   "name": "State Dots",
+   "kind": "custom",
+   "description": "Filled = on air, hollow = waiting, doubled = never-drop. Form first, colour second.",
+   "html": "<div class=\"ds-dots\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\"><circle cx=\"9\" cy=\"9\" r=\"7\" fill=\"#c42b21\"/></svg><svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\"><circle cx=\"9\" cy=\"9\" r=\"6\" fill=\"none\" stroke=\"#1f2427\" stroke-width=\"2.5\"/></svg><svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\"><circle cx=\"5.5\" cy=\"9\" r=\"4\" fill=\"#1f2427\"/><circle cx=\"13\" cy=\"9\" r=\"4\" fill=\"#1f2427\"/></svg></div>",
+   "css": ".ds-dots{display:flex;gap:1rem;align-items:center}"
+  }
+ ],
+ "narrative": {
+  "northStar": "The Tactile Plate",
+  "overview": "Earshot's screen is a station wayfinding plate: braille signage, tactile maps and blister paving, read at arm's length, zoomed in, or not at all. The match is a plate that always says where you are. Sound carries where the ball is; the screen confirms, in one glance, three things only: the score, the minute and the line on air now.\n\nThe world is two colours plus one spot. Charcoal plates sit on a chalk ground; a faint raised-dot grid (blister paving) runs under everything and doubles as the spacing armature, so every plate snaps to whole cells and the grid scales with the reader's own text size. Depth comes from seams and reversal, never shadows. The one spot colour, signal red, means \"on air now\" and nothing else. Every state is carried by form first (a filled, hollow or doubled dot; a corduroy band for attention) and colour second, so nothing depends on seeing red.\n\nDensity is low and the type is large because the people looking at this screen are often partially sighted, zoomed, or glancing at a phone in a pocket. Blind listeners meet the same screen as structure through VoiceOver or TalkBack, and for them the heading order and the live regions are the design.",
+  "keyCharacteristics": [
+   "Two colours and one spot; the spot is reserved for \"on air now\".",
+   "Square-cut plates (2px corners) divided by seams; flat, no shadows.",
+   "A raised-dot ground grid on a 0.5rem cell; all spacing in whole or half cells.",
+   "One typeface, Atkinson Hyperlegible Next, ranked by weight and size only.",
+   "State by form first: filled, hollow and doubled dots.",
+   "Light and dark themes follow the device; both measured at WCAG AA or better."
+  ],
+  "rules": [
+   {
+    "name": "The One Spot Rule",
+    "body": "Signal red appears only where something is on air now, or as the keyboard focus ring. It is never decoration, never an error colour by itself, never a brand fill.",
+    "section": "colors"
+   },
+   {
+    "name": "The No Blue Rule",
+    "body": "No blue anywhere, never orange with blue, no yellow or cream grounds. The palette is chalk, charcoal and one red.",
+    "section": "colors"
+   },
+   {
+    "name": "The Form Before Colour Rule",
+    "body": "Every state readable in red must also be readable in greyscale: the on-air dot is filled, waiting is hollow, never-drop is doubled, attention is a corduroy band.",
+    "section": "colors"
+   },
+   {
+    "name": "The Reader's Size Rule",
+    "body": "The root is 100% of the reader's setting and every size is in rem, so the device's text size scales the whole plate, including the dot grid.",
+    "section": "typography"
+   },
+   {
+    "name": "The Score Is Biggest Rule",
+    "body": "On the listening screen nothing outranks the score line in size or weight.",
+    "section": "typography"
+   },
+   {
+    "name": "The Seams Not Shadows Rule",
+    "body": "Separate plates with a seam or a reversal. A box-shadow is a defect.",
+    "section": "elevation"
+   }
+  ],
+  "dos": [
+   "Do use signal red only for \"on air now\" and the focus ring.",
+   "Do pair every coloured state with a form (filled, hollow, doubled dot; corduroy band) and with text.",
+   "Do separate surfaces with seams (2px) or a charcoal reversal.",
+   "Do size everything in rem and space in 0.5rem cells, so the reader's text size scales the whole plate.",
+   "Do keep one primary action per screen; second paths are underlined links.",
+   "Do keep the score line the largest type on the listening screen, with tabular figures.",
+   "Do measure contrast for any new colour pairing in both themes before shipping (AA: 4.5:1 text, 3:1 large text and UI parts)."
+  ],
+  "donts": [
+   "Don't use box-shadows, gradients as fills, or glass effects; the only patterned fills are the dot grid, the corduroy attention band and the agent legend hatches.",
+   "Don't use blue, orange with blue, yellow or cream anywhere.",
+   "Don't add a second typeface or decorative braille; the braille wordmark on the landing is the only braille.",
+   "Don't round corners beyond 2px or introduce pill shapes.",
+   "Don't put a visual ball strip on the listening screen; where the ball is lives in the sound.",
+   "Don't make colour the only signal for any state."
+  ]
+ }
+}

@@ -130,6 +130,43 @@ Evaluation profiles: P1 Casual, App voice, nothing followed; P2 Analyst, App voi
 and player; P3 Casual, screen-reader mode; P4 Analyst, one-ear mode, following shot speed; P5
 Analyst, App voice, nothing followed.
 
+### 4.1 Listening test protocol (earshot-listening-v1), pre-registered 2026-10-16
+
+Committed before any participant is tested; the commit timestamp is the proof.
+
+- **Question:** does placing the ball in sound help a listener follow the match?
+- **Arms (within-subject):**
+  - `speech`: speech only, centred;
+  - `pan`: speech panned to the ball;
+  - `full`: speech with pan, plus the continuous ball tone and crowd layer.
+
+  The goal replay is excluded from all three arms.
+- **Clips:** three 3-minute clips from development seeds, chosen by `python -m earshot.listening` as the three distinct matches whose action-density scores are closest together, each with a goal 60-90 s in. The demo match is excluded.
+  - Seeds 36, 32 and 12.
+  - Fixtures and clips: `data/clips/listen-test/`.
+  - Clip order is fixed (A, B, C).
+- **Arm order:** three orders (a Latin square), assigned by participant number: order = (participant - 1) mod 3.
+  - Order 1: speech, pan, full.
+  - Order 2: pan, full, speech.
+  - Order 3: full, speech, pan.
+- **Setup:** stereo headphones, with a left/right check before trial 1.
+  - The facilitator runs the `#test` page; the listener only hears.
+  - The arm is never named to the listener.
+- **Probes:** up to four per clip, at in-play moments at least 20 s apart (11 probes over the three clips). At each, the clip pauses and the facilitator asks three questions:
+  - "What's the score?"
+  - "Who has the ball?"
+  - "Where is the ball: left, middle or right?"
+
+  The true answers come from the events and the ball track. Each answer is marked correct, or wrong / don't know.
+- **Primary outcome:** "where" accuracy per arm. **Secondary:** score and possession accuracy per arm.
+- **Decision rules (from the design's Oct 19 checkpoint):**
+  - Pan stays if `pan` "where" accuracy is at least `speech` "where" accuracy.
+  - The continuous layer (and the goal replay with it) stays if `full` is at least `pan` on "where" and no worse on score and possession.
+- **Reporting:**
+  - n is stated, and every result is reported whichever way it goes.
+  - With small n these are descriptive counts, not significance claims.
+  - Blind and partially sighted participants are reported separately from sighted eyes-closed volunteers.
+
 ## 5. Results
 
 Appended after each run, with the command, the commit and the date. Development runs are listed
@@ -214,3 +251,21 @@ match itself, so its PASS is a plausibility check of the frame model, not an ind
 matches it never saw, the ball-near criterion misses by about 0.1 percentage points (the engine sometimes
 picks an interceptor further away than a player can run in the ball's flight time). G8 was pre-registered
 for the render match only, as the CEO plan scoped it.
+
+### Auditor (development run, not of record)
+2026-10-16, seeds 1-10 only (the held-out seeds 9001-9040 were not touched). The independent auditor
+(`earshot.agents.auditor`) re-reads each line against the reviewed template files and roster and
+recounts every number from the event log; it shares no code with the Checker's slot path.
+- 84,728 clean lines (Caller 72,576, code fallback 5,248, StatWatcher 6,064, recaps 840; four
+  languages, both modes), each with its exact SSML.
+- First pass: 208 findings. 120 were a real defect: the code fallback spoke possession rounded twice
+  (the match tool rounds the share to three places, then speech rounded half-to-even), so 52.55% was
+  said as "52". Fixed by rounding once from the unrounded share, with a regression test. The other
+  88 were gaps in the auditor (recap possession not tied to the named club; a recap red-card minute
+  checked against goal minutes); fixed in the auditor. Second pass: 0 findings.
+- Planted slot defects on seed 4 (all classes, English Analyst): 100% caught, including
+  real-but-wrong values the set-membership test cannot see (another real player 760/760, the other
+  club 583/583, scores swapped 3/3).
+- The 16 rendered demo clips: 557 lines audited, 0 findings, including the Analyst's claim lines.
+The auditor was changed after seeing these development results, so they are not evidence of its
+recall; the run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.

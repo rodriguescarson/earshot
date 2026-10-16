@@ -15,6 +15,7 @@ import asyncio
 import contextlib
 import logging
 import os
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -23,7 +24,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Route
+from starlette.routing import BaseRoute, Route
 
 from earshot.api.flags import CACHED_ONLY_NOTICE, BlobFlags, FileFlags, Flags, JudgeCodesFromFlags, SpendMeter
 from earshot.api.negotiate import NegotiateError, Negotiator, TokenIssuer
@@ -40,6 +41,55 @@ SECURITY_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
     "Cache-Control": "no-store",
 }
+
+
+MAX_BODY_BYTES = 16 * 1024
+"""Every request body the public endpoints take is a small JSON object."""
+
+
+class BodyLimit:
+    """ASGI middleware: refuse request bodies over ``MAX_BODY_BYTES`` (413), declared or streamed,
+    before an endpoint reads them. Bodies are read here (they are small) and replayed to the app;
+    after the body, ``receive`` is the server's again, so disconnects still reach a stream."""
+
+    def __init__(self, app, limit: int = MAX_BODY_BYTES) -> None:
+        self.app, self.limit = app, limit
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http" or scope.get("method") in ("GET", "HEAD", "OPTIONS"):
+            await self.app(scope, receive, send)
+            return
+        declared = dict(scope.get("headers") or []).get(b"content-length")
+        if declared is not None and (not declared.isdigit() or int(declared) > self.limit):
+            await self._too_large(send)
+            return
+        body, more = b"", True
+        while more:
+            message = await receive()
+            if message["type"] != "http.request":  # the client went away
+                return
+            body += message.get("body", b"")
+            more = message.get("more_body", False)
+            if len(body) > self.limit:
+                await self._too_large(send)
+                return
+        replayed = False
+
+        async def replay():
+            nonlocal replayed
+            if not replayed:
+                replayed = True
+                return {"type": "http.request", "body": body, "more_body": False}
+            return await receive()
+
+        await self.app(scope, replay, send)
+
+    @staticmethod
+    async def _too_large(send) -> None:
+        body = b'{"error": "request body too large"}'
+        headers = [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]
+        await send({"type": "http.response.start", "status": 413, "headers": headers})
+        await send({"type": "http.response.body", "body": body})
 
 
 class SecurityHeaders:
@@ -92,8 +142,14 @@ def default_flags() -> Flags:
 
 
 def build_app(
-    flags: Flags | None = None, issuer: TokenIssuer | None = None, poll_s: float = 30.0
+    flags: Flags | None = None,
+    issuer: TokenIssuer | None = None,
+    poll_s: float = 30.0,
+    extra_routes: Sequence[BaseRoute] = (),
+    extra_lifespans: Sequence[Callable[[Starlette], Any]] = (),
 ) -> Starlette:
+    """The worker app. ``extra_routes`` and ``extra_lifespans`` let another surface (the live
+    match broadcaster) share this app's headers, CORS and flag poller (see earshot.api.server)."""
     flags = flags or default_flags()
     meter = SpendMeter(flags)
     state: dict[str, Any] = {"issuer": issuer}
@@ -137,11 +193,14 @@ def build_app(
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette):
         task = asyncio.create_task(flags.poll(poll_s))
-        try:
-            yield
-        finally:
-            task.cancel()
-            meter.persist()
+        async with contextlib.AsyncExitStack() as stack:
+            for extra in extra_lifespans:
+                await stack.enter_async_context(extra(app))
+            try:
+                yield
+            finally:
+                task.cancel()
+                meter.persist()
 
     origins = [o for o in os.environ.get("EARSHOT_ALLOWED_ORIGINS", "").split(",") if o]
     app = Starlette(
@@ -149,9 +208,11 @@ def build_app(
             Route("/healthz", healthz),
             Route("/api/status", status),
             Route("/api/negotiate", negotiate, methods=["POST"]),
+            *extra_routes,
         ],
         middleware=[
             Middleware(SecurityHeaders),
+            Middleware(BodyLimit),
             Middleware(
                 CORSMiddleware,
                 allow_origins=origins,

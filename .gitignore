@@ -21,3 +21,8 @@ node_modules/
 data/
 p0/evidence/*.wav
 .impeccable/questions/
+web/node_modules/
+web/dist/
+web/public/clips
+.claude/settings.local.json
+web/tsconfig.tsbuildinfo

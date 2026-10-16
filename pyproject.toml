@@ -11,9 +11,12 @@ dependencies = [
   "agent-framework-foundry>=1.14",
   "mcp>=1.20",
   "azure-identity>=1.19",
-  "azure-messaging-webpubsubservice>=1.2",
-  "azure-storage-blob>=12.23",
+  "httpx>=0.27",
+  "starlette>=0.40",
   "uvicorn>=0.30",
+  "azure-storage-blob>=12.23",
+  "azure-messaging-webpubsubservice>=1.2",
+  "openai>=1.80",
 ]
 
 [project.scripts]
@@ -42,7 +45,11 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PT"]
-ignore = ["RUF001", "RUF002", "RUF003"]  # Arabic and Devanagari text is intentional
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]  # Arabic/Devanagari text is intentional; word lists read best as strings
+
+[tool.ruff.lint.per-file-ignores]
+"src/**" = ["PT018"]  # asserts in src narrow types for invariants; PT rules target tests
+"src/earshot/agents/analyst.py" = ["E501"]  # the system prompt reads best unwrapped
 
 [tool.pyright]
 include = ["src", "tests"]

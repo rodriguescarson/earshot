@@ -287,7 +287,7 @@ resource mcp 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'mcp'
           image: empty(mcpImage) ? placeholder : mcpImage
-          command: empty(mcpImage) ? [] : ['uvicorn', 'earshot.api.mcp:app', '--host', '0.0.0.0', '--port', '8080', '--proxy-headers', '--forwarded-allow-ips', '*']
+          command: empty(mcpImage) ? [] : ['uvicorn', 'earshot.api.mcp:app', '--host', '0.0.0.0', '--port', '8080', '--proxy-headers', '--forwarded-allow-ips', '*', '--no-access-log']
           resources: { cpu: json('0.25'), memory: '0.5Gi' }
           env: [
             { name: 'AZURE_CLIENT_ID', value: mcpId.properties.clientId }

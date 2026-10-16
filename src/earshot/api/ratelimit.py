@@ -82,6 +82,11 @@ class SlidingLimit:
 
 
 def client_ip(headers: dict[str, str], peer: str | None) -> str:
-    """The caller's address: the first X-Forwarded-For hop (the Container Apps ingress), else the peer."""
+    """The caller's address as the platform saw it: the last X-Forwarded-For entry, else the peer.
+
+    The Container Apps ingress appends the address it accepted the connection from. Every entry
+    before it came from the caller and can be anything, so the first entry is never trusted (a
+    made-up header there used to buy a fresh rate limit per request).
+    """
     fwd = headers.get("x-forwarded-for", "")
-    return fwd.split(",")[0].strip() or (peer or "unknown")
+    return fwd.split(",")[-1].strip() or (peer or "unknown")
