@@ -105,7 +105,7 @@
   },
   "agents": {
     "title": "Behind the voice",
-    "lede": "Six agents share one audio channel. This is what each one last decided.",
+    "lede": "These agents share one audio channel; a separate auditor re-checks every line. This is what each one last decided.",
     "airtime": "On air {{seconds}} s of the last minute.",
     "legendCaller": "play-by-play",
     "legendAnalyst": "analysis",

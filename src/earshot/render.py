@@ -15,6 +15,7 @@ import numpy as np
 from pydantic import TypeAdapter
 
 from earshot.agents.analyst import Analyst, timeout_for
+from earshot.agents.auditor import Auditor
 from earshot.agents.caller import Caller
 from earshot.agents.catalog import load
 from earshot.agents.checker import check_caller_line
@@ -346,6 +347,30 @@ def render_fixture(
                     blocked.append({"line": ln.text, "reason": v.reason})
                     log(ln.wall_ms, "Checker", f"blocked: {v.reason}", "block")
 
+    # The independent auditor (a separate code path) re-reads every line against the reviewed
+    # templates and roster and the whole event log; anything it finds never airs.
+    clubs_l, players_l = localized(d, language)
+    auditor = Auditor(match, full_match_events(d), clubs_l, players_l)
+    audit = {"lines": 0, "findings": []}
+    kept: list[Line] = []
+    for ln in lines:
+        audit["lines"] += 1
+        findings = auditor.audit(ln, ssml_for(ln))
+        if findings:
+            audit["findings"] += [{"line": ln.text, "kind": f.kind, "detail": f.detail} for f in findings]
+            blocked.append({"line": ln.text, "reason": f"auditor: {findings[0].detail}"})
+            log(ln.wall_ms, "Auditor", f"blocked: {findings[0].detail}", "block")
+        else:
+            kept.append(ln)
+            if ln.template_id != REPLAY_TEMPLATE:
+                log(
+                    ln.wall_ms,
+                    "Auditor",
+                    "passed: re-read against the reviewed templates, roster and event log",
+                    "ok",
+                )
+    lines = kept
+
     ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     synth = Synthesizer(cache)
     clips = {
@@ -436,6 +461,7 @@ def render_fixture(
             "tts_characters_sent": synth.characters,
         },
         "blocked": blocked,
+        "audit": audit,
         "agents": agents,
         "analyst_windows": windows,
     }

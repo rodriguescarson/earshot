@@ -117,15 +117,43 @@ def test_only_groups_the_match_can_serve_are_created(match26):
             m.join(GroupKey(*base[:3], OutputMode.ONE_EAR))
 
 
+def real_lines(match26, k=2):
+    """Real Caller lines (no numbers, so no event-log context needed), retimed to the test clock."""
+    from earshot.agents.catalog import NUMERIC_SLOTS
+    from earshot.eval.planted import _caller_items
+
+    r, clubs, players = match26
+    out = []
+    for ln, *_ in _caller_items(r.events, r.info, clubs, players, Language.EN, ListeningMode.CASUAL):
+        if not set(ln.slots) & NUMERIC_SLOTS and ln.text not in {x.text for x in out}:
+            out.append(
+                ln.model_copy(update={"line_id": f"l{len(out) + 1}", "wall_ms": 0, "deadline_wall_ms": 3000})
+            )
+        if len(out) == k:
+            return out
+    raise AssertionError("not enough lines")
+
+
+def test_the_auditor_blocks_a_made_up_line_before_it_airs(match26):
+    r, _, _ = match26
+    m, _ = _match(match26, FakeAudio())
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    asyncio.run(m._offer(g, _line(1, 15, 0)))  # player "X" is not in the reviewed roster
+    assert g.director.queue == []
+    asyncio.run(m._offer(g, real_lines(match26, 1)[0]))
+    assert len(g.director.queue) == 1
+
+
 def test_cached_only_mode_makes_no_speech_calls_and_airs_text(match26):
     r, _, _ = match26
     audio = FakeAudio(cached={"l1"})
     m, sent = _match(match26, audio, cached_only=lambda: True)
     g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    lines = real_lines(match26)
 
     async def go():
-        for i in (1, 2):
-            await m._offer(g, _line(i, 15, 0))
+        for ln in lines:
+            await m._offer(g, ln)
         for act in g.director.tick(m.match_ms()):
             if isinstance(act, Start):
                 await m._publish_line(g, act)
@@ -143,10 +171,12 @@ def test_cache_hits_do_not_spend_the_speech_budget(match26):
     m, _ = _match(match26, audio)
     m.budget.limit = 0
     g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
-    asyncio.run(m._offer(g, _line(1, 15, 0)))
+    first, second = real_lines(match26)
+    asyncio.run(m._offer(g, first))
     assert m.budget.used == 0
-    asyncio.run(m._offer(g, _line(2, 15, 0)))
+    asyncio.run(m._offer(g, second))
     assert audio.synthesized == []  # over budget: text only
+    assert len(g.director.queue) == 2  # both reached the Director: the test is not vacuous
 
 
 @pytest.mark.slow

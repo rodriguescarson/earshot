@@ -175,3 +175,21 @@ separately and are not results of record.
 ### Development runs (not of record)
 - 2026-10-16, engine 1.1.0, `uv run earshot gate --seeds 1-40 --workers 8`: G1, G2, G3 (slice
   means, informational), G4, G5, G6, G9 and G10 all PASS. Details in `reports/gate-slice.json`.
+
+### Auditor (development run, not of record)
+2026-10-16, seeds 1-10 only (the held-out seeds 9001-9040 were not touched). The independent auditor
+(`earshot.agents.auditor`) re-reads each line against the reviewed template files and roster and
+recounts every number from the event log; it shares no code with the Checker's slot path.
+- 84,728 clean lines (Caller 72,576, code fallback 5,248, StatWatcher 6,064, recaps 840; four
+  languages, both modes), each with its exact SSML.
+- First pass: 208 findings. 120 were a real defect: the code fallback spoke possession rounded twice
+  (the match tool rounds the share to three places, then speech rounded half-to-even), so 52.55% was
+  said as "52". Fixed by rounding once from the unrounded share, with a regression test. The other
+  88 were gaps in the auditor (recap possession not tied to the named club; a recap red-card minute
+  checked against goal minutes); fixed in the auditor. Second pass: 0 findings.
+- Planted slot defects on seed 4 (all classes, English Analyst): 100% caught, including
+  real-but-wrong values the set-membership test cannot see (another real player 760/760, the other
+  club 583/583, scores swapped 3/3).
+- The 16 rendered demo clips: 557 lines audited, 0 findings, including the Analyst's claim lines.
+The auditor was changed after seeing these development results, so they are not evidence of its
+recall; the run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.

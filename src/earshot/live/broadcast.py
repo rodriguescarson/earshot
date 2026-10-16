@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from earshot.agents.analyst import AnalystResult
+from earshot.agents.auditor import Auditor
 from earshot.agents.claims import (
     check_claim_line,
     claim_key,
@@ -54,6 +55,7 @@ from earshot.pipeline.workflow import MatchPipeline, WindowResult
 from earshot.sim.ballpath import ball_path
 from earshot.stats.danger import with_danger
 from earshot.tools.snapshots import MatchView
+from earshot.voice.tts import ssml_for
 from earshot.world.localize import roster as local_roster
 
 log = logging.getLogger("earshot.live")
@@ -195,6 +197,7 @@ class LiveMatch:
                 info, c, p, targets, analyst if script == "latin" else None
             )
         self.watcher = StatWatcher(info.home.team_id, info.away.team_id)
+        self.audited: dict[tuple[str, str], bool] = {}
         self.seen: list[Event] = []
         self._tasks: set[asyncio.Task] = set()
 
@@ -399,7 +402,22 @@ class LiveMatch:
             for ln in lines:
                 self._spawn(self._offer(g, ln))
 
+    def _audit_ok(self, line: Line) -> bool:
+        """The independent auditor over the events so far; a line with any finding never airs."""
+        key = (line.line_id, line.text)
+        ok = self.audited.get(key)
+        if ok is None:
+            clubs, players = self.views[line.language]
+            findings = Auditor(self.info, self.seen, clubs, players).audit(line, ssml_for(line))
+            ok = not findings
+            self.audited[key] = ok
+            if findings:
+                log.warning("auditor blocked %s: %s", line.text, findings[0].detail)
+        return ok
+
     async def _offer(self, g: Group, line: Line) -> None:
+        if not self._audit_ok(line):
+            return
         if g.key.output_mode is OutputMode.SCREEN_READER:
             duration = int(len(line.text) / 14 * 1000) + 300  # the reader speaks it; estimate its airtime
         else:

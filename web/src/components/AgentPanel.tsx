@@ -1,7 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { type AgentName, type ClipLine, latestByAgent, type Manifest } from "../player/manifest";
 
-const AGENTS: AgentName[] = ["Spotter", "Caller", "Checker", "Analyst", "Director", "Voice"];
+const AGENTS: AgentName[] = [
+  "Spotter",
+  "Caller",
+  "StatWatcher",
+  "Checker",
+  "Auditor",
+  "Analyst",
+  "Director",
+  "Voice",
+];
 const WINDOW_MS = 60_000;
 
 function clock(ms: number): string {
@@ -93,7 +102,9 @@ export function AgentPanel({ manifest, tMs }: { manifest: Manifest; tMs: number 
           </tr>
         </thead>
         <tbody>
-          {AGENTS.map((a) => {
+          {AGENTS.filter(
+            (a) => a !== "StatWatcher" || (manifest.agents ?? []).some((e) => e.agent === a),
+          ).map((a) => {
             const e = latest.get(a);
             return (
               <tr key={a} className={e ? `is-${e.kind}` : undefined}>
