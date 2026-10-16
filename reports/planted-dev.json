@@ -1,0 +1,212 @@
+{
+ "seeds": "1-10 (development, not of record)",
+ "rate": 0.25,
+ "stream1_commit": "fd5504c",
+ "points": [
+  {
+   "point": "analyst_json",
+   "defects_injected": 660,
+   "recall": 1.0,
+   "per_class": {
+    "fabricated_value": {
+     "injected": 130,
+     "blocked": 130,
+     "recall": 1.0
+    },
+    "future_window": {
+     "injected": 126,
+     "blocked": 126,
+     "recall": 1.0
+    },
+    "missing_event": {
+     "injected": 123,
+     "blocked": 123,
+     "recall": 1.0
+    },
+    "out_of_window_event": {
+     "injected": 133,
+     "blocked": 133,
+     "recall": 1.0
+    },
+    "wrong_direction": {
+     "injected": 148,
+     "blocked": 148,
+     "recall": 1.0
+    }
+   },
+   "clean": 2136,
+   "false_block_rate": 0.0,
+   "examples": []
+  },
+  {
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": [],
+   "language": "en"
+  },
+  {
+   "point": "roster_entries",
+   "defects_injected": 140,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 140,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8932,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ],
+   "language": "en"
+  },
+  {
+   "point": "template_strings",
+   "defects_injected": 707,
+   "recall": 0.8472,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 108,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 599,
+     "blocked": 599,
+     "recall": 1.0
+    }
+   },
+   "clean": 8365,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ],
+   "language": "en"
+  },
+  {
+   "point": "slot_values",
+   "defects_injected": 1158,
+   "recall": 1.0,
+   "per_class": {
+    "out_of_set_name": {
+     "injected": 432,
+     "blocked": 432,
+     "recall": 1.0
+    },
+    "out_of_set_number": {
+     "injected": 3,
+     "blocked": 3,
+     "recall": 1.0
+    },
+    "real_wrong_club": {
+     "injected": 307,
+     "blocked": 307,
+     "recall": 1.0
+    },
+    "real_wrong_player": {
+     "injected": 407,
+     "blocked": 407,
+     "recall": 1.0
+    },
+    "real_wrong_score": {
+     "injected": 9,
+     "blocked": 9,
+     "recall": 1.0
+    }
+   },
+   "clean": 7914,
+   "false_block_rate": 0.0,
+   "examples": [],
+   "language": "ar"
+  },
+  {
+   "point": "roster_entries",
+   "defects_injected": 140,
+   "recall": 0.0,
+   "per_class": {
+    "wrong_name_for_id": {
+     "injected": 140,
+     "blocked": 0,
+     "recall": 0.0
+    }
+   },
+   "clean": 8932,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: ",
+    "missed wrong_name_for_id: "
+   ],
+   "language": "ar"
+  },
+  {
+   "point": "template_strings",
+   "defects_injected": 707,
+   "recall": 0.8472,
+   "per_class": {
+    "name_in_fixed_text": {
+     "injected": 108,
+     "blocked": 0,
+     "recall": 0.0
+    },
+    "stray_numeral": {
+     "injected": 599,
+     "blocked": 599,
+     "recall": 1.0
+    }
+   },
+   "clean": 8365,
+   "false_block_rate": 0.0,
+   "examples": [
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: ",
+    "missed name_in_fixed_text: "
+   ],
+   "language": "ar"
+  }
+ ]
+}
