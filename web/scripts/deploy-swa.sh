@@ -22,4 +22,18 @@ fi
 SWA_CLI_DEPLOYMENT_TOKEN=$(az staticwebapp secrets list --name earshot-web -g rg-earshot \
   --subscription "$EARSHOT_SUBSCRIPTION" --query properties.apiKey -o tsv) \
   npx -y @azure/static-web-apps-cli@latest deploy ./dist --env production --no-use-keychain 2>&1 |
-  grep -v -i "token"
+  grep -v -i "token" || true
+
+# The CLI can report an upload failure and still exit 0, so check the live site serves this build.
+site="https://kind-island-0f3823d0f.5.azurestaticapps.net"
+want=$(grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1)
+for _ in 1 2 3 4 5 6; do
+  got=$(curl -s -m 20 "$site/" | grep -o 'assets/index-[^"]*\.js' | head -1 || true)
+  [ "$got" = "$want" ] && break
+  sleep 10
+done
+if [ "$got" != "$want" ]; then
+  echo "deploy NOT live: site serves ${got:-nothing}, this build is $want" >&2
+  exit 1
+fi
+echo "live: $site serves $want"
