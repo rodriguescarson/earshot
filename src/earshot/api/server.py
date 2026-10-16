@@ -8,6 +8,10 @@ Entrypoint: ``uvicorn earshot.api.server:app``.
   ``/audio/*``, and the broadcaster loop that runs the shared pipeline in real time and publishes to
   Web PubSub.
 
+The SSE stream gets the negotiate endpoint's limits (``earshot.api.streams``): the browser's
+EventSource connects to it directly, so limits that only negotiate applied would bind nobody.
+Judges trade their code for a signed ticket at ``POST /api/ticket``.
+
 Spend (SEC1) for both surfaces runs through one persisted ``SpendMeter``:
 - ``Live.cached_only`` reads the kill-switch flag, so the live app's own gate stops new speech and
   Analyst calls the moment the flag flips (it also skips the Analyst while nobody listens);
@@ -20,7 +24,10 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from earshot.api.flags import SpendMeter
+from starlette.routing import Route
+
+from earshot.api.flags import JudgeCodesFromFlags, SpendMeter
+from earshot.api.streams import StreamGuard, Tickets, guard_stream, ticket_endpoint
 from earshot.api.worker import build_app as build_worker
 
 ANALYST_CALL_TOKENS = 6_000
@@ -60,8 +67,26 @@ def build_app():
     from earshot.live import app as live
     from earshot.live import broadcast
 
-    worker = build_worker(extra_routes=live.ROUTES, extra_lifespans=[live.lifespan])
+    guard, tickets = StreamGuard(), Tickets()
+    routes = [
+        Route(r.path, guard_stream(r.endpoint, guard, tickets), methods=["GET"])
+        if isinstance(r, Route) and r.path == "/api/stream"
+        else r
+        for r in live.ROUTES
+    ]
+    assert any(isinstance(r, Route) and r.path == "/api/stream" for r in live.ROUTES), (
+        "live stream route moved"
+    )
+    holder: dict[str, Any] = {}
+
+    async def ticket(request):  # the judge codes come from the worker's flags, built below
+        return await holder["ticket"](request)
+
+    routes.append(Route("/api/ticket", ticket, methods=["POST"]))
+    worker = build_worker(extra_routes=routes, extra_lifespans=[live.lifespan])
     flags, meter = worker.state.flags, cast(SpendMeter, worker.state.meter)
+    holder["ticket"] = ticket_endpoint(JudgeCodesFromFlags(flags), tickets)
+    worker.state.stream_guard = guard
     limit = broadcast.DAILY_SPEECH_CHARS
     broadcast.SpeechBudget = lambda: MeteredSpeechBudget(meter, limit)  # type: ignore[assignment]
     live.live.cached_only = lambda: flags.cached_only
