@@ -99,8 +99,9 @@ happened.
 3. To try another language or mode, choose **Choose language and style**.
 4. On a screen 1024 px or wider, the agents' decisions appear in a second column.
 5. To hear a match as it happens, choose **Join the live match** on the first screen. The match
-   loops all day, so you may join in the middle of it. Judges' link: [PENDING: the link with the
-   judge code, from Stream 2; it skips the per-visitor limits.]
+   loops all day, so you may join in the middle of it. Judges' link: [PASTE AT SUBMISSION: the link
+   in judge-link.txt, which Stream 2 opened for you. It skips the per-visitor limits. It never
+   goes in the repo.]
 
 No sign-in. Every match, club and player is made up.
 
