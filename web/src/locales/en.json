@@ -6,7 +6,8 @@
     "screenReader": "Earshot speaks in its own voice. Using a screen reader? Switch to text after you start.",
     "listen": "Listen now",
     "headphones": "Best with headphones. You'll hear left, then right.",
-    "connecting": "Connecting…"
+    "connecting": "Connecting…",
+    "choose": "Choose language and style"
   },
   "listen": {
     "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}.",
@@ -45,5 +46,36 @@
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",
     "artist": "Earshot"
+  },
+  "setup": {
+    "step": "Step {{n}} of {{m}}",
+    "back": "Back",
+    "next": "Next",
+    "listen": "Listen",
+    "language": {
+      "title": "Which language?"
+    },
+    "output": {
+      "title": "How should Earshot talk to you?",
+      "app": "Earshot's voice",
+      "appHint": "Earshot speaks every line, with the ball placed in sound. Best with headphones.",
+      "reader": "My screen reader",
+      "readerHint": "Lines go to your screen reader at your own speed. The ball sound keeps playing.",
+      "oneEar": "One ear only",
+      "oneEarHint": "Everything centred, for one earbud or one good ear."
+    },
+    "mode": {
+      "title": "How much detail?",
+      "casual": "Casual",
+      "casualHint": "What happened and who did it. Numbers only for the score, the minute and the hardest shots.",
+      "analyst": "Analyst",
+      "analystHint": "The same, plus the numbers: pass lengths, shot speeds and how each team's tactics are changing."
+    }
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "ar": "العربية",
+    "hi": "हिन्दी"
   }
 }

@@ -1,6 +1,6 @@
 /** A rendered clip: one mixed audio file per arm plus the timed lines and score timeline. */
 
-export type Arm = "speech" | "pan" | "full" | "bed";
+export type Arm = "speech" | "pan" | "full" | "bed" | "mono";
 
 export interface ClipLine {
   t_ms: number;

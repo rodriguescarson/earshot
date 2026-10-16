@@ -1,0 +1,81 @@
+{
+  "landing": {
+    "wordmark": "Earshot",
+    "tagline": "Fútbol en directo para seguir de oído.",
+    "fiction": "Un partido inventado entre clubes inventados.",
+    "screenReader": "Earshot habla con su propia voz. ¿Usas un lector de pantalla? Cambia a texto después de empezar.",
+    "listen": "Escuchar ahora",
+    "headphones": "Mejor con auriculares. Oirás izquierda y luego derecha.",
+    "connecting": "Conectando…",
+    "choose": "Elegir idioma y estilo"
+  },
+  "listen": {
+    "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}.",
+    "status": {
+      "live": "En directo",
+      "dead": "Balón parado",
+      "recorded": "Clip grabado",
+      "paused": "En pausa",
+      "ended": "Fin del clip"
+    },
+    "onAir": "En el aire",
+    "waiting": "Esperando la siguiente frase",
+    "pause": "Pausa",
+    "resume": "Reanudar",
+    "whereBall": "¿Dónde está el balón?",
+    "catchUp": "Ponme al día",
+    "howTalks": "Cómo habla Earshot",
+    "settings": "Ajustes",
+    "transcript": "Lo que ha dicho Earshot",
+    "transcriptEmpty": "Las frases aparecen aquí a medida que se dicen.",
+    "recaps": "Resúmenes",
+    "recapsEmpty": "Aquí aparecen los resúmenes del descanso y del final.",
+    "ended": "Fin del clip. {{home}} {{homeScore}}, {{away}} {{awayScore}}.",
+    "again": "Escucharlo otra vez",
+    "restore": "Toca para recuperar el sonido",
+    "soundBlocked": "El sonido está bloqueado. Toca para recuperarlo.",
+    "giveUp": "No se pudo conectar con el partido. Inténtalo de nuevo.",
+    "tryAgain": "Intentar de nuevo",
+    "analysisPrefix": "Análisis:",
+    "outputApp": "La voz de Earshot",
+    "outputReader": "Mi lector de pantalla",
+    "outputAppHint": "Earshot dice cada frase y sitúa el balón en el sonido.",
+    "outputReaderHint": "Las frases van a tu lector de pantalla a tu ritmo. El sonido del balón sigue sonando.",
+    "close": "Volver al partido"
+  },
+  "media": {
+    "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}",
+    "artist": "Earshot"
+  },
+  "setup": {
+    "step": "Paso {{n}} de {{m}}",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "listen": "Escuchar",
+    "language": {
+      "title": "¿Qué idioma?"
+    },
+    "output": {
+      "title": "¿Cómo quieres que te hable Earshot?",
+      "app": "La voz de Earshot",
+      "appHint": "Earshot dice cada frase y sitúa el balón en el sonido. Mejor con auriculares.",
+      "reader": "Mi lector de pantalla",
+      "readerHint": "Las frases van a tu lector de pantalla a tu ritmo. El sonido del balón sigue sonando.",
+      "oneEar": "Un solo oído",
+      "oneEarHint": "Todo centrado, para un solo auricular o un solo oído."
+    },
+    "mode": {
+      "title": "¿Cuánto detalle?",
+      "casual": "Básico",
+      "casualHint": "Qué pasa y quién lo hace. Números solo para el marcador, el minuto y los disparos más fuertes.",
+      "analyst": "Analista",
+      "analystHint": "Lo mismo, más los números: longitud de los pases, velocidad de los disparos y cómo cambia la táctica de cada equipo."
+    }
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "ar": "العربية",
+    "hi": "हिन्दी"
+  }
+}

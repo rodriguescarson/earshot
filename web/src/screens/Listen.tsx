@@ -2,16 +2,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dot } from "../components/Dot";
 import { type Announcer, LiveRegions } from "../components/LiveRegions";
+import { ARM_FOR, type Output } from "../player/choices";
 import { type Manifest, onAirAt, scoreAt, spokenBy } from "../player/manifest";
 import { useClipPlayer } from "../player/useClipPlayer";
 
-type Output = "app" | "reader";
-
-export function Listen({ base, manifest }: { base: string; manifest: Manifest }) {
+export function Listen({
+  base,
+  manifest,
+  initialOutput,
+}: {
+  base: string;
+  manifest: Manifest;
+  initialOutput: Output;
+}) {
   const { t } = useTranslation();
-  const [output, setOutput] = useState<Output>("app");
+  const [output, setOutput] = useState<Output>(initialOutput);
   const [choosing, setChoosing] = useState(false);
-  const player = useClipPlayer(base, manifest, output === "app" ? "full" : "bed");
+  const player = useClipPlayer(base, manifest, ARM_FOR[output]);
   const announcer = useRef<Announcer>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const restore = useRef<HTMLButtonElement>(null);
@@ -116,7 +123,7 @@ export function Listen({ base, manifest }: { base: string; manifest: Manifest })
         >
           <fieldset>
             <legend>{t("listen.howTalks")}</legend>
-            {(["app", "reader"] as const).map((o, i) => (
+            {(["app", "reader", "oneEar"] as const).map((o, i) => (
               <label key={o} className="choice">
                 <input
                   ref={i === 0 ? firstOption : undefined}

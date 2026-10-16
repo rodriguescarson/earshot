@@ -1,7 +1,15 @@
 import { useTranslation } from "react-i18next";
 
 /** "Listen now": one decision, one primary action (CEO-11, DR-1, DR-7, DR-8). */
-export function Landing({ onListen, busy }: { onListen: () => void; busy: boolean }) {
+export function Landing({
+  onListen,
+  onChoose,
+  busy,
+}: {
+  onListen: () => void;
+  onChoose: () => void;
+  busy: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <main className="landing">
@@ -19,6 +27,9 @@ export function Landing({ onListen, busy }: { onListen: () => void; busy: boolea
       <p id="hp" className="landing__small">
         {t("landing.headphones")}
       </p>
+      <button type="button" className="link" onClick={onChoose}>
+        {t("landing.choose")}
+      </button>
       <p className="landing__small">{t("landing.fiction")}</p>
     </main>
   );

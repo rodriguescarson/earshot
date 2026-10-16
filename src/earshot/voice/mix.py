@@ -28,6 +28,8 @@ class Arm(StrEnum):
     """Speech with pan plus the continuous ball tone and crowd layer."""
     BED = "bed"
     """The continuous layer alone: screen-reader mode, where the reader speaks the lines."""
+    MONO = "mono"
+    """One-ear mode: everything centred; the ball tone's pitch says which third of the pitch it is in."""
 
 
 @dataclass(frozen=True)
@@ -101,14 +103,14 @@ def mix(
         if i0 < 0 or i0 >= n:
             continue
         x = x[: n - i0]
-        pan = 0.0 if arm is Arm.SPEECH else a.line.pan
+        pan = 0.0 if arm in (Arm.SPEECH, Arm.MONO) else a.line.pan
         gl, gr = _pan_gains(pan)
         out[i0 : i0 + len(x), 0] += x * float(gl)
         out[i0 : i0 + len(x), 1] += x * float(gr)
         c0, c1 = i0 // (SAMPLE_RATE // CONTROL_HZ), (i0 + len(x)) // (SAMPLE_RATE // CONTROL_HZ)
         speech_ctl[c0 : c1 + 1] = 1.0
 
-    if arm in (Arm.FULL, Arm.BED) and ball:
+    if arm in (Arm.FULL, Arm.BED, Arm.MONO) and ball:
         rng = np.random.default_rng(seed)
         t_ctl = start_ms + np.arange(len(speech_ctl)) * (1000 / CONTROL_HZ)
         bt = np.array([b.wall_ms for b in ball], np.float64)
@@ -124,9 +126,16 @@ def mix(
         duck = 1 - 0.65 * _smooth(speech_ctl, 0.06, 0.3)
         # Ball tone: soft G3 with a slow roll, panned along the full width of the pitch.
         t = np.arange(n, dtype=np.float32) / SAMPLE_RATE
-        tone = np.sin(2 * np.pi * 196 * t) + 0.22 * np.sin(2 * np.pi * 392 * t)
+        if arm is Arm.MONO:
+            # Pitch earcon instead of pan: low in the left third, G3 in the middle, high in the right third.
+            hz_ctl = np.where(bx < 35, 165.0, np.where(bx < 70, 196.0, 247.0)).astype(np.float32)
+            phase = 2 * np.pi * np.cumsum(_upsample(hz_ctl, n)) / SAMPLE_RATE
+            tone = np.sin(phase) + 0.22 * np.sin(2 * phase)
+            p = np.zeros(n, np.float32)
+        else:
+            tone = np.sin(2 * np.pi * 196 * t) + 0.22 * np.sin(2 * np.pi * 392 * t)
+            p = _upsample(np.clip(bx / 52.5 - 1, -1, 1).astype(np.float32), n)
         tone *= 0.8 + 0.2 * np.sin(2 * np.pi * 2.6 * t)
-        p = _upsample(np.clip(bx / 52.5 - 1, -1, 1).astype(np.float32), n)
         g_tone = _upsample((live * duck * _db(-25)).astype(np.float32), n)
         gl, gr = _pan_gains(p)
         out[:, 0] += tone * gl * g_tone
@@ -134,8 +143,10 @@ def mix(
         # Crowd: decorrelated brown noise per ear, rising with danger, roaring on goals.
         level = _db(-31) * (1 + 3.0 * danger + 5.0 * roar) * (0.55 + 0.45 * duck)
         g_crowd = _upsample(level.astype(np.float32), n)
-        out[:, 0] += _brown(rng, n) * g_crowd
-        out[:, 1] += _brown(rng, n) * g_crowd
+        left = _brown(rng, n)
+        right = left if arm is Arm.MONO else _brown(rng, n)
+        out[:, 0] += left * g_crowd
+        out[:, 1] += right * g_crowd
 
     peak = float(np.abs(out).max())
     if peak > 0:

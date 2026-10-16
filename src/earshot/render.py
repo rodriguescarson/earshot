@@ -335,7 +335,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--lang", type=Language, default=Language.EN)
     p.add_argument("--mode", type=ListeningMode, default=ListeningMode.CASUAL)
-    p.add_argument("--arms", default="speech,pan,full,bed")
+    p.add_argument("--arms", default="speech,pan,full,bed,mono")
     p.add_argument("--cache", type=Path, default=Path("data/tts-cache"))
     p.add_argument("--no-analyst", action="store_true", help="Caller only (no model calls)")
     a = p.parse_args(argv)
