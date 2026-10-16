@@ -43,7 +43,9 @@ time and full time there's a recap, which a studio can also take as text or data
 Facts and explanations come in different voices, so you always know which line the AI wrote. On a
 computer screen, a second column shows what each agent last decided and which line has the floor.
 
-[PENDING: the live match, once deployed.]
+There is also a live match. It plays in real time on our server, around the clock, and you can
+join it from the first screen. The same agents run it as it happens, including the AI's
+explanations during stoppages.
 
 ## How it's built
 
@@ -91,7 +93,9 @@ happened.
 2. Press **Listen now**. A recorded clip plays at once.
 3. To try another language or mode, choose **Choose language and style**.
 4. On a screen 1024 px or wider, the agents' decisions appear in a second column.
-5. [PENDING: live match steps.]
+5. To hear a match as it happens, choose **Join the live match** on the first screen. The match
+   loops all day, so you may join in the middle of it. Judges' link: [PENDING: the link with the
+   judge code, from Stream 2; it skips the per-visitor limits.]
 
 No sign-in. Every match, club and player is made up.
 

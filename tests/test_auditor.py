@@ -159,3 +159,29 @@ def test_fallback_possession_is_rounded_once_from_the_unrounded_share():
             assert ln.slots["percent"] == round(after * 100)
             checked += 1
     assert checked > 10
+
+
+def test_a_substitution_naming_the_wrong_teammate_is_caught():
+    # Stream 2's planted run found substitutions slipped through: on/off were checked for team
+    # membership only, so swapping in a real teammate passed. They are now bound to [on, off] ids.
+    from earshot.agents.catalog import load
+
+    r, clubs, players, aud = match(SEED, Language.EN)
+    ref = Roster.build(r.info, clubs, players)
+    subs = [
+        ln
+        for ln, *_ in _caller_items(r.events, r.info, clubs, players, Language.EN, ListeningMode.CASUAL)
+        if "on" in ln.slots
+    ]
+    assert subs
+    for ln in subs:
+        assert aud.audit(ln) == []
+        assert not reference_blocked(ln, ref)
+        team = ln.club_tags[0]
+        other = next(p.short_name for p in players if p.team_id == team and p.player_id not in ln.player_ids)
+        for slot in ("on", "off"):
+            slots = {**ln.slots, slot: other}
+            text = load(Language.EN).render(ln.template_id, ln.listening_mode, slots)
+            bad = ln.model_copy(update={"slots": slots, "text": text})
+            assert any(f.kind == "name" for f in aud.audit(bad)), slot
+            assert reference_blocked(bad, ref), slot
