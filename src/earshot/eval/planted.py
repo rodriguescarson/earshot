@@ -299,11 +299,20 @@ TEMPLATE_DEFECTS = ("stray_numeral", "name_in_fixed_text")
 
 
 def template_point(matches, clubs_of, players_of, language, mode, seed: int = 4,
-                   rate: float = DEFECT_RATE) -> PointResult:  # fmt: skip
+                   rate: float = DEFECT_RATE,
+                   auditor: Callable[..., Callable[[Any], Any]] | None = None) -> PointResult:  # fmt: skip
+    """Plant a stray numeral or a club name in the fixed text of some templates in the catalogue the
+    Caller and Checker share. The Checker sees the numeral but not the name (it renders from the same
+    catalogue), so names are the auditor's job: with ``auditor(info, events, clubs, players)`` returning
+    an ``audit(line)`` callable (findings mean blocked), each line is judged by the auditor instead,
+    which reads the reviewed templates from disk."""
     from earshot.agents.checker import check_caller_line  # pyright: ignore[reportMissingImports]
 
     rng = random.Random(seed)
-    res = PointResult("template_strings")
+    res = PointResult("template_strings" if auditor is None else "template_strings_auditor")
+    # Built before the catalogue is patched, so nothing the auditor caches can see the planted text.
+    audits = {info.match_id: auditor(info, events, clubs_of(info), players_of(info))
+              for events, info in matches} if auditor is not None else {}  # fmt: skip
     plan: dict[str, str] = {}
 
     def mutate(templates: dict) -> set[str]:
@@ -322,6 +331,9 @@ def template_point(matches, clubs_of, players_of, language, mode, seed: int = 4,
             for ln, m, trig, st, roster in _caller_items(
                 events, info, clubs_of(info), players_of(info), language, mode
             ):
+                if auditor is not None:
+                    res.add(plan.get(ln.template_id), bool(audits[info.match_id](ln)), "auditor")
+                    continue
                 v = check_caller_line(ln, m, trig, st, roster)
                 res.add(plan.get(ln.template_id), not v.ok, v.reason)
     return res
@@ -333,10 +345,11 @@ def run_all(
     modes: Sequence[ListeningMode] = tuple(ListeningMode),
     rate: float = DEFECT_RATE,
 ) -> dict[str, Any]:
-    """Every injection point over ``seeds``, per language and mode. The roster point runs twice:
-    against the Checker alone (which reads the same roster, so about zero by design) and with the
-    independent auditor checking the reviewed roster (``earshot.agents.auditor.reference_blocked``)."""
-    from earshot.agents.auditor import reference_blocked  # pyright: ignore[reportMissingImports]
+    """Every injection point over ``seeds``, per language and mode. The roster and template points run
+    twice: against the Checker alone (which reads the same roster and catalogue, so names planted
+    there are invisible to it by design) and with the independent auditor, which checks the reviewed
+    roster (``reference_blocked``) and the reviewed template files (``Auditor.audit``)."""
+    from earshot.agents.auditor import Auditor, reference_blocked  # pyright: ignore[reportMissingImports]
     from earshot.sim.match import simulate
     from earshot.world.localize import roster as local_roster
 
@@ -360,6 +373,15 @@ def run_all(
                 roster_point(matches, clubs_of, players_of, language, mode),
                 roster_point(matches, clubs_of, players_of, language, mode, auditor=reference_blocked),
                 template_point(matches, clubs_of, players_of, language, mode, rate=rate),
+                template_point(
+                    matches,
+                    clubs_of,
+                    players_of,
+                    language,
+                    mode,
+                    rate=rate,
+                    auditor=lambda i, e, c, p: Auditor(i, e, c, p).audit,
+                ),
             ):
                 points.append(tag | res.summary())
     return {"seeds": list(seeds), "rate": rate, "points": points}
