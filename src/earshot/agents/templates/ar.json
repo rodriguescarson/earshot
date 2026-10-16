@@ -1,0 +1,194 @@
+{
+  "_meta": {
+    "language": "ar",
+    "locale": "ar-SA",
+    "reviewed": "drafted 2026-10-16 by the model; native review pending (stated limit)"
+  },
+  "lexicon": {
+    "zone": {
+      "defensive_left": "في الخلف على اليسار",
+      "defensive_centre": "في نصف ملعبه",
+      "defensive_right": "في الخلف على اليمين",
+      "middle_left": "على يسار الوسط",
+      "middle_centre": "في وسط الملعب",
+      "middle_right": "على يمين الوسط",
+      "attacking_left": "على الجهة اليسرى",
+      "attacking_centre": "على حدود منطقة الجزاء",
+      "attacking_right": "على الجهة اليمنى"
+    },
+    "side": {
+      "left": "من اليسار",
+      "right": "من اليمين",
+      "centre": "من العمق"
+    },
+    "stoppage": {
+      "throw_in": "رمية تماس",
+      "goal_kick": "ركلة مرمى",
+      "corner": "ركلة ركنية",
+      "free_kick": "ركلة حرة",
+      "penalty": "ركلة جزاء",
+      "offside": "تسلل"
+    },
+    "var_subject": {
+      "goal": "الهدف",
+      "penalty": "ركلة الجزاء",
+      "red_card": "البطاقة الحمراء",
+      "offside": "التسلل"
+    },
+    "plus": "زائد"
+  },
+  "templates": {
+    "goal.1": {
+      "casual": "هدف! {player} يسجل لفريق {club}! {home} {home_score}، {away} {away_score}.",
+      "analyst": "هدف! {player} يسجل لفريق {club}! {home} {home_score}، {away} {away_score}."
+    },
+    "goal.2": {
+      "casual": "في الشباك! {player} لفريق {club}! {home} {home_score}، {away} {away_score}.",
+      "analyst": "في الشباك! {player} لفريق {club}! {home} {home_score}، {away} {away_score}."
+    },
+    "goal_speed.1": {
+      "casual": "هدف! قذيفة من {player} لفريق {club} بسرعة {speed} كيلومتر في الساعة! {home} {home_score}، {away} {away_score}.",
+      "analyst": "هدف! {player} لفريق {club}، بسرعة {speed} كيلومتر في الساعة! {home} {home_score}، {away} {away_score}."
+    },
+    "own_goal.1": {
+      "casual": "هدف عكسي! {player} يحرز في مرماه. {home} {home_score}، {away} {away_score}.",
+      "analyst": "هدف عكسي! {player} يحرز في مرماه. {home} {home_score}، {away} {away_score}."
+    },
+    "shot.1": {
+      "casual": "{player} يسدد!",
+      "analyst": "{player} يسدد!"
+    },
+    "shot.2": {
+      "casual": "{player} يجرب حظه!",
+      "analyst": "{player} يجرب حظه!"
+    },
+    "shot_speed.1": {
+      "casual": "{player} يطلق قذيفة! بسرعة {speed} كيلومتر في الساعة.",
+      "analyst": "{player} يسدد! بسرعة {speed} كيلومتر في الساعة."
+    },
+    "save.1": {
+      "casual": "{player} يسدد، ويتصدى {keeper}!",
+      "analyst": "{player} يسدد، ويتصدى {keeper}!"
+    },
+    "save.2": {
+      "casual": "محاولة من {player}، و{keeper} يبعدها!",
+      "analyst": "محاولة من {player}، و{keeper} يبعدها!"
+    },
+    "save_speed.1": {
+      "casual": "{player} يسدد بسرعة {speed} كيلومتر في الساعة، ويتصدى {keeper}!",
+      "analyst": "{player} يسدد بسرعة {speed} كيلومتر في الساعة، ويتصدى {keeper}!"
+    },
+    "penalty.1": {
+      "casual": "ركلة جزاء لفريق {club}!",
+      "analyst": "ركلة جزاء لفريق {club}!"
+    },
+    "red_card.1": {
+      "casual": "بطاقة حمراء! طرد {player}. فريق {club} يكمل بـ{count} لاعبين.",
+      "analyst": "بطاقة حمراء! طرد {player}. فريق {club} يكمل بـ{count} لاعبين."
+    },
+    "yellow_card.1": {
+      "casual": "بطاقة صفراء لـ{player} من فريق {club}.",
+      "analyst": "بطاقة صفراء لـ{player} من فريق {club}."
+    },
+    "attack.1": {
+      "casual": "فريق {club} يهاجم، {player} {zone}.",
+      "analyst": "فريق {club} يهاجم، {player} {zone}."
+    },
+    "attack.2": {
+      "casual": "{player} يتقدم بالكرة لفريق {club}، {zone}.",
+      "analyst": "{player} يتقدم بالكرة لفريق {club}، {zone}."
+    },
+    "cross.1": {
+      "casual": "عرضية من {player} {side}.",
+      "analyst": "عرضية من {player} {side}."
+    },
+    "turnover.1": {
+      "casual": "{player} يستعيد الكرة لفريق {club}.",
+      "analyst": "{player} يستعيد الكرة لفريق {club}."
+    },
+    "turnover.2": {
+      "casual": "فريق {club} يستعيد الكرة، {player}.",
+      "analyst": "فريق {club} يستعيد الكرة، {player}."
+    },
+    "on_ball.1": {
+      "casual": "{player}، {zone}.",
+      "analyst": "{player}، {zone}."
+    },
+    "on_ball.2": {
+      "casual": "الكرة مع فريق {club}، {player} {zone}.",
+      "analyst": "الكرة مع فريق {club}، {player} {zone}."
+    },
+    "long_pass.1": {
+      "casual": "{player} يرسل كرة طويلة.",
+      "analyst": "{player} يرسل كرة طويلة، {distance} مترًا."
+    },
+    "tackle.1": {
+      "casual": "تدخل جيد من {player}.",
+      "analyst": "تدخل جيد من {player}."
+    },
+    "foul.1": {
+      "casual": "خطأ من {player}.",
+      "analyst": "خطأ من {player}."
+    },
+    "stoppage.1": {
+      "casual": "{stoppage} لفريق {club}.",
+      "analyst": "{stoppage} لفريق {club}."
+    },
+    "offside.1": {
+      "casual": "تسلل على فريق {club}.",
+      "analyst": "تسلل على فريق {club}."
+    },
+    "kickoff.1": {
+      "casual": "فريق {club} يبدأ اللعب.",
+      "analyst": "فريق {club} يبدأ اللعب."
+    },
+    "kickoff_after_goal.1": {
+      "casual": "فريق {club} يستأنف اللعب. {home} {home_score}، {away} {away_score}.",
+      "analyst": "فريق {club} يستأنف اللعب. {home} {home_score}، {away} {away_score}، الدقيقة {minute}."
+    },
+    "substitution.1": {
+      "casual": "تبديل في فريق {club}: يدخل {on} ويخرج {off}.",
+      "analyst": "تبديل في فريق {club}: يدخل {on} ويخرج {off}."
+    },
+    "injury.1": {
+      "casual": "{player} على الأرض ويحتاج إلى علاج.",
+      "analyst": "{player} على الأرض ويحتاج إلى علاج."
+    },
+    "var_check.1": {
+      "casual": "تقنية الفيديو تراجع {var_subject}.",
+      "analyst": "تقنية الفيديو تراجع {var_subject}."
+    },
+    "var_stands.1": {
+      "casual": "القرار قائم.",
+      "analyst": "القرار قائم."
+    },
+    "var_overturned.1": {
+      "casual": "تقنية الفيديو تلغي القرار.",
+      "analyst": "تقنية الفيديو تلغي القرار."
+    },
+    "half_time.1": {
+      "casual": "استراحة بين الشوطين. {home} {home_score}، {away} {away_score}.",
+      "analyst": "استراحة بين الشوطين. {home} {home_score}، {away} {away_score}."
+    },
+    "full_time.1": {
+      "casual": "نهاية المباراة. {home} {home_score}، {away} {away_score}.",
+      "analyst": "نهاية المباراة. {home} {home_score}، {away} {away_score}."
+    },
+    "where.1": {
+      "casual": "الكرة مع فريق {club}، {zone}.",
+      "analyst": "الكرة مع فريق {club}، {zone}، الدقيقة {minute}."
+    },
+    "where_dead.1": {
+      "casual": "الكرة خارج اللعب. {stoppage} لفريق {club}.",
+      "analyst": "الكرة خارج اللعب. {stoppage} لفريق {club}."
+    },
+    "catch_up.1": {
+      "casual": "الدقيقة {minute}. {home} {home_score}، {away} {away_score}.",
+      "analyst": "الدقيقة {minute}. {home} {home_score}، {away} {away_score}."
+    },
+    "late.1": {
+      "casual": "قبل قليل: ",
+      "analyst": "قبل قليل: "
+    }
+  }
+}

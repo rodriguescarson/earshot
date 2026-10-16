@@ -1,0 +1,194 @@
+{
+  "_meta": {
+    "language": "es",
+    "locale": "es-ES",
+    "reviewed": "drafted 2026-10-16 by the model; native review pending (stated limit)"
+  },
+  "lexicon": {
+    "zone": {
+      "defensive_left": "atrás por la izquierda",
+      "defensive_centre": "en su propio campo",
+      "defensive_right": "atrás por la derecha",
+      "middle_left": "por la izquierda del centro del campo",
+      "middle_centre": "en el centro del campo",
+      "middle_right": "por la derecha del centro del campo",
+      "attacking_left": "por la banda izquierda",
+      "attacking_centre": "en la frontal del área",
+      "attacking_right": "por la banda derecha"
+    },
+    "side": {
+      "left": "desde la izquierda",
+      "right": "desde la derecha",
+      "centre": "desde el centro"
+    },
+    "stoppage": {
+      "throw_in": "Saque de banda",
+      "goal_kick": "Saque de puerta",
+      "corner": "Córner",
+      "free_kick": "Tiro libre",
+      "penalty": "Penalti",
+      "offside": "Fuera de juego"
+    },
+    "var_subject": {
+      "goal": "el gol",
+      "penalty": "el penalti",
+      "red_card": "la roja",
+      "offside": "el fuera de juego"
+    },
+    "plus": "más"
+  },
+  "templates": {
+    "goal.1": {
+      "casual": "¡Gol de {player}! Marca {club}. {home} {home_score}, {away} {away_score}.",
+      "analyst": "¡Gol de {player}! Marca {club}. {home} {home_score}, {away} {away_score}."
+    },
+    "goal.2": {
+      "casual": "¡Dentro! {player}, para {club}. {home} {home_score}, {away} {away_score}.",
+      "analyst": "¡Dentro! {player}, para {club}. {home} {home_score}, {away} {away_score}."
+    },
+    "goal_speed.1": {
+      "casual": "¡Gol de {player}! Un cañonazo a {speed} kilómetros por hora para {club}. {home} {home_score}, {away} {away_score}.",
+      "analyst": "¡Gol de {player}, para {club}, a {speed} kilómetros por hora! {home} {home_score}, {away} {away_score}."
+    },
+    "own_goal.1": {
+      "casual": "¡Gol en propia puerta de {player}! {home} {home_score}, {away} {away_score}.",
+      "analyst": "¡Gol en propia puerta de {player}! {home} {home_score}, {away} {away_score}."
+    },
+    "shot.1": {
+      "casual": "¡Dispara {player}!",
+      "analyst": "¡Dispara {player}!"
+    },
+    "shot.2": {
+      "casual": "¡Lo intenta {player}!",
+      "analyst": "¡Lo intenta {player}!"
+    },
+    "shot_speed.1": {
+      "casual": "¡Remata {player}! A {speed} kilómetros por hora.",
+      "analyst": "¡Dispara {player}! A {speed} kilómetros por hora."
+    },
+    "save.1": {
+      "casual": "Dispara {player}, ¡y para {keeper}!",
+      "analyst": "Dispara {player}, ¡y para {keeper}!"
+    },
+    "save.2": {
+      "casual": "Lo intenta {player}, ¡{keeper} la saca!",
+      "analyst": "Lo intenta {player}, ¡{keeper} la saca!"
+    },
+    "save_speed.1": {
+      "casual": "Remata {player} a {speed} kilómetros por hora, ¡y para {keeper}!",
+      "analyst": "Dispara {player} a {speed} kilómetros por hora, ¡y para {keeper}!"
+    },
+    "penalty.1": {
+      "casual": "¡Penalti a favor de {club}!",
+      "analyst": "¡Penalti a favor de {club}!"
+    },
+    "red_card.1": {
+      "casual": "¡Tarjeta roja! {player} se va expulsado. {club} se queda con {count} jugadores.",
+      "analyst": "¡Tarjeta roja! {player} se va expulsado. {club} se queda con {count} jugadores."
+    },
+    "yellow_card.1": {
+      "casual": "Tarjeta amarilla para {player}, de {club}.",
+      "analyst": "Tarjeta amarilla para {player}, de {club}."
+    },
+    "attack.1": {
+      "casual": "Ataca {club}, {player} {zone}.",
+      "analyst": "Ataca {club}, {player} {zone}."
+    },
+    "attack.2": {
+      "casual": "{player} conduce para {club}, {zone}.",
+      "analyst": "{player} conduce para {club}, {zone}."
+    },
+    "cross.1": {
+      "casual": "Centro de {player} {side}.",
+      "analyst": "Centro de {player} {side}."
+    },
+    "turnover.1": {
+      "casual": "{player} recupera para {club}.",
+      "analyst": "{player} recupera para {club}."
+    },
+    "turnover.2": {
+      "casual": "Recupera {club}, {player}.",
+      "analyst": "Recupera {club}, {player}."
+    },
+    "on_ball.1": {
+      "casual": "{player}, {zone}.",
+      "analyst": "{player}, {zone}."
+    },
+    "on_ball.2": {
+      "casual": "La tiene {club}, {player} {zone}.",
+      "analyst": "La tiene {club}, {player} {zone}."
+    },
+    "long_pass.1": {
+      "casual": "{player} busca el pase largo.",
+      "analyst": "{player} busca el pase largo, {distance} metros."
+    },
+    "tackle.1": {
+      "casual": "Buena entrada de {player}.",
+      "analyst": "Buena entrada de {player}."
+    },
+    "foul.1": {
+      "casual": "Falta de {player}.",
+      "analyst": "Falta de {player}."
+    },
+    "stoppage.1": {
+      "casual": "{stoppage} para {club}.",
+      "analyst": "{stoppage} para {club}."
+    },
+    "offside.1": {
+      "casual": "Fuera de juego de {club}.",
+      "analyst": "Fuera de juego de {club}."
+    },
+    "kickoff.1": {
+      "casual": "Saca {club}.",
+      "analyst": "Saca {club}."
+    },
+    "kickoff_after_goal.1": {
+      "casual": "Saca {club}. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Saca {club}. {home} {home_score}, {away} {away_score}, minuto {minute}."
+    },
+    "substitution.1": {
+      "casual": "Cambio en {club}: entra {on}, sale {off}.",
+      "analyst": "Cambio en {club}: entra {on}, sale {off}."
+    },
+    "injury.1": {
+      "casual": "{player} está en el suelo y necesita atención.",
+      "analyst": "{player} está en el suelo y necesita atención."
+    },
+    "var_check.1": {
+      "casual": "El VAR revisa {var_subject}.",
+      "analyst": "El VAR revisa {var_subject}."
+    },
+    "var_stands.1": {
+      "casual": "Se mantiene la decisión.",
+      "analyst": "Se mantiene la decisión."
+    },
+    "var_overturned.1": {
+      "casual": "El VAR cambia la decisión.",
+      "analyst": "El VAR cambia la decisión."
+    },
+    "half_time.1": {
+      "casual": "Descanso. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Descanso. {home} {home_score}, {away} {away_score}."
+    },
+    "full_time.1": {
+      "casual": "Final del partido. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Final del partido. {home} {home_score}, {away} {away_score}."
+    },
+    "where.1": {
+      "casual": "La tiene {club}, {zone}.",
+      "analyst": "La tiene {club}, {zone}, minuto {minute}."
+    },
+    "where_dead.1": {
+      "casual": "Balón parado. {stoppage} para {club}.",
+      "analyst": "Balón parado. {stoppage} para {club}."
+    },
+    "catch_up.1": {
+      "casual": "Minuto {minute}. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Minuto {minute}. {home} {home_score}, {away} {away_score}."
+    },
+    "late.1": {
+      "casual": "Hace un momento: ",
+      "analyst": "Hace un momento: "
+    }
+  }
+}

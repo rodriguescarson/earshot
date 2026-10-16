@@ -40,7 +40,7 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PT"]
-ignore = ["RUF001", "RUF002", "RUF003"]  # Arabic and Devanagari text is intentional
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]  # Arabic/Devanagari text is intentional; word lists read best as strings
 
 [tool.ruff.lint.per-file-ignores]
 "src/**" = ["PT018"]  # asserts in src narrow types for invariants; PT rules target tests

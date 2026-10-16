@@ -8,7 +8,7 @@ import pytest
 from pydantic import TypeAdapter
 
 from earshot.agents.caller import Caller
-from earshot.agents.catalog import literal_violations, load
+from earshot.agents.catalog import literal_violations, load, number_words_in, placeholders
 from earshot.agents.checker import check_caller_line
 from earshot.agents.director import Director, Profile
 from earshot.agents.spotter import Spotter
@@ -99,9 +99,55 @@ def test_planted_defects_are_blocked(run, field, value, reason):
     assert reason in v.reason
 
 
-def test_templates_carry_no_numeric_literals():
-    for lang in (Language.EN,):
-        assert literal_violations(lang) == []
+@pytest.mark.parametrize("lang", list(Language))
+def test_templates_carry_no_numeric_literals(lang):
+    assert literal_violations(lang) == []
+
+
+@pytest.mark.parametrize("lang", [Language.ES, Language.AR, Language.HI])
+def test_every_language_has_the_same_templates_and_slots_as_english(lang):
+    en, other = load(Language.EN), load(lang)
+    assert set(other.templates) == set(en.templates)
+    for tid, modes in en.templates.items():
+        for mode, tmpl in modes.items():
+            assert placeholders(other.templates[tid][mode]) == placeholders(tmpl), (lang, tid, mode)
+    for key in ("zone", "side", "stoppage", "var_subject"):
+        assert set(other.lexicon[key]) == set(en.lexicon[key])
+
+
+@pytest.mark.parametrize(
+    ("lang", "text", "hit"),
+    [
+        (Language.AR, "بطاقة صفراء", False),
+        (Language.AR, "يكمل وثلاثة", True),
+        (Language.HI, "ज़बरदस्त शॉट", False),
+        (Language.HI, "दस खिलाड़ी", True),
+        (Language.ES, "un cañonazo", False),
+        (Language.EN, "down to ten", True),
+    ],
+)
+def test_number_words_match_whole_words_only(lang, text, hit):
+    assert bool(number_words_in(lang, text)) is hit
+
+
+@pytest.mark.parametrize("lang", list(Language))
+def test_every_caller_line_passes_the_checker_in_every_language(lang):
+    d = json.loads(FIXTURE.read_text())
+    match = MatchInfo(**d["match"])
+    roster = Roster.build(match, [ClubInfo(**c) for c in d["clubs"]], [PlayerInfo(**p) for p in d["players"]])
+    state = replace(MatchState.start(match), period_id=2, home_score=2, away_score=2, status="live")
+    spotter, caller, by_id, n = Spotter(roster), Caller(roster), {}, 0
+    for raw in d["events"]:
+        ev = EV.validate_python(raw)
+        by_id[ev.event_id] = ev
+        before, state = state, state.apply(ev, roster)
+        for m in spotter.observe(ev, before, state):
+            for mode in ListeningMode:
+                for ln in caller.lines(m, by_id[m.event_ids[0]], state, lang, mode):
+                    v = check_caller_line(ln, m, by_id[m.event_ids[0]], state, roster)
+                    assert v.ok, (ln.text, v.reason)
+                    n += 1
+    assert n > 40
 
 
 def test_casual_never_says_a_number_except_score_minute_and_fast_shots(run):

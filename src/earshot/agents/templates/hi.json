@@ -1,0 +1,194 @@
+{
+  "_meta": {
+    "language": "hi",
+    "locale": "hi-IN",
+    "reviewed": "drafted 2026-10-16 by the model; native review pending (stated limit)"
+  },
+  "lexicon": {
+    "zone": {
+      "defensive_left": "पीछे बाईं ओर",
+      "defensive_centre": "अपने हाफ़ में",
+      "defensive_right": "पीछे दाईं ओर",
+      "middle_left": "मिडफ़ील्ड में बाईं ओर",
+      "middle_centre": "मिडफ़ील्ड में",
+      "middle_right": "मिडफ़ील्ड में दाईं ओर",
+      "attacking_left": "बाएँ फ़्लैंक पर",
+      "attacking_centre": "बॉक्स के पास",
+      "attacking_right": "दाएँ फ़्लैंक पर"
+    },
+    "side": {
+      "left": "बाईं ओर से",
+      "right": "दाईं ओर से",
+      "centre": "बीच से"
+    },
+    "stoppage": {
+      "throw_in": "थ्रो-इन",
+      "goal_kick": "गोल किक",
+      "corner": "कॉर्नर",
+      "free_kick": "फ़्री किक",
+      "penalty": "पेनल्टी",
+      "offside": "ऑफ़साइड"
+    },
+    "var_subject": {
+      "goal": "गोल",
+      "penalty": "पेनल्टी",
+      "red_card": "रेड कार्ड",
+      "offside": "ऑफ़साइड"
+    },
+    "plus": "प्लस"
+  },
+  "templates": {
+    "goal.1": {
+      "casual": "गोल! {player} ने {club} के लिए गोल किया! {home} {home_score}, {away} {away_score}।",
+      "analyst": "गोल! {player} ने {club} के लिए गोल किया! {home} {home_score}, {away} {away_score}।"
+    },
+    "goal.2": {
+      "casual": "गेंद जाल में! {player}, {club} के लिए! {home} {home_score}, {away} {away_score}।",
+      "analyst": "गेंद जाल में! {player}, {club} के लिए! {home} {home_score}, {away} {away_score}।"
+    },
+    "goal_speed.1": {
+      "casual": "गोल! {club} के लिए {player} का ज़बरदस्त शॉट, {speed} किलोमीटर प्रति घंटे! {home} {home_score}, {away} {away_score}।",
+      "analyst": "गोल! {player}, {club} के लिए, {speed} किलोमीटर प्रति घंटे की रफ़्तार से! {home} {home_score}, {away} {away_score}।"
+    },
+    "own_goal.1": {
+      "casual": "आत्मघाती गोल! {player} ने अपने ही गोल में डाल दिया। {home} {home_score}, {away} {away_score}।",
+      "analyst": "आत्मघाती गोल! {player} ने अपने ही गोल में डाल दिया। {home} {home_score}, {away} {away_score}।"
+    },
+    "shot.1": {
+      "casual": "{player} का शॉट!",
+      "analyst": "{player} का शॉट!"
+    },
+    "shot.2": {
+      "casual": "{player} ने कोशिश की!",
+      "analyst": "{player} ने कोशिश की!"
+    },
+    "shot_speed.1": {
+      "casual": "{player} का ज़ोरदार शॉट! {speed} किलोमीटर प्रति घंटे।",
+      "analyst": "{player} का शॉट! {speed} किलोमीटर प्रति घंटे।"
+    },
+    "save.1": {
+      "casual": "{player} का शॉट, और {keeper} ने बचा लिया!",
+      "analyst": "{player} का शॉट, और {keeper} ने बचा लिया!"
+    },
+    "save.2": {
+      "casual": "{player} की कोशिश, {keeper} ने रोक दिया!",
+      "analyst": "{player} की कोशिश, {keeper} ने रोक दिया!"
+    },
+    "save_speed.1": {
+      "casual": "{player} का {speed} किलोमीटर प्रति घंटे का शॉट, {keeper} ने बचा लिया!",
+      "analyst": "{player} का {speed} किलोमीटर प्रति घंटे का शॉट, {keeper} ने बचा लिया!"
+    },
+    "penalty.1": {
+      "casual": "{club} को पेनल्टी!",
+      "analyst": "{club} को पेनल्टी!"
+    },
+    "red_card.1": {
+      "casual": "रेड कार्ड! {player} बाहर। {club} के पास अब {count} खिलाड़ी।",
+      "analyst": "रेड कार्ड! {player} बाहर। {club} के पास अब {count} खिलाड़ी।"
+    },
+    "yellow_card.1": {
+      "casual": "{player} को येलो कार्ड, {club}।",
+      "analyst": "{player} को येलो कार्ड, {club}।"
+    },
+    "attack.1": {
+      "casual": "{club} का हमला, {player} {zone}।",
+      "analyst": "{club} का हमला, {player} {zone}।"
+    },
+    "attack.2": {
+      "casual": "{player} गेंद लेकर आगे, {club} के लिए, {zone}।",
+      "analyst": "{player} गेंद लेकर आगे, {club} के लिए, {zone}।"
+    },
+    "cross.1": {
+      "casual": "{player} का क्रॉस {side}।",
+      "analyst": "{player} का क्रॉस {side}।"
+    },
+    "turnover.1": {
+      "casual": "{player} ने {club} के लिए गेंद छीन ली।",
+      "analyst": "{player} ने {club} के लिए गेंद छीन ली।"
+    },
+    "turnover.2": {
+      "casual": "{club} ने गेंद वापस ली, {player}।",
+      "analyst": "{club} ने गेंद वापस ली, {player}।"
+    },
+    "on_ball.1": {
+      "casual": "{player}, {zone}।",
+      "analyst": "{player}, {zone}।"
+    },
+    "on_ball.2": {
+      "casual": "गेंद {club} के पास, {player} {zone}।",
+      "analyst": "गेंद {club} के पास, {player} {zone}।"
+    },
+    "long_pass.1": {
+      "casual": "{player} का लंबा पास।",
+      "analyst": "{player} का लंबा पास, {distance} मीटर।"
+    },
+    "tackle.1": {
+      "casual": "{player} का बढ़िया टैकल।",
+      "analyst": "{player} का बढ़िया टैकल।"
+    },
+    "foul.1": {
+      "casual": "{player} का फ़ाउल।",
+      "analyst": "{player} का फ़ाउल।"
+    },
+    "stoppage.1": {
+      "casual": "{stoppage}, {club}।",
+      "analyst": "{stoppage}, {club}।"
+    },
+    "offside.1": {
+      "casual": "{club} ऑफ़साइड।",
+      "analyst": "{club} ऑफ़साइड।"
+    },
+    "kickoff.1": {
+      "casual": "{club} किक-ऑफ़ करेंगे।",
+      "analyst": "{club} किक-ऑफ़ करेंगे।"
+    },
+    "kickoff_after_goal.1": {
+      "casual": "{club} फिर से खेल शुरू करते हैं। {home} {home_score}, {away} {away_score}।",
+      "analyst": "{club} फिर से खेल शुरू करते हैं। {home} {home_score}, {away} {away_score}, मिनट {minute}।"
+    },
+    "substitution.1": {
+      "casual": "{club} में बदलाव: {on} अंदर, {off} बाहर।",
+      "analyst": "{club} में बदलाव: {on} अंदर, {off} बाहर।"
+    },
+    "injury.1": {
+      "casual": "{player} मैदान पर गिरे हैं, इलाज की ज़रूरत है।",
+      "analyst": "{player} मैदान पर गिरे हैं, इलाज की ज़रूरत है।"
+    },
+    "var_check.1": {
+      "casual": "VAR {var_subject} की जाँच कर रहा है।",
+      "analyst": "VAR {var_subject} की जाँच कर रहा है।"
+    },
+    "var_stands.1": {
+      "casual": "फ़ैसला बरकरार।",
+      "analyst": "फ़ैसला बरकरार।"
+    },
+    "var_overturned.1": {
+      "casual": "VAR ने फ़ैसला पलट दिया।",
+      "analyst": "VAR ने फ़ैसला पलट दिया।"
+    },
+    "half_time.1": {
+      "casual": "हाफ़-टाइम। {home} {home_score}, {away} {away_score}।",
+      "analyst": "हाफ़-टाइम। {home} {home_score}, {away} {away_score}।"
+    },
+    "full_time.1": {
+      "casual": "मैच ख़त्म। {home} {home_score}, {away} {away_score}।",
+      "analyst": "मैच ख़त्म। {home} {home_score}, {away} {away_score}।"
+    },
+    "where.1": {
+      "casual": "गेंद {club} के पास, {zone}।",
+      "analyst": "गेंद {club} के पास, {zone}, मिनट {minute}।"
+    },
+    "where_dead.1": {
+      "casual": "गेंद खेल से बाहर। {stoppage}, {club}।",
+      "analyst": "गेंद खेल से बाहर। {stoppage}, {club}।"
+    },
+    "catch_up.1": {
+      "casual": "मिनट {minute}। {home} {home_score}, {away} {away_score}।",
+      "analyst": "मिनट {minute}। {home} {home_score}, {away} {away_score}।"
+    },
+    "late.1": {
+      "casual": "कुछ देर पहले: ",
+      "analyst": "कुछ देर पहले: "
+    }
+  }
+}

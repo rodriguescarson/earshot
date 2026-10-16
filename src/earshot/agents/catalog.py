@@ -34,17 +34,46 @@ NUMERIC_SLOTS = frozenset(
 DIGITS = re.compile(r"[0-9٠-٩۰-۹०-९]")
 """ASCII, Arabic-Indic, Eastern Arabic-Indic and Devanagari digits."""
 
-NUMBER_WORDS = {
-    Language.EN: r"\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen"
-    r"|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety"
-    r"|hundred|thousand|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|half-dozen|dozen)\b",
-    Language.ES: r"\b(cero|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce"
-    r"|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento|mil|primero"
-    r"|primera|segundo|segunda|tercero|tercera)\b",
-    Language.AR: r"(صفر|واحد|اثنان|اثنين|ثلاثة|أربعة|خمسة|ستة|سبعة|ثمانية|تسعة|عشرة|عشرون|مئة|مائة|ألف"
-    r"|الأول|الثاني|الثالث)",
-    Language.HI: r"(शून्य|एक|दो|तीन|चार|पांच|पाँच|छह|सात|आठ|नौ|दस|बीस|तीस|सौ|हज़ार|हजार|पहला|दूसरा|तीसरा)",
+NUMBER_WORDS: dict[Language, frozenset[str]] = {
+    Language.EN: frozenset(
+        "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+        "sixteen seventeen eighteen nineteen twenty thirty forty fifty sixty seventy eighty ninety "
+        "hundred thousand "
+        "first second third fourth fifth sixth seventh eighth ninth tenth dozen".split()
+    ),
+    Language.ES: frozenset(
+        "cero uno una dos tres cuatro cinco seis siete ocho nueve diez once doce trece catorce quince "
+        "dieciséis veinte treinta cuarenta cincuenta sesenta setenta ochenta noventa cien ciento mil "
+        "primero primera "
+        "segundo segunda tercero tercera".split()
+    ),
+    Language.AR: frozenset(
+        "صفر واحد واحدة اثنان اثنين اثنتان ثلاثة ثلاث أربعة أربع خمسة خمس ستة ست سبعة سبع ثمانية ثمان "
+        "تسعة تسع عشرة عشر عشرون عشرين مئة مائة ألف الأول الأولى الثاني الثانية الثالث الثالثة".split()
+    ),
+    Language.HI: frozenset(
+        "शून्य एक दो तीन चार पांच पाँच छह सात आठ नौ दस ग्यारह बारह बीस तीस चालीस पचास सौ हज़ार हजार "
+        "पहला पहली दूसरा दूसरी तीसरा तीसरी".split()
+    ),
 }
+"""Whole words only: "صفراء" (yellow) contains "صفر" (zero) and "ज़बरदस्त" contains "दस" (ten)."""
+
+_TOKEN = re.compile(r"[^\s.,;:!?¡¿،؛।\"'()\-]+")
+_AR_PREFIXES = ("وال", "بال", "لل", "ال", "و", "ب", "ل", "ف")
+
+
+def number_words_in(language: Language, text: str) -> list[str]:
+    """Number words in ``text`` for ``language``, matched as whole tokens (Arabic prefixes stripped)."""
+    words = NUMBER_WORDS[language]
+    hits = []
+    for tok in _TOKEN.findall(text.lower()):
+        tok = tok.strip("ـ")
+        candidates = {tok}
+        if language is Language.AR:
+            candidates |= {tok[len(p) :] for p in _AR_PREFIXES if tok.startswith(p) and len(tok) > len(p) + 1}
+        if candidates & words:
+            hits.append(tok)
+    return hits
 
 
 @dataclass(frozen=True)
@@ -103,11 +132,10 @@ def load(language: Language) -> Catalog:
 def literal_violations(language: Language) -> list[str]:
     """Digits or number words in a template's literal text (outside slots): must be empty."""
     cat = load(language)
-    words = re.compile(NUMBER_WORDS[language], re.IGNORECASE)
     bad: list[str] = []
     for tid, modes in cat.templates.items():
         for mode, tmpl in modes.items():
-            literal = "".join(lit for lit, _, _, _ in string.Formatter().parse(tmpl))
-            if DIGITS.search(literal) or words.search(literal):
+            literal = " ".join(lit for lit, _, _, _ in string.Formatter().parse(tmpl))
+            if DIGITS.search(literal) or number_words_in(language, literal):
                 bad.append(f"{language.value}:{tid}:{mode}: {literal!r}")
     return bad

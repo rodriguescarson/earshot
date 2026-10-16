@@ -13,7 +13,14 @@ from dataclasses import dataclass
 from functools import cache
 
 from earshot.agents.caller import slots_for
-from earshot.agents.catalog import DIGITS, NUMBER_WORDS, NUMERIC_SLOTS, literal_violations, load, placeholders
+from earshot.agents.catalog import (
+    DIGITS,
+    NUMERIC_SLOTS,
+    literal_violations,
+    load,
+    number_words_in,
+    placeholders,
+)
 from earshot.agents.state import MatchState, Roster
 from earshot.contract import Event, Language, Line, LineSource, Moment
 
@@ -33,13 +40,14 @@ def _bad_templates(language: Language) -> frozenset[str]:
 
 def ssml_numeric_leak(language: Language, ssml_body: str, slots: dict) -> str | None:
     """Return the offending text if anything numeric sits outside a numeric slot."""
-    stripped = SAY_AS.sub(" ", ssml_body)
-    words = re.compile(NUMBER_WORDS[language], re.IGNORECASE)
+    stripped = re.sub(r"<[^>]+>", " ", SAY_AS.sub(" ", ssml_body))
     for key, value in slots.items():
-        if key not in NUMERIC_SLOTS and (DIGITS.search(str(value)) or words.search(str(value))):
+        if key not in NUMERIC_SLOTS and (DIGITS.search(str(value)) or number_words_in(language, str(value))):
             return f"slot {key}={value!r}"
-    if m := DIGITS.search(stripped) or words.search(stripped):
+    if m := DIGITS.search(stripped):
         return m.group(0)
+    if hits := number_words_in(language, stripped):
+        return hits[0]
     return None
 
 
