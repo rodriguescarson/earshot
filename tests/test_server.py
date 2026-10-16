@@ -83,6 +83,10 @@ def test_one_app_serves_both_surfaces(tmp_path, monkeypatch):
         assert c.get("/api/status").json()["cached_only"] is False
         assert c.get("/api/live").status_code in (200, 503)  # 503 until a stored match kicks off
         assert "strict-transport-security" in c.get("/api/live").headers
+        # The SSE stream is behind the per-IP guard, and judges have a ticket endpoint.
+        assert c.post("/api/ticket").status_code == 403
+        c.get("/api/stream?group=m00026.en.casual.app_voice.-.-.-")
+        assert app.state.stream_guard.total == 0  # whatever the live app answered, the slot was freed
         # The kill-switch flag reaches the live app's own gate, with no restart.
         assert app.state.live.cached_only() is False
         app.state.flags.set_cached_only(True, "drill")
