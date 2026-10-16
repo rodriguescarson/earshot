@@ -1,0 +1,33 @@
+{
+ "render_match_seed": 26,
+ "tuned_on": "seed 26 (drift 13 m, lookahead 4 s)",
+ "results": {
+  "26": {
+   "passed": true,
+   "outfield_players": 16,
+   "median_outfield_km": 9.85,
+   "median_sprint_m": 201.7,
+   "share_actions_ball_within_1_5m": 0.993,
+   "max_speed_ms": 9.3,
+   "max_accel_ms2": 7.5
+  },
+  "5": {
+   "passed": false,
+   "outfield_players": 14,
+   "median_outfield_km": 9.55,
+   "median_sprint_m": 373.7,
+   "share_actions_ball_within_1_5m": 0.9887,
+   "max_speed_ms": 9.3,
+   "max_accel_ms2": 7.5
+  },
+  "17": {
+   "passed": false,
+   "outfield_players": 11,
+   "median_outfield_km": 9.59,
+   "median_sprint_m": 285.5,
+   "share_actions_ball_within_1_5m": 0.9882,
+   "max_speed_ms": 9.3,
+   "max_accel_ms2": 7.5
+  }
+ }
+}

@@ -1,0 +1,17 @@
+# Only pyproject, the lock, README and src/ are copied; everything else stays out, secrets first.
+.env
+.env.*
+**/.env*
+.git
+.venv
+data
+web
+fixtures
+reports
+tests
+p0
+docs
+infra
+schemas
+**/__pycache__
+**/node_modules
