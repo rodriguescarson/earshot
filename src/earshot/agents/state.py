@@ -18,7 +18,9 @@ from earshot.contract import (
 )
 from earshot.contract.events import CardColor
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
-from earshot.contract.spadl import SHOT_TYPES, ActionType, Result
+from earshot.stats.football import is_goal, scoring_team_id, spoken_minute
+
+__all__ = ["MatchState", "Roster", "is_goal", "scoring_team", "spoken_minute"]
 
 Status = Literal["before_kickoff", "live", "dead", "half_time", "full_time"]
 
@@ -45,15 +47,8 @@ class Roster:
         return self.away_id if team_id == self.home_id else self.home_id
 
 
-def is_goal(ev: Event) -> bool:
-    return isinstance(ev, Action) and (
-        (ActionType(ev.type) in SHOT_TYPES and ev.result is Result.SUCCESS) or ev.result is Result.OWNGOAL
-    )
-
-
 def scoring_team(ev: Action, roster: Roster) -> str:
-    assert ev.team_id is not None
-    return roster.other(ev.team_id) if ev.result is Result.OWNGOAL else ev.team_id
+    return scoring_team_id(ev, roster.home_id, roster.away_id)
 
 
 @dataclass(frozen=True)
@@ -128,12 +123,3 @@ class MatchState:
         if isinstance(ev, PeriodEnd):
             return replace(s, status="half_time" if ev.period_id == 1 else "full_time")
         return s
-
-
-def spoken_minute(period_id: int, clock_ms: int) -> str:
-    """Football minute as said on air: 62:10 in the first half is "63"; added time is "45+2"."""
-    base = 45 * (period_id - 1)
-    m = clock_ms // 60_000 + 1
-    if m > 45:
-        return f"{base + 45}+{m - 45}"
-    return str(base + m)

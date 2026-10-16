@@ -189,6 +189,114 @@
     "late.1": {
       "casual": "قبل قليل: ",
       "analyst": "قبل قليل: "
+    },
+    "claim.press_height.up.1": {
+      "casual": "فريق {club} يضغط أعلى في الملعب.",
+      "analyst": "فريق {club} يضغط أعلى: من {before} إلى {after} مترًا من مرماه خلال آخر {window_min} دقائق."
+    },
+    "claim.press_height.down.1": {
+      "casual": "فريق {club} تراجع إلى الخلف.",
+      "analyst": "فريق {club} تراجع: ضغطه انخفض من {before} إلى {after} مترًا خلال آخر {window_min} دقائق."
+    },
+    "claim.tempo.up.1": {
+      "casual": "فريق {club} رفع الإيقاع.",
+      "analyst": "فريق {club} رفع الإيقاع: من {before} إلى {after} لمسة في الدقيقة."
+    },
+    "claim.tempo.down.1": {
+      "casual": "فريق {club} أبطأ الإيقاع.",
+      "analyst": "فريق {club} أبطأ الإيقاع: من {before} إلى {after} لمسة في الدقيقة."
+    },
+    "claim.directness.up.1": {
+      "casual": "فريق {club} يلعب بشكل أكثر مباشرة.",
+      "analyst": "فريق {club} يلعب بشكل أكثر مباشرة: {after}٪ من تمريراته طويلة إلى الأمام، بعد أن كانت {before}٪."
+    },
+    "claim.directness.down.1": {
+      "casual": "فريق {club} يلعب بتمريرات أقصر.",
+      "analyst": "فريق {club} يلعب بتمريرات أقصر: التمريرات الطويلة إلى الأمام انخفضت من {before}٪ إلى {after}٪."
+    },
+    "claim.width.up.1": {
+      "casual": "فريق {club} يوسع اللعب على الأطراف.",
+      "analyst": "فريق {club} يلعب بعرض أكبر: من {before} إلى {after} مترًا عن منتصف الملعب."
+    },
+    "claim.width.down.1": {
+      "casual": "فريق {club} يضيق اللعب في العمق.",
+      "analyst": "فريق {club} يلعب بعرض أقل: من {before} إلى {after} مترًا عن منتصف الملعب."
+    },
+    "claim.line_height.up.1": {
+      "casual": "خط دفاع فريق {club} تقدم.",
+      "analyst": "مدافعو فريق {club} تقدموا: من {before} إلى {after} مترًا."
+    },
+    "claim.line_height.down.1": {
+      "casual": "خط دفاع فريق {club} تراجع.",
+      "analyst": "مدافعو فريق {club} تراجعوا: من {before} إلى {after} مترًا."
+    },
+    "claim.possession_share.up.1": {
+      "casual": "فريق {club} يستحوذ على الكرة أكثر.",
+      "analyst": "استحوذ فريق {club} على {after}٪ من الكرة خلال آخر {window_min} دقائق، بعد {before}٪."
+    },
+    "claim.possession_share.down.1": {
+      "casual": "فريق {club} يستحوذ على الكرة أقل.",
+      "analyst": "استحواذ فريق {club} انخفض إلى {after}٪ بعد {before}٪."
+    },
+    "claim.shot_count.up.1": {
+      "casual": "فريق {club} يسدد أكثر.",
+      "analyst": "فريق {club} سدد {after} مرات خلال آخر {window_min} دقائق، بعد {before}."
+    },
+    "claim.shot_count.down.1": {
+      "casual": "تسديدات فريق {club} توقفت.",
+      "analyst": "فريق {club} سدد {after} مرات خلال آخر {window_min} دقائق، بعد {before}."
+    },
+    "summary.possession.1": {
+      "casual": "فريق {club} يستحوذ على الكرة أكثر مؤخرًا.",
+      "analyst": "استحوذ فريق {club} على {percent}٪ من الكرة خلال آخر {window_min} دقائق."
+    },
+    "cause.PRESS_HIGHER.1": {
+      "casual": "يبدو أنه قرار متعمد لاستعادة الكرة في مناطق متقدمة.",
+      "analyst": "يبدو أنه قرار متعمد لاستعادة الكرة في مناطق متقدمة."
+    },
+    "cause.DROP_DEEPER.1": {
+      "casual": "يبدو أنهم اختاروا التراجع إلى الخلف.",
+      "analyst": "يبدو أنهم اختاروا التراجع إلى الخلف."
+    },
+    "cause.GO_DIRECT.1": {
+      "casual": "يبدو أنه تحول إلى الكرات الطويلة.",
+      "analyst": "يبدو أنه تحول إلى الكرات الطويلة."
+    },
+    "cause.RAISE_TEMPO.1": {
+      "casual": "يبدو أنهم يريدون اللعب بسرعة أكبر.",
+      "analyst": "يبدو أنهم يريدون اللعب بسرعة أكبر."
+    },
+    "cause.SLOW_TEMPO.1": {
+      "casual": "يبدو أنهم يبطئون المباراة.",
+      "analyst": "يبدو أنهم يبطئون المباراة."
+    },
+    "cause.WIDEN.1": {
+      "casual": "يبدو أنهم يحاولون توسيع الدفاع.",
+      "analyst": "يبدو أنهم يحاولون توسيع الدفاع."
+    },
+    "cause.NARROW.1": {
+      "casual": "يبدو أنهم يزدحمون في العمق.",
+      "analyst": "يبدو أنهم يزدحمون في العمق."
+    },
+    "cause.PARK_THE_BUS.1": {
+      "casual": "يبدو أنهم يدافعون بأعداد كبيرة.",
+      "analyst": "يبدو أنهم يدافعون بأعداد كبيرة."
+    },
+    "cause.ALL_OUT_ATTACK.1": {
+      "casual": "يبدو أنهم يرمون بكل ثقلهم إلى الهجوم.",
+      "analyst": "يبدو أنهم يرمون بكل ثقلهم إلى الهجوم."
+    },
+    "cause.RED_CARD_REORG.1": {
+      "casual": "هذا إعادة ترتيب بعد البطاقة الحمراء.",
+      "analyst": "هذا إعادة ترتيب بعد البطاقة الحمراء."
+    },
+    "cause.CHASING_GAME.1": {
+      "casual": "يبدو أنهم يطاردون النتيجة.",
+      "analyst": "يبدو أنهم يطاردون النتيجة."
+    },
+    "cause.PROTECTING_LEAD.1": {
+      "casual": "يبدو أنهم يحافظون على التقدم.",
+      "analyst": "يبدو أنهم يحافظون على التقدم."
     }
   }
 }

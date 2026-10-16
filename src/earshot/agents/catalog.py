@@ -28,7 +28,19 @@ VOICES = {
 }
 
 NUMERIC_SLOTS = frozenset(
-    {"home_score", "away_score", "speed", "distance", "count", "minute", "percent", "value"}
+    {
+        "home_score",
+        "away_score",
+        "speed",
+        "distance",
+        "count",
+        "minute",
+        "percent",
+        "value",
+        "before",
+        "after",
+        "window_min",
+    }
 )
 
 DIGITS = re.compile(r"[0-9٠-٩۰-۹०-९]")

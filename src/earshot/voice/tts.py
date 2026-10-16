@@ -20,7 +20,7 @@ import httpx
 import numpy as np
 from azure.identity import DefaultAzureCredential
 
-from earshot.agents.catalog import LOCALES, VOICES, load
+from earshot.agents.catalog import LOCALES, VOICES, load, placeholders
 from earshot.contract import Language, Line, VoiceRole
 
 SAMPLE_RATE = 24_000
@@ -35,7 +35,13 @@ def voice_for(language: Language, role: VoiceRole) -> str:
 
 def ssml_for(line: Line, *, excited: bool = False) -> str:
     cat = load(line.language)
-    body = cat.ssml_body(line.template_id, line.listening_mode, dict(line.slots))
+    parts = []
+    for tid in line.template_id.split("+"):  # Analyst lines join a claim template and a cause template
+        names = placeholders(cat.template(tid, line.listening_mode))
+        parts.append(
+            cat.ssml_body(tid, line.listening_mode, {k: v for k, v in line.slots.items() if k in names})
+        )
+    body = " ".join(parts)
     if line.late:
         body = f"{cat.ssml_body('late.1', line.listening_mode, {})}{body}"
     rate, pitch = ("+12%", "+6%") if excited else ("+4%", "+0%")

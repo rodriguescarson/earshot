@@ -14,14 +14,26 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
+from earshot.agents.analyst import Analyst, timeout_for
 from earshot.agents.caller import Caller
 from earshot.agents.checker import check_caller_line
+from earshot.agents.claims import (
+    check_claim_line,
+    claim_key,
+    claim_line,
+    fresh,
+    gate_cause,
+    select_for_mode,
+    verify,
+    window_summary_line,
+)
 from earshot.agents.director import Director, Profile
 from earshot.agents.spotter import Spotter
 from earshot.agents.state import MatchState, Roster, is_goal, spoken_minute
-from earshot.contract import Event, Language, Line, ListeningMode, MomentKind
+from earshot.contract import Event, Language, Line, ListeningMode, MomentKind, Restart, StoppageStart
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.pitch import attacks_right, to_attacking
+from earshot.tools.match import MatchView, Teams
 from earshot.voice.mix import Arm, BallPoint, mix
 from earshot.voice.tts import Synthesizer, ssml_for, write_stereo
 
@@ -39,27 +51,69 @@ def danger(b: dict, roster: Roster) -> float:
     return max(0.0, (ax - 52.5) / 52.5) ** 2
 
 
+ANALYST_MIN_DEAD_MS = 15_000
+CACHED_ANALYST_LATENCY_MS = 2_500
+"""Replayed (cached) Analyst answers are scheduled as if they took this long, so renders are stable."""
+
+
+def full_match_events(d: dict) -> list[Event]:
+    """The whole match up to the clip, so the Analyst can compare windows before the clip started.
+
+    Offline tooling only: it uses the simulator's events and never its truth log.
+    """
+    from earshot.sim.match import simulate
+
+    events = simulate(d["seed"]).events
+    clip_ids = {e["event_id"] for e in d["events"]}
+    assert clip_ids <= {e.event_id for e in events}, "fixture does not match the engine: regenerate it"
+    return events
+
+
 def render_fixture(
-    fixture: Path, out_dir: Path, *, language: Language, mode: ListeningMode, arms: list[Arm], cache: Path
+    fixture: Path,
+    out_dir: Path,
+    *,
+    language: Language,
+    mode: ListeningMode,
+    arms: list[Arm],
+    cache: Path,
+    analyst: bool = True,
 ) -> dict:
     d = json.loads(fixture.read_text())
     match = MatchInfo(**d["match"])
     roster = Roster.build(match, [ClubInfo(**c) for c in d["clubs"]], [PlayerInfo(**p) for p in d["players"]])
     clip = d["clip"]
-    state = replace(
-        MatchState.start(match),
-        period_id=clip["period_id"],
-        home_score=clip["home_score_at_start"],
-        away_score=clip["away_score_at_start"],
-        status="live",
-    )
+    t0 = clip["start_wall_ms"]
+    all_events = full_match_events(d) if analyst else [EV.validate_python(r) for r in d["events"]]
+    state = MatchState.start(match)
+    for ev in all_events:
+        if ev.wall_ms >= t0:
+            break
+        state = state.apply(ev, roster)
+    if not analyst:
+        state = replace(
+            state,
+            period_id=clip["period_id"],
+            home_score=clip["home_score_at_start"],
+            away_score=clip["away_score_at_start"],
+            status="live",
+        )
+    teams = Teams(roster.home_id, roster.away_id, {t: c.short_name for t, c in roster.clubs.items()})
+    positions = {p.player_id: p.position for p in roster.players.values()}
+    the_analyst = Analyst(cache_dir=cache.parent / "analyst-cache", patient=True) if analyst else None
+    if the_analyst:
+        the_analyst.warm()
+    pending: list[Line] = []
+    windows: list[dict] = []
+    said_summaries: set[str] = set()
+    aired_claims: dict[tuple[str, str, str], int] = {}
+
     spotter, caller = Spotter(roster), Caller(roster)
     lines: list[Line] = []
     kinds: dict[str, MomentKind] = {}
     blocked: list[dict] = []
     timeline: list[dict] = []
     goals: list[int] = []
-    t0 = clip["start_wall_ms"]
     by_id: dict[str, Event] = {}
     states: dict[str, MatchState] = {}
 
@@ -73,6 +127,75 @@ def render_fixture(
                     kinds[ln.line_id] = m.kind
                 else:
                     blocked.append({"line": ln.text, "reason": v.reason})
+
+    def analyse_window(ev: StoppageStart) -> list[Line]:
+        assert the_analyst is not None
+        view = MatchView(all_events, teams, positions, now_wall_ms=ev.wall_ms)
+        window_id = f"{match.match_id}-win-{ev.event_id}"
+        res = the_analyst.run(view, window_id, ev.expected_dead_ms)
+        budget_ms = int(timeout_for(ev.expected_dead_ms) * 1000)
+        ready = ev.wall_ms + (CACHED_ANALYST_LATENCY_MS if res.cached else min(res.latency_ms, budget_ms))
+        deadline = ev.wall_ms + ev.expected_dead_ms
+        checked = [(c, verify(c, view)) for c in res.claims]
+        gated = [(gate_cause(c, view), k) for c, k in checked]
+        ok = fresh([(c, k) for (c, _why), k in gated if k.ok], aired_claims, ev.wall_ms)
+        out: list[Line] = []
+        if ok and not res.timed_out and not res.error:
+            for c, k in select_for_mode(ok, mode):
+                ln = claim_line(
+                    c,
+                    k,
+                    view=view,
+                    window_id=window_id,
+                    language=language,
+                    mode=mode,
+                    wall_ms=ready,
+                    deadline_wall_ms=deadline,
+                )
+                if check_claim_line(ln, c, view).ok:
+                    aired_claims[claim_key(c)] = ev.wall_ms
+                    out.append(ln)
+                    kinds[ln.line_id] = MomentKind.STOPPAGE
+        if not out:
+            fb = window_summary_line(
+                view,
+                window_id=window_id,
+                language=language,
+                mode=mode,
+                wall_ms=ready,
+                deadline_wall_ms=deadline,
+            )
+            if fb is not None and fb.text not in said_summaries:
+                said_summaries.add(fb.text)
+                out.append(fb)
+                kinds[fb.line_id] = MomentKind.STOPPAGE
+        windows.append(
+            {
+                "window_id": window_id,
+                "t_ms": ev.wall_ms - t0,
+                "kind": ev.kind.value,
+                "expected_dead_ms": ev.expected_dead_ms,
+                "latency_ms": res.latency_ms,
+                "cached": res.cached,
+                "timed_out": res.timed_out,
+                "error": res.error,
+                "tool_calls": res.tool_calls,
+                "tokens": res.tokens,
+                "claims": [
+                    {
+                        **c.model_dump(mode="json"),
+                        "verified": k.ok,
+                        "reason": k.reason,
+                        "recomputed": [k.before, k.after],
+                        "cause_dropped": why,
+                    }
+                    for (c, k), ((_, why), _) in zip(checked, gated, strict=True)
+                ],
+                "invalid": res.invalid,
+                "aired_lines": [ln.text for ln in out],
+            }
+        )
+        return out
 
     for raw in d["events"]:
         ev = EV.validate_python(raw)
@@ -91,7 +214,16 @@ def render_fixture(
             }
         )
         voice_moments(spotter.observe(ev, before, state), state)
+        if isinstance(ev, StoppageStart) and the_analyst and ev.expected_dead_ms >= ANALYST_MIN_DEAD_MS:
+            pending.extend(analyse_window(ev))
+        if isinstance(ev, Restart) and pending:
+            for ln in pending:
+                lines.append(
+                    ln.model_copy(update={"deadline_wall_ms": max(ln.wall_ms, ev.wall_ms - ln.est_ms)})
+                )
+            pending.clear()
     voice_moments(spotter.flush(), state)
+    lines.extend(pending)
 
     synth = Synthesizer(cache)
     clips = {ln.line_id: synth.synthesize(ssml_for(ln, excited=kinds[ln.line_id] in EXCITED)) for ln in lines}
@@ -142,6 +274,7 @@ def render_fixture(
                 "never_drop": a.line.never_drop,
                 "cut": a.cut_at_ms is not None,
                 "template_id": a.line.template_id,
+                "source": a.line.source.value,
                 "pan": a.line.pan,
             }
             for a in aired
@@ -159,6 +292,7 @@ def render_fixture(
             "tts_characters_sent": synth.characters,
         },
         "blocked": blocked,
+        "analyst_windows": windows,
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
     return manifest
@@ -203,6 +337,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--mode", type=ListeningMode, default=ListeningMode.CASUAL)
     p.add_argument("--arms", default="speech,pan,full,bed")
     p.add_argument("--cache", type=Path, default=Path("data/tts-cache"))
+    p.add_argument("--no-analyst", action="store_true", help="Caller only (no model calls)")
     a = p.parse_args(argv)
     m = render_fixture(
         a.fixture,

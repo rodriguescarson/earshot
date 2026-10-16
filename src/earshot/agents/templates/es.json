@@ -189,6 +189,114 @@
     "late.1": {
       "casual": "Hace un momento: ",
       "analyst": "Hace un momento: "
+    },
+    "claim.press_height.up.1": {
+      "casual": "{club} presiona más arriba.",
+      "analyst": "{club} presiona más arriba: de {before} a {after} metros de su portería en los últimos {window_min} minutos."
+    },
+    "claim.press_height.down.1": {
+      "casual": "{club} se ha echado atrás.",
+      "analyst": "{club} se ha echado atrás: su presión baja de {before} a {after} metros en los últimos {window_min} minutos."
+    },
+    "claim.tempo.up.1": {
+      "casual": "{club} sube el ritmo.",
+      "analyst": "{club} sube el ritmo: de {before} a {after} toques por minuto."
+    },
+    "claim.tempo.down.1": {
+      "casual": "{club} baja el ritmo.",
+      "analyst": "{club} baja el ritmo: de {before} a {after} toques por minuto."
+    },
+    "claim.directness.up.1": {
+      "casual": "{club} juega más directo, en largo.",
+      "analyst": "{club} juega más directo: el {after} % de sus pases ya van largos y hacia delante, antes el {before} %."
+    },
+    "claim.directness.down.1": {
+      "casual": "{club} la juega más corta.",
+      "analyst": "{club} la juega más corta: los pases largos hacia delante bajan del {before} al {after} %."
+    },
+    "claim.width.up.1": {
+      "casual": "{club} abre el campo.",
+      "analyst": "{club} juega más abierto: de {before} a {after} metros del centro."
+    },
+    "claim.width.down.1": {
+      "casual": "{club} juega más cerrado.",
+      "analyst": "{club} juega más cerrado: de {before} a {after} metros del centro."
+    },
+    "claim.line_height.up.1": {
+      "casual": "La defensa de {club} ha adelantado la línea.",
+      "analyst": "La defensa de {club} adelanta la línea: de {before} a {after} metros."
+    },
+    "claim.line_height.down.1": {
+      "casual": "La defensa de {club} ha retrasado la línea.",
+      "analyst": "La defensa de {club} retrasa la línea: de {before} a {after} metros."
+    },
+    "claim.possession_share.up.1": {
+      "casual": "{club} tiene más el balón.",
+      "analyst": "{club} ha tenido el {after} % del balón en los últimos {window_min} minutos, antes el {before} %."
+    },
+    "claim.possession_share.down.1": {
+      "casual": "{club} tiene menos el balón.",
+      "analyst": "{club} baja al {after} % de posesión, desde el {before} %."
+    },
+    "claim.shot_count.up.1": {
+      "casual": "{club} dispara más.",
+      "analyst": "{club} lleva {after} disparos en los últimos {window_min} minutos, antes {before}."
+    },
+    "claim.shot_count.down.1": {
+      "casual": "A {club} se le han secado los disparos.",
+      "analyst": "{club} lleva {after} disparos en los últimos {window_min} minutos, antes {before}."
+    },
+    "summary.possession.1": {
+      "casual": "{club} ha tenido más el balón últimamente.",
+      "analyst": "{club} ha tenido el {percent} % del balón en los últimos {window_min} minutos."
+    },
+    "cause.PRESS_HIGHER.1": {
+      "casual": "Parece que buscan recuperar el balón más arriba.",
+      "analyst": "Parece que buscan recuperar el balón más arriba."
+    },
+    "cause.DROP_DEEPER.1": {
+      "casual": "Parece que han decidido replegarse.",
+      "analyst": "Parece que han decidido replegarse."
+    },
+    "cause.GO_DIRECT.1": {
+      "casual": "Parece un cambio hacia el balón largo.",
+      "analyst": "Parece un cambio hacia el balón largo."
+    },
+    "cause.RAISE_TEMPO.1": {
+      "casual": "Parece que quieren jugar más rápido.",
+      "analyst": "Parece que quieren jugar más rápido."
+    },
+    "cause.SLOW_TEMPO.1": {
+      "casual": "Parece que quieren dormir el partido.",
+      "analyst": "Parece que quieren dormir el partido."
+    },
+    "cause.WIDEN.1": {
+      "casual": "Parece que buscan abrir la defensa.",
+      "analyst": "Parece que buscan abrir la defensa."
+    },
+    "cause.NARROW.1": {
+      "casual": "Parece que quieren cerrar el centro.",
+      "analyst": "Parece que quieren cerrar el centro."
+    },
+    "cause.PARK_THE_BUS.1": {
+      "casual": "Parece que se encierran atrás.",
+      "analyst": "Parece que se encierran atrás."
+    },
+    "cause.ALL_OUT_ATTACK.1": {
+      "casual": "Parece que van con todo al ataque.",
+      "analyst": "Parece que van con todo al ataque."
+    },
+    "cause.RED_CARD_REORG.1": {
+      "casual": "Es el reajuste tras la roja.",
+      "analyst": "Es el reajuste tras la roja."
+    },
+    "cause.CHASING_GAME.1": {
+      "casual": "Parece que van a remolque y buscan reaccionar.",
+      "analyst": "Parece que van a remolque y buscan reaccionar."
+    },
+    "cause.PROTECTING_LEAD.1": {
+      "casual": "Parece que quieren proteger la ventaja.",
+      "analyst": "Parece que quieren proteger la ventaja."
     }
   }
 }

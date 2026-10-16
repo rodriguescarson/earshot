@@ -189,6 +189,114 @@
     "late.1": {
       "casual": "कुछ देर पहले: ",
       "analyst": "कुछ देर पहले: "
+    },
+    "claim.press_height.up.1": {
+      "casual": "{club} ऊपर जाकर प्रेस कर रहे हैं।",
+      "analyst": "{club} ऊपर प्रेस कर रहे हैं: पिछले {window_min} मिनट में अपने गोल से {before} से {after} मीटर तक।"
+    },
+    "claim.press_height.down.1": {
+      "casual": "{club} पीछे हट गए हैं।",
+      "analyst": "{club} पीछे हट गए हैं: पिछले {window_min} मिनट में प्रेस {before} से घटकर {after} मीटर।"
+    },
+    "claim.tempo.up.1": {
+      "casual": "{club} ने रफ़्तार बढ़ा दी है।",
+      "analyst": "{club} ने रफ़्तार बढ़ाई: {before} से {after} टच प्रति मिनट।"
+    },
+    "claim.tempo.down.1": {
+      "casual": "{club} ने खेल धीमा कर दिया है।",
+      "analyst": "{club} ने खेल धीमा किया: {before} से {after} टच प्रति मिनट।"
+    },
+    "claim.directness.up.1": {
+      "casual": "{club} अब लंबे और सीधे पास खेल रहे हैं।",
+      "analyst": "{club} ज़्यादा सीधा खेल रहे हैं: अब {after} प्रतिशत पास लंबे और आगे की ओर, पहले {before}।"
+    },
+    "claim.directness.down.1": {
+      "casual": "{club} छोटे पास खेल रहे हैं।",
+      "analyst": "{club} छोटे पास खेल रहे हैं: लंबे आगे के पास {before} से घटकर {after} प्रतिशत।"
+    },
+    "claim.width.up.1": {
+      "casual": "{club} खेल को चौड़ा कर रहे हैं।",
+      "analyst": "{club} चौड़ा खेल रहे हैं: बीच से {before} से {after} मीटर।"
+    },
+    "claim.width.down.1": {
+      "casual": "{club} खेल को सिकोड़ रहे हैं।",
+      "analyst": "{club} तंग खेल रहे हैं: बीच से {before} से {after} मीटर।"
+    },
+    "claim.line_height.up.1": {
+      "casual": "{club} की डिफ़ेंस लाइन आगे बढ़ी है।",
+      "analyst": "{club} के डिफ़ेंडर आगे आए: {before} से {after} मीटर।"
+    },
+    "claim.line_height.down.1": {
+      "casual": "{club} की डिफ़ेंस लाइन पीछे हटी है।",
+      "analyst": "{club} के डिफ़ेंडर पीछे हटे: {before} से {after} मीटर।"
+    },
+    "claim.possession_share.up.1": {
+      "casual": "{club} के पास गेंद ज़्यादा है।",
+      "analyst": "पिछले {window_min} मिनट में {club} के पास {after} प्रतिशत गेंद रही, पहले {before}।"
+    },
+    "claim.possession_share.down.1": {
+      "casual": "{club} के पास गेंद कम है।",
+      "analyst": "{club} का कब्ज़ा घटकर {after} प्रतिशत, पहले {before}।"
+    },
+    "claim.shot_count.up.1": {
+      "casual": "{club} ज़्यादा शॉट लगा रहे हैं।",
+      "analyst": "पिछले {window_min} मिनट में {club} के {after} शॉट, पहले {before}।"
+    },
+    "claim.shot_count.down.1": {
+      "casual": "{club} के शॉट थम गए हैं।",
+      "analyst": "पिछले {window_min} मिनट में {club} के {after} शॉट, पहले {before}।"
+    },
+    "summary.possession.1": {
+      "casual": "हाल में गेंद ज़्यादातर {club} के पास रही है।",
+      "analyst": "पिछले {window_min} मिनट में {club} के पास {percent} प्रतिशत गेंद रही।"
+    },
+    "cause.PRESS_HIGHER.1": {
+      "casual": "लगता है वे जानबूझकर ऊपर गेंद छीनना चाहते हैं।",
+      "analyst": "लगता है वे जानबूझकर ऊपर गेंद छीनना चाहते हैं।"
+    },
+    "cause.DROP_DEEPER.1": {
+      "casual": "लगता है उन्होंने पीछे रहकर खेलना चुना है।",
+      "analyst": "लगता है उन्होंने पीछे रहकर खेलना चुना है।"
+    },
+    "cause.GO_DIRECT.1": {
+      "casual": "लगता है वे लंबी गेंदों की ओर मुड़ गए हैं।",
+      "analyst": "लगता है वे लंबी गेंदों की ओर मुड़ गए हैं।"
+    },
+    "cause.RAISE_TEMPO.1": {
+      "casual": "लगता है वे तेज़ खेलना चाहते हैं।",
+      "analyst": "लगता है वे तेज़ खेलना चाहते हैं।"
+    },
+    "cause.SLOW_TEMPO.1": {
+      "casual": "लगता है वे खेल को धीमा कर रहे हैं।",
+      "analyst": "लगता है वे खेल को धीमा कर रहे हैं।"
+    },
+    "cause.WIDEN.1": {
+      "casual": "लगता है वे डिफ़ेंस को फैलाना चाहते हैं।",
+      "analyst": "लगता है वे डिफ़ेंस को फैलाना चाहते हैं।"
+    },
+    "cause.NARROW.1": {
+      "casual": "लगता है वे बीच में भीड़ बना रहे हैं।",
+      "analyst": "लगता है वे बीच में भीड़ बना रहे हैं।"
+    },
+    "cause.PARK_THE_BUS.1": {
+      "casual": "लगता है वे पूरी टीम के साथ बचाव कर रहे हैं।",
+      "analyst": "लगता है वे पूरी टीम के साथ बचाव कर रहे हैं।"
+    },
+    "cause.ALL_OUT_ATTACK.1": {
+      "casual": "लगता है वे सब कुछ झोंककर हमला कर रहे हैं।",
+      "analyst": "लगता है वे सब कुछ झोंककर हमला कर रहे हैं।"
+    },
+    "cause.RED_CARD_REORG.1": {
+      "casual": "यह रेड कार्ड के बाद का बदलाव है।",
+      "analyst": "यह रेड कार्ड के बाद का बदलाव है।"
+    },
+    "cause.CHASING_GAME.1": {
+      "casual": "लगता है वे स्कोर बराबर करने की कोशिश में हैं।",
+      "analyst": "लगता है वे स्कोर बराबर करने की कोशिश में हैं।"
+    },
+    "cause.PROTECTING_LEAD.1": {
+      "casual": "लगता है वे बढ़त बचाने में लगे हैं।",
+      "analyst": "लगता है वे बढ़त बचाने में लगे हैं।"
     }
   }
 }

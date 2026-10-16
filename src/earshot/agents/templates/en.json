@@ -189,6 +189,114 @@
     "save_speed.1": {
       "analyst": "{player} shoots at {speed} kilometres an hour, {keeper} saves!",
       "casual": "{player} lets fly at {speed} kilometres an hour, {keeper} saves!"
+    },
+    "claim.press_height.up.1": {
+      "casual": "{club} are pressing higher up the pitch.",
+      "analyst": "{club} are pressing higher, up from {before} to {after} metres from their own goal over the last {window_min} minutes."
+    },
+    "claim.press_height.down.1": {
+      "casual": "{club} have dropped deeper.",
+      "analyst": "{club} have dropped deeper, their press down from {before} to {after} metres over the last {window_min} minutes."
+    },
+    "claim.tempo.up.1": {
+      "casual": "{club} have upped the tempo.",
+      "analyst": "{club} have upped the tempo, from {before} to {after} touches a minute."
+    },
+    "claim.tempo.down.1": {
+      "casual": "{club} have slowed things down.",
+      "analyst": "{club} have slowed things down, from {before} to {after} touches a minute."
+    },
+    "claim.directness.up.1": {
+      "casual": "{club} are going longer and more direct.",
+      "analyst": "{club} are going more direct: {after} percent of their passes now go long and forward, up from {before}."
+    },
+    "claim.directness.down.1": {
+      "casual": "{club} are keeping it shorter.",
+      "analyst": "{club} are keeping it shorter: long forward passes down from {before} to {after} percent."
+    },
+    "claim.width.up.1": {
+      "casual": "{club} are stretching the play wide.",
+      "analyst": "{club} are playing wider, up from {before} to {after} metres from the middle."
+    },
+    "claim.width.down.1": {
+      "casual": "{club} are squeezing the play narrower.",
+      "analyst": "{club} are playing narrower, down from {before} to {after} metres from the middle."
+    },
+    "claim.line_height.up.1": {
+      "casual": "The {club} back line has pushed up.",
+      "analyst": "The {club} defenders have stepped up, from {before} to {after} metres out."
+    },
+    "claim.line_height.down.1": {
+      "casual": "The {club} back line has dropped off.",
+      "analyst": "The {club} defenders have dropped back, from {before} to {after} metres out."
+    },
+    "claim.possession_share.up.1": {
+      "casual": "{club} are seeing more of the ball.",
+      "analyst": "{club} have had {after} percent of the ball in the last {window_min} minutes, up from {before}."
+    },
+    "claim.possession_share.down.1": {
+      "casual": "{club} are seeing less of the ball.",
+      "analyst": "{club} are down to {after} percent of the ball, from {before}."
+    },
+    "claim.shot_count.up.1": {
+      "casual": "{club} are getting more shots away.",
+      "analyst": "{club} have had {after} shots in the last {window_min} minutes, up from {before}."
+    },
+    "claim.shot_count.down.1": {
+      "casual": "{club} have stopped getting shots away.",
+      "analyst": "{club} have had {after} shots in the last {window_min} minutes, down from {before}."
+    },
+    "summary.possession.1": {
+      "casual": "{club} have had more of the ball lately.",
+      "analyst": "{club} have had {percent} percent of the ball in the last {window_min} minutes."
+    },
+    "cause.PRESS_HIGHER.1": {
+      "casual": "It looks like a deliberate push to win the ball back higher.",
+      "analyst": "It looks like a deliberate push to win the ball back higher."
+    },
+    "cause.DROP_DEEPER.1": {
+      "casual": "It looks like they have chosen to sit deeper.",
+      "analyst": "It looks like they have chosen to sit deeper."
+    },
+    "cause.GO_DIRECT.1": {
+      "casual": "It looks like a switch to longer balls.",
+      "analyst": "It looks like a switch to longer balls."
+    },
+    "cause.RAISE_TEMPO.1": {
+      "casual": "It looks like they want to play quicker.",
+      "analyst": "It looks like they want to play quicker."
+    },
+    "cause.SLOW_TEMPO.1": {
+      "casual": "It looks like they are slowing the game down.",
+      "analyst": "It looks like they are slowing the game down."
+    },
+    "cause.WIDEN.1": {
+      "casual": "It looks like they are trying to stretch the defence.",
+      "analyst": "It looks like they are trying to stretch the defence."
+    },
+    "cause.NARROW.1": {
+      "casual": "It looks like they are crowding the middle.",
+      "analyst": "It looks like they are crowding the middle."
+    },
+    "cause.PARK_THE_BUS.1": {
+      "casual": "It looks like they are defending in numbers.",
+      "analyst": "It looks like they are defending in numbers."
+    },
+    "cause.ALL_OUT_ATTACK.1": {
+      "casual": "It looks like they are throwing bodies forward.",
+      "analyst": "It looks like they are throwing bodies forward."
+    },
+    "cause.RED_CARD_REORG.1": {
+      "casual": "That looks like the reshuffle after the red card.",
+      "analyst": "That looks like the reshuffle after the red card."
+    },
+    "cause.CHASING_GAME.1": {
+      "casual": "They look to be chasing the game.",
+      "analyst": "They look to be chasing the game."
+    },
+    "cause.PROTECTING_LEAD.1": {
+      "casual": "They look to be protecting the lead.",
+      "analyst": "They look to be protecting the lead."
     }
   }
 }
