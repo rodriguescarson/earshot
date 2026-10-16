@@ -7,7 +7,8 @@
     "listen": "अभी सुनें",
     "headphones": "हेडफ़ोन के साथ सबसे अच्छा। पहले बायाँ, फिर दायाँ सुनाई देगा।",
     "connecting": "कनेक्ट हो रहा है…",
-    "choose": "भाषा और शैली चुनें"
+    "choose": "भाषा और शैली चुनें",
+    "live": "लाइव मैच से जुड़ें"
   },
   "listen": {
     "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}। मिनट {{minute}}।",
@@ -41,7 +42,8 @@
     "outputReader": "मेरा स्क्रीन रीडर",
     "outputAppHint": "Earshot हर लाइन बोलता है और गेंद को आवाज़ में जगह देता है।",
     "outputReaderHint": "लाइनें आपकी गति से आपके स्क्रीन रीडर पर जाती हैं। गेंद की आवाज़ चलती रहती है।",
-    "close": "मैच पर वापस"
+    "close": "मैच पर वापस",
+    "reconnecting": "मैच से फिर से जुड़ रहे हैं…"
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}। मिनट {{minute}}",

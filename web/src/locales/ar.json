@@ -7,7 +7,8 @@
     "listen": "استمع الآن",
     "headphones": "الأفضل مع سماعات الرأس. ستسمع اليسار ثم اليمين.",
     "connecting": "جارٍ الاتصال…",
-    "choose": "اختر اللغة والأسلوب"
+    "choose": "اختر اللغة والأسلوب",
+    "live": "انضم إلى المباراة المباشرة"
   },
   "listen": {
     "score": "{{home}} {{homeScore}}، {{away}} {{awayScore}}. الدقيقة {{minute}}.",
@@ -41,7 +42,8 @@
     "outputReader": "قارئ الشاشة الخاص بي",
     "outputAppHint": "ينطق Earshot كل جملة ويضع الكرة في الصوت.",
     "outputReaderHint": "تذهب الجمل إلى قارئ الشاشة بسرعتك. يستمر صوت الكرة.",
-    "close": "العودة إلى المباراة"
+    "close": "العودة إلى المباراة",
+    "reconnecting": "جارٍ إعادة الاتصال بالمباراة…"
   },
   "media": {
     "title": "{{home}} {{homeScore}}، {{away}} {{awayScore}}. الدقيقة {{minute}}",
