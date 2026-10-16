@@ -11,7 +11,8 @@ Mode: Builder
 Blind and partially sighted football fans get live description only where a human describer or
 stadium hardware happens to be:
 - **Broadcaster audio description:** a UK broadcaster announced it on 2026-10-08 for about 109 of
-  380 league games, in English.
+  380 league games (one match per gameweek day, from 10 October). Source checked 2026-10-16:
+  Broadband TV News, 2026-10-08, and SVG Europe. "In English" is our inference, not stated there.
 - **The 2026 World Cup:** FIFA offered human description in two languages per host country, plus
   haptic boards at select matches.
 - **Haptic tablets** (Touch2See, Field of Vision) exist only in the stadiums that buy them.
