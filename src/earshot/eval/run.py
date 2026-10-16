@@ -252,7 +252,8 @@ class TimedAnalyst:
         res = self.inner.run(view, window_id, expected_dead_ms)
         self.last_ms = int((time.perf_counter() - t0) * 1000)
         tokens = int(getattr(res, "tokens", 0) or 0)
-        self._recent.append((self.clock(), tokens))
+        if not getattr(res, "cached", False):  # a cached answer spends nothing: it must not slow the pace
+            self._recent.append((self.clock(), tokens))
         failure = "timeout" if getattr(res, "timed_out", False) else getattr(res, "error", None)
         self.calls.append(
             {

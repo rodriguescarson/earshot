@@ -179,3 +179,19 @@ def test_a_long_run_resumes_from_its_rows(tmp_path, monkeypatch):
     assert s2["resumed_from_rows"] == 2
     assert [m["seed"] for m in m2] == [1, 2, 3]
     assert len(rows.read_text().splitlines()) == 3
+
+
+def test_cached_answers_do_not_count_against_the_pace():
+    from types import SimpleNamespace
+
+    now = [0.0]
+    slept: list[float] = []
+    cached = SimpleNamespace(
+        run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=0, cached=True)
+    )
+    a = R.TimedAnalyst(cached, tokens_per_hour=10_000, clock=lambda: now[0], sleep=lambda s: slept.append(s))
+    for i in range(5):
+        a.pace()
+        a.run(None, f"w{i}", 20_000)
+    assert slept == []  # 30,000 tokens of cached answers, nothing spent, no wait
+    assert all(c["cached"] for c in a.calls)
