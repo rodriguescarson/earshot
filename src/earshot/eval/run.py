@@ -526,7 +526,7 @@ def evaluate_match(
             "casual_violations": viol,
             "by_source": dict(Counter(a.line.source.value for a in log.aired)),
         }
-    out["explanations"] = explanations(r, players, vm.windows, real_analyst)
+    out["explanations"] = explanations(r, clubs, players, vm.windows, real_analyst)
     out["wall_s"] = round(time.perf_counter() - t0, 2)
     return out
 
@@ -535,10 +535,19 @@ GRADE_KEYS = ("labels", "correct", "truth_changes", "recalled", "matches")
 
 
 def explanations(
-    r: Any, players: Sequence[PlayerInfo], windows: Sequence[tuple[Any, Any]], analyst: Any
+    r: Any,
+    clubs: Sequence[ClubInfo],
+    players: Sequence[PlayerInfo],
+    windows: Sequence[tuple[Any, Any]],
+    analyst: Any,
 ) -> dict:
     """Cause-label grades for one match (counts only: they add up across matches, and the truth log
-    never leaves this process)."""
+    never leaves this process).
+
+    ``analyst_aired`` is what a listener hears: a claim the window's claim check accepted that also
+    passes the live ``verify``, with its cause after ``gate_cause`` (which drops causes whose
+    checkable preconditions fail), as ``LiveMatch._window_lines`` airs it. ``analyst_proposed`` is
+    every cause the model gave, accepted or rejected, before the gate."""
     from earshot.eval.baseline_detector import predictions as baseline_predictions
     from earshot.eval.grading import Prediction, analysis_windows, grade
 
@@ -554,15 +563,29 @@ def explanations(
     out: dict[str, Any] = {"windows": len(analysis_windows(r.events)), "baseline": counts(base)}
     if analyst is None or not hasattr(analyst, "calls"):
         return out
-    aired = [
-        Prediction(mid, c.team_id, st.wall_ms, c.cause) for st, w in windows for c in w.accepted if c.cause
-    ]
-    proposed = aired + [
-        Prediction(mid, c.team_id, st.wall_ms, c.cause) for st, w in windows for c, _ in w.rejected if c.cause
+    from earshot.agents.claims import gate_cause, verify
+    from earshot.tools.snapshots import MatchView
+
+    aired: list[Prediction] = []
+    gate_dropped = 0
+    for st, w in windows:
+        view = MatchView.of(r.info, list(clubs), list(players), list(r.events), st.wall_ms + 1)
+        for c in w.accepted:
+            gated = gate_cause(c, view)[0]
+            if c.cause is not None and gated.cause is None:
+                gate_dropped += 1
+            if gated.cause is not None and verify(c, view).ok:
+                aired.append(Prediction(mid, c.team_id, st.wall_ms, gated.cause))
+    proposed = [
+        Prediction(mid, c.team_id, st.wall_ms, c.cause)
+        for st, w in windows
+        for c in (*w.accepted, *(c for c, _ in w.rejected))
+        if c.cause
     ]
     out |= {
         "analyst_aired": counts(aired),
         "analyst_proposed": counts(proposed),
+        "causes_dropped_by_gate": gate_dropped,
         "window_outcomes": dict(Counter(w.analyst_failure or "claims" for _, w in windows)),
         "analyst_calls": analyst.calls,
         "analyst_paused_s": round(analyst.paused_s, 1),
@@ -706,6 +729,7 @@ def summarize_explanations(ok: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "baseline": total("baseline"),
         "analyst_aired": total("analyst_aired"),
         "analyst_proposed": total("analyst_proposed"),
+        "causes_dropped_by_gate": sum(m.get("explanations", {}).get("causes_dropped_by_gate", 0) for m in ok),
         "window_outcomes": dict(
             sum((Counter(m.get("explanations", {}).get("window_outcomes", {})) for m in ok), Counter())
         ),
