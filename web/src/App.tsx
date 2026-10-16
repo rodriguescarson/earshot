@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { deviceLanguage, setLanguage } from "./i18n";
 import { unlockAudio } from "./player/audioElement";
@@ -7,6 +7,7 @@ import { loadManifest, type Manifest } from "./player/manifest";
 import { Landing } from "./screens/Landing";
 import { Listen } from "./screens/Listen";
 import { Setup } from "./screens/Setup";
+import { TestPage } from "./screens/TestPage";
 
 type Screen =
   | { name: "landing" }
@@ -18,6 +19,12 @@ void setLanguage(defaults.lang);
 
 export function App() {
   const { t } = useTranslation();
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const on = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
   const [screen, setScreen] = useState<Screen>({ name: "landing" });
   const [choices, setChoices] = useState<Choices>(defaults);
   const [busy, setBusy] = useState(false);
@@ -39,6 +46,7 @@ export function App() {
     }
   };
 
+  if (hash === "#test") return <TestPage />;
   if (screen.name === "listen")
     return (
       <Listen

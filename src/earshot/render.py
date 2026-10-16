@@ -106,6 +106,7 @@ def render_fixture(
     arms: list[Arm],
     cache: Path,
     analyst: bool = True,
+    replay: bool = True,
 ) -> dict:
     d = json.loads(fixture.read_text())
     match = MatchInfo(**d["match"])
@@ -281,7 +282,8 @@ def render_fixture(
         states[ev.event_id] = state
         if is_goal(ev):
             goals.append(ev.wall_ms)
-            pending.append(replay_line(ev))
+            if replay:
+                pending.append(replay_line(ev))
         timeline.append(
             {
                 "t_ms": ev.wall_ms - t0,
