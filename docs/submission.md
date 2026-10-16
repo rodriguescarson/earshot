@@ -78,17 +78,26 @@ happened.
 
 - The season engine passed every check we set before running it: 380 matches, 674,950 events,
   realistic goals, shots, passing and cards, and the same output every run.
-- In a test run, the checks caught every wrong name and number we planted on purpose, including
-  a real player's name in the wrong place.
-- That test run also caught one real mistake of our own: a possession figure that could be off by
-  one percent. It is fixed.
+- We wrote down what counts as a pass before running anything, then locked the code and tested it
+  on 40 matches it had never seen.
+- On those 40 matches we planted more than 60,000 wrong names and numbers on purpose, in all four
+  languages. The checks caught every one of them before it could air, and never blocked a correct
+  line.
+- An earlier test run also caught one real mistake of our own: a possession figure that could be
+  off by one percent. It is fixed.
+- We ran a full 380-match season through the live system on a sped-up clock. Every goal, red
+  card and penalty aired, for every kind of listener.
 - We also tested whether the AI could say *why* a team changed its tactics, against the hidden log
   of what each team really did. On the first graded match it was right 1 time in 22, worse than a
   simple rule-based guess (4 in 7). So Earshot doesn't say why. The AI still picks which changes
   are worth hearing, and code checks every number in them. [PENDING: the same test on the 40
   unseen matches.]
-- [PENDING: the run on 40 matches the system had never seen. Facts, coverage, never-drop and the
-  Analyst against a simple baseline.]
+- Two targets we missed. We wanted 95% of shots and cards spoken within 3 seconds; on our live
+  server with 30 people listening at once it was 71% to 78%, depending on the listening mode.
+  And we wanted the first sound of a call within 2 seconds of the event in 95% of cases; it was
+  3.6 seconds. Most of the delay is calls queueing for the one voice, and the trip from India to
+  the server in Sweden. [PENDING: the result after the speed fixes now in progress, measured the
+  same way; and whether the server size changed since.]
 - [PENDING: the listening test with eyes closed, Oct 18-19, with the number of listeners stated.]
 
 ## Testing instructions
