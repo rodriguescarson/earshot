@@ -2,14 +2,15 @@
 
 What is real: the engine's events, the Agent Framework pipeline (Spotter, Caller, Checker, and the
 window run with the claim check), Stream 1's ``LiveMatch`` (state, per-group window lines, claim
-gating) and its ``LiveDirector`` for every evaluation profile. What is modelled: time. The clock is
+gating, and the independent auditor on every offered line, which stops a line with any finding) and
+its ``LiveDirector`` for every evaluation profile. What is modelled: time. The clock is
 virtual, so a 100-minute match runs in seconds, and the parts that wait on a network draw their
 latency from a ``LatencyModel``:
 
 - ``ready_ms``: from the moment a line is offered to the moment its audio is ready (speech
   synthesis or the cache), added to the measured compute time of the pipeline for that event;
-- ``analyst_ms``: one Analyst call. Window lines wait for it, and so does the event feeder, as it
-  does live (``LiveMatch`` awaits the window run before it pushes the next event);
+- ``analyst_ms``: one Analyst call. Window lines wait for it. With ``windows="inline"`` the event
+  feeder waits for it too, as the broadcaster did before window runs moved to their own task;
 - ``delivery_ms``: from the Director starting a line to the listener hearing its first byte.
 
 The deployed load test measures these. A model built in code says so in ``source``, and results run
@@ -41,8 +42,8 @@ import math
 import statistics
 import time
 import traceback
-from collections import Counter, defaultdict
-from collections.abc import Awaitable, Coroutine, Sequence
+from collections import Counter, defaultdict, deque
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -58,6 +59,8 @@ from earshot.contract.moment import Moment
 from earshot.rng import stream
 
 TICK_MS = 100
+ANALYST_TOKENS_GUESS = 6_000
+"""Tokens per Analyst call before any is measured (the worker reserves the same)."""
 COVERAGE_MS = 3_000
 SHOT_TYPES = frozenset({"shot", "shot_penalty", "shot_freekick"})
 SCORE_SLOTS = frozenset({"home_score", "away_score"})
@@ -180,6 +183,8 @@ class GroupLog:
     aired: list[AiredLine] = field(default_factory=list)
     dropped: Counter[str] = field(default_factory=Counter)
     cut: int = 0
+    audit_blocked: list[str] = field(default_factory=list)
+    """Lines the independent auditor stopped before they reached the Director (as live)."""
 
 
 class LatencyAnalyst:
@@ -199,22 +204,73 @@ class LatencyAnalyst:
 
 
 class TimedAnalyst:
-    """The real Analyst, with its real latency carried onto the virtual clock."""
+    """The real Analyst, with its real latency carried onto the virtual clock.
 
-    def __init__(self, inner: Any) -> None:
-        self.inner = inner
+    ``tokens_per_hour`` paces calls so a long run stays under the kill-switch alerts. The virtual
+    match calls ``pace()`` before it pushes an event that opens an analysis window, never inside
+    ``run``: the window workflow guards each call with a real-time limit (budget + 1.5 s), and a
+    wait inside it would turn into a timeout. ``max_calls`` caps a trial run.
+    """
+
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        tokens_per_hour: int | None = None,
+        max_calls: int | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self.inner, self.tokens_per_hour, self.max_calls = inner, tokens_per_hour, max_calls
+        self.clock, self.sleep = clock, sleep
         self.last_ms = 0
+        self.calls: list[dict[str, Any]] = []
+        self.paused_s = 0.0
+        self._recent: deque[tuple[float, int]] = deque()
+
+    def pace(self) -> None:
+        if not self.tokens_per_hour:
+            return
+        per_call = statistics.mean(c["tokens"] for c in self.calls) if self.calls else ANALYST_TOKENS_GUESS
+        while True:
+            now = self.clock()
+            while self._recent and now - self._recent[0][0] >= 3_600:
+                self._recent.popleft()
+            if sum(t for _, t in self._recent) + per_call <= self.tokens_per_hour or not self._recent:
+                return
+            step = min(60.0, max(1.0, 3_600 - (now - self._recent[0][0])))
+            self.paused_s += step
+            self.sleep(step)
 
     def run(self, view: Any, window_id: str, expected_dead_ms: int) -> Any:
+        from earshot.agents.analyst import AnalystResult
+
+        if self.max_calls is not None and len(self.calls) >= self.max_calls:
+            self.last_ms = 0
+            return AnalystResult(window_id, error="skipped: call cap")
         t0 = time.perf_counter()
         res = self.inner.run(view, window_id, expected_dead_ms)
         self.last_ms = int((time.perf_counter() - t0) * 1000)
+        tokens = int(getattr(res, "tokens", 0) or 0)
+        if not getattr(res, "cached", False):  # a cached answer spends nothing: it must not slow the pace
+            self._recent.append((self.clock(), tokens))
+        failure = "timeout" if getattr(res, "timed_out", False) else getattr(res, "error", None)
+        self.calls.append(
+            {
+                "latency_ms": int(getattr(res, "latency_ms", self.last_ms) or self.last_ms),
+                "tokens": tokens,
+                "claims": len(getattr(res, "claims", []) or []),
+                "failure": failure,
+                "cached": bool(getattr(res, "cached", False)),
+            }
+        )
         return res
 
 
 def _virtual_match_class():
     from earshot.live.broadcast import GroupError, GroupKey, LiveMatch
     from earshot.live.director import Cut, Drop, Start
+    from earshot.pipeline.workflow import opens_window
 
     class VirtualMatch(LiveMatch):
         """``LiveMatch`` with its clock, audio and sends replaced; everything else runs as live."""
@@ -229,7 +285,7 @@ def _virtual_match_class():
             latency: LatencyModel,
             rng: np.random.Generator,
             analyst: LatencyAnalyst | TimedAnalyst | None,
-            windows: str = "inline",
+            windows: str = "background",
         ) -> None:
             super().__init__(
                 info, events, clubs, players, audio=cast(Any, None), send=self._discard, analyst=analyst
@@ -243,8 +299,21 @@ def _virtual_match_class():
             self.logs: dict[str, GroupLog] = defaultdict(GroupLog)
             self.moments: dict[str, Moment] = {}
             self.notes: list[str] = []
+            self.windows: list[tuple[StoppageStart, Any]] = []
+            self.offered: list[Line] = []
+            """Every line offered to any group (the template evaluators judge real rendered lines)."""
             for p in self.pipelines.values():
                 p.push_moment = self._timed(p.push_moment)  # type: ignore[method-assign]
+                p.run_window = self._windowed(p.run_window)  # type: ignore[method-assign]
+
+        def _windowed(self, run_window):
+            async def windowed(wstep):
+                res = await run_window(wstep)
+                if res is not None:
+                    self.windows.append((wstep.stoppage, res))
+                return res
+
+            return windowed
 
         def _timed(self, push_moment):
             async def timed(ev: Event, *, final: bool = False):
@@ -289,6 +358,10 @@ def _virtual_match_class():
             raise RuntimeError("a virtual-clock coroutine suspended")
 
         async def _offer(self, g, line: Line) -> None:
+            # As LiveMatch._offer: the independent auditor first; a line with any finding never airs.
+            if not self._audit_ok(line):
+                self.logs[g.key.name].audit_blocked.append(f"{line.template_id}: {line.text}")
+                return
             if g.key.output_mode is OutputMode.SCREEN_READER:
                 duration = int(len(line.text) / 14 * 1000) + 300  # as LiveMatch estimates the reader
             else:
@@ -297,6 +370,7 @@ def _virtual_match_class():
             if line.source in (LineSource.ANALYST, LineSource.FALLBACK) and self.timer is not None:
                 wait += self.timer.last_ms
             self.seq += 1
+            self.offered.append(line)
             heapq.heappush(self.offers, (self.vnow + wait, self.seq, g.key.name, line, duration))
 
         def join_profile(self, p: EvalProfile) -> str:
@@ -322,12 +396,15 @@ def _virtual_match_class():
                     ev = self.events[i]
                     i += 1
                     self.vnow, self.push_ms = max(ev.wall_ms, busy_until), 0
+                    self.now_ms = self.vnow  # LiveMatch stamps recaps and window lines with now_ms
                     if self.timer is not None:
                         self.timer.last_ms = 0
+                        if isinstance(self.timer, TimedAnalyst) and opens_window(ev):
+                            await asyncio.to_thread(self.timer.pace)  # outside the window's real-time guard
                     await self._push_all([ev], final=i == n)
                     if self.windows_block and self.timer is not None and self.timer.last_ms:
                         busy_until = self.vnow + self.timer.last_ms  # as built: the feeder waits
-                self.vnow = t
+                self.vnow = self.now_ms = t
                 while self.offers and self.offers[0][0] <= t:
                     ready, _, name, line, dur = heapq.heappop(self.offers)
                     g = self.groups[name]
@@ -395,10 +472,14 @@ def playing_minutes(events: Sequence[Event]) -> float:
 def evaluate_match(
     seed: int,
     latency: LatencyModel,
-    real_analyst: Any | None = None,
+    real_analyst: TimedAnalyst | None = None,
     profiles: Sequence[EvalProfile] = PROFILES,
-    windows: str = "inline",
+    windows: str = "background",
+    facts_languages: Sequence[Language] = (Language.ES, Language.AR, Language.HI),
 ) -> dict[str, Any]:
+    """One match. ``real_analyst`` (a ``TimedAnalyst`` around Stream 1's Analyst) makes real model
+    calls in every analysis window and grades their cause labels; without it the Analyst is a
+    latency-only stand-in. The baseline detector is graded on the same windows either way."""
     from earshot.sim.match import simulate
     from earshot.world.localize import roster
 
@@ -409,11 +490,22 @@ def evaluate_match(
     clubs = [c for c in latin.clubs if c.team_id in teams]
     players = [p for p in latin.players if p.team_id in teams]
     rng = stream(seed, "eval", "latency")
-    analyst = TimedAnalyst(real_analyst) if real_analyst is not None else LatencyAnalyst(latency, rng)
+    analyst = real_analyst if real_analyst is not None else LatencyAnalyst(latency, rng)
     vm = _virtual_match_class()(
         r.info, list(r.events), clubs, players, latency=latency, rng=rng, analyst=analyst, windows=windows
     )
     names = {p.name: vm.join_profile(p) for p in profiles}
+    # Facts is pre-registered "in any language": one group per other language and mode, so the
+    # auditor sees every line, the Analyst's claims included, rendered in each language. Claims are
+    # language-neutral, so these add no model calls.
+    from earshot.live.broadcast import GroupKey
+
+    facts_groups = {}
+    for lang in facts_languages:
+        for mode in ListeningMode:
+            key = GroupKey(r.info.match_id, lang, mode, OutputMode.APP_VOICE)
+            vm.join(key)
+            facts_groups[key.name] = lang.value
     asyncio.run(vm.play())
     goals = targets(r.events)
     minutes = playing_minutes(r.events)
@@ -458,16 +550,102 @@ def evaluate_match(
             "numeric_slots": nums,
             "numeric_slots_per_min": round(nums / minutes, 3) if minutes else None,
             "casual_violations": viol,
+            "audit_blocked": log.audit_blocked,
             "by_source": dict(Counter(a.line.source.value for a in log.aired)),
         }
+    out["explanations"] = explanations(r, clubs, players, vm.windows, real_analyst)
+    facts: dict[str, dict[str, Any]] = defaultdict(lambda: {"aired": 0, "audit_blocked": []})
+    for name, log in vm.logs.items():
+        lang = facts_groups.get(name, "en")
+        facts[lang]["aired"] += len(log.aired)
+        facts[lang]["audit_blocked"] += log.audit_blocked
+    out["facts"] = dict(facts)
     out["wall_s"] = round(time.perf_counter() - t0, 2)
     return out
 
 
-def _safe(args: tuple[int, LatencyModel, str]) -> dict[str, Any]:
-    seed, latency, windows = args
+GRADE_KEYS = ("labels", "correct", "truth_changes", "recalled", "matches")
+
+
+def explanations(
+    r: Any,
+    clubs: Sequence[ClubInfo],
+    players: Sequence[PlayerInfo],
+    windows: Sequence[tuple[Any, Any]],
+    analyst: Any,
+) -> dict:
+    """Cause-label grades for one match (counts only: they add up across matches, and the truth log
+    never leaves this process).
+
+    ``analyst_proposed`` is every cause the model gave, accepted or rejected, before the gate.
+    ``analyst_gated`` is the cause ``gate_cause`` leaves (it drops causes whose checkable
+    preconditions fail) on a claim the window's claim check accepted and the live ``verify`` passes:
+    what would air if causes were spoken. Since 2026-10-16 they are not (``AIR_CAUSES`` is False in
+    ``earshot.agents.claims``): Analyst lines speak only the verified metric change, and
+    ``causes_aired`` records which way the run was."""
+    from earshot.eval.baseline_detector import predictions as baseline_predictions
+    from earshot.eval.grading import Prediction, analysis_windows, grade
+
+    mid = r.info.match_id
+    truth = {mid: list(r.truth)}
+    positions = {p.player_id: p.position for p in players}
+
+    def counts(preds: list[Prediction]) -> dict[str, int]:
+        g = grade(preds, truth)
+        return {k: int(getattr(g, k)) for k in GRADE_KEYS}
+
+    base = [Prediction(mid, t, w, lab) for w, t, lab in baseline_predictions(r.events, r.info, positions)]
+    out: dict[str, Any] = {"windows": len(analysis_windows(r.events)), "baseline": counts(base)}
+    if analyst is None or not hasattr(analyst, "calls"):
+        return out
+    from earshot.agents import claims as agent_claims
+    from earshot.agents.claims import gate_cause, verify
+    from earshot.tools.snapshots import MatchView
+
+    gated: list[Prediction] = []
+    gate_dropped = 0
+    for st, w in windows:
+        view = MatchView.of(r.info, list(clubs), list(players), list(r.events), st.wall_ms + 1)
+        for c in w.accepted:
+            gated_claim = gate_cause(c, view)[0]
+            if c.cause is not None and gated_claim.cause is None:
+                gate_dropped += 1
+            if gated_claim.cause is not None and verify(c, view).ok:
+                gated.append(Prediction(mid, c.team_id, st.wall_ms, gated_claim.cause))
+    proposed = [
+        Prediction(mid, c.team_id, st.wall_ms, c.cause)
+        for st, w in windows
+        for c in (*w.accepted, *(c for c, _ in w.rejected))
+        if c.cause
+    ]
+    out |= {
+        "analyst_gated": counts(gated),
+        "analyst_proposed": counts(proposed),
+        "causes_aired": bool(getattr(agent_claims, "AIR_CAUSES", True)),
+        "causes_dropped_by_gate": gate_dropped,
+        "window_outcomes": dict(Counter(w.analyst_failure or "claims" for _, w in windows)),
+        "analyst_calls": analyst.calls,
+        "analyst_paused_s": round(analyst.paused_s, 1),
+    }
+    return out
+
+
+def real_analyst(config: dict[str, Any]) -> TimedAnalyst:
+    """Stream 1's Analyst in patient mode (it waits out rate limits; the wait is not latency)."""
+    from earshot.agents.analyst import Analyst
+
+    cache = config.get("cache_dir")
+    return TimedAnalyst(
+        Analyst(cache_dir=Path(cache) if cache else None, patient=True),
+        tokens_per_hour=config.get("tokens_per_hour"),
+        max_calls=config.get("max_calls"),
+    )
+
+
+def _safe(args: tuple[int, LatencyModel, str, dict[str, Any] | None]) -> dict[str, Any]:
+    seed, latency, windows, analyst = args
     try:
-        return evaluate_match(seed, latency, windows=windows)
+        return evaluate_match(seed, latency, real_analyst(analyst) if analyst else None, windows=windows)
     except Exception:
         return {"seed": seed, "error": traceback.format_exc(limit=6)}
 
@@ -488,7 +666,7 @@ def summarize(
     latency: LatencyModel,
     wall_s: float,
     workers: int,
-    windows: str = "inline",
+    windows: str = "background",
 ) -> dict[str, Any]:
     ok = [m for m in matches if "error" not in m]
     failed = [
@@ -544,8 +722,18 @@ def summarize(
             else None,
             "casual_violations": dict(violations.most_common()),
             "aired_lines": sum(r["aired"] for r in rows),
+            "audit_blocked": sum(len(r.get("audit_blocked", [])) for r in rows),
+            "audit_blocked_examples": [x for r in rows for x in r.get("audit_blocked", [])][:10],
             "dropped": dict(sum((Counter(r["dropped"]) for r in rows), Counter())),
         }
+    expl = summarize_explanations(ok)
+    facts: dict[str, dict[str, Any]] = {}
+    for m in ok:
+        for lang, f in m.get("facts", {}).items():
+            agg = facts.setdefault(lang, {"aired": 0, "audit_blocked": 0, "examples": []})
+            agg["aired"] += f["aired"]
+            agg["audit_blocked"] += len(f["audit_blocked"])
+            agg["examples"] = (agg["examples"] + f["audit_blocked"])[:10]
     p1, p5 = profiles.get("P1", {}), profiles.get("P5", {})
     ratio = None
     if p1.get("numeric_slots_per_min") and p5.get("numeric_slots_per_min") is not None:
@@ -562,20 +750,103 @@ def summarize(
         "notes": sorted({n for m in ok for n in m["notes"]}),
         "profiles": profiles,
         "analyst_vs_casual_numeric_ratio": ratio,
+        "explanations": expl,
+        "facts": facts,
+    }
+
+
+def summarize_explanations(ok: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    def total(key: str) -> dict[str, Any] | None:
+        rows = [m["explanations"][key] for m in ok if key in m.get("explanations", {})]
+        if not rows:
+            return None
+        c = {k: sum(r[k] for r in rows) for k in GRADE_KEYS}
+        return c | {
+            "accuracy": round(c["correct"] / c["labels"], 4) if c["labels"] else None,
+            "recall": round(c["recalled"] / c["truth_changes"], 4) if c["truth_changes"] else None,
+            "false_alarms_per_match": round((c["labels"] - c["correct"]) / c["matches"], 3)
+            if c["matches"]
+            else None,
+        }
+
+    calls = [c for m in ok for c in m.get("explanations", {}).get("analyst_calls", [])]
+    tokens = [c["tokens"] for c in calls]
+    lat = [c["latency_ms"] for c in calls if c["failure"] is None and not c.get("cached")]
+    return {
+        "windows": sum(m.get("explanations", {}).get("windows", 0) for m in ok),
+        "baseline": total("baseline"),
+        "analyst_gated": total("analyst_gated"),
+        "causes_aired": any(m.get("explanations", {}).get("causes_aired", False) for m in ok),
+        "analyst_proposed": total("analyst_proposed"),
+        "causes_dropped_by_gate": sum(m.get("explanations", {}).get("causes_dropped_by_gate", 0) for m in ok),
+        "window_outcomes": dict(
+            sum((Counter(m.get("explanations", {}).get("window_outcomes", {})) for m in ok), Counter())
+        ),
+        "analyst_calls": {
+            "n": len(calls),
+            "tokens_total": sum(tokens),
+            "tokens_per_call": {
+                "p50": pct(tokens, 50),
+                "p95": pct(tokens, 95),
+                "max": max(tokens, default=None),
+            },
+            "latency_ms": {"p50": pct(lat, 50), "p95": pct(lat, 95), "max": max(lat, default=None)},
+            "failures": dict(Counter(c["failure"] for c in calls if c["failure"])),
+            "cached": sum(1 for c in calls if c.get("cached")),
+            "paused_s": round(sum(m.get("explanations", {}).get("analyst_paused_s", 0) for m in ok), 1),
+        }
+        if calls
+        else None,
     }
 
 
 def run_season(
-    seeds: Sequence[int], latency: LatencyModel, workers: int = 8, windows: str = "inline"
+    seeds: Sequence[int],
+    latency: LatencyModel,
+    workers: int = 8,
+    windows: str = "background",
+    analyst: dict[str, Any] | None = None,
+    rows_path: Path | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """``windows``: "inline" measures the broadcaster as built (the event feeder waits for each
-    window run); "background" models a broadcaster that runs windows on their own task
-    (``MatchPipeline.push_moment`` + ``run_window``)."""
+    """``windows``: "background" is the broadcaster as built (window runs on their own task, since
+    Stream 1's 24f4efb); "inline" is the broadcaster before it, whose event feeder waited for each
+    window run. Kept so that finding stays reproducible.
+
+    ``analyst``: {"tokens_per_hour": ..., "max_calls": ...} for real Analyst calls; each worker
+    process gets its share of the hourly tokens.
+
+    ``rows_path``: each match's row is appended there as it finishes, and seeds that already have a
+    good row are not run again, so a long paced run can stop and resume. ``wall_s`` counts this
+    invocation only."""
     t0 = time.perf_counter()
-    jobs = [(s, latency, windows) for s in seeds]
+    if analyst and analyst.get("tokens_per_hour"):
+        analyst = analyst | {"tokens_per_hour": analyst["tokens_per_hour"] // max(1, workers)}
+    done: dict[int, dict[str, Any]] = {}
+    if rows_path is not None and rows_path.exists():
+        for raw in rows_path.read_text().splitlines():
+            row = json.loads(raw)
+            if "error" not in row and row["seed"] in set(seeds):
+                done[row["seed"]] = row
+        rows_path.write_text("".join(json.dumps(r) + "\n" for r in done.values()))  # drop failed rows
+    todo = [s for s in seeds if s not in done]
+    jobs = [(s, latency, windows, analyst) for s in todo]
+    new: list[dict[str, Any]] = []
+
+    def keep(row: dict[str, Any]) -> None:
+        new.append(row)
+        if rows_path is not None:
+            with rows_path.open("a") as f:
+                f.write(json.dumps(row) + "\n")
+
     if workers <= 1:
-        matches = [_safe(j) for j in jobs]
+        for j in jobs:
+            keep(_safe(j))
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
-            matches = list(pool.map(_safe, jobs, chunksize=1))
-    return summarize(matches, latency, time.perf_counter() - t0, workers, windows), matches
+            for row in pool.map(_safe, jobs, chunksize=1):
+                keep(row)
+    by_seed = done | {r["seed"]: r for r in new}
+    matches = [by_seed[s] for s in seeds if s in by_seed]
+    summary = summarize(matches, latency, time.perf_counter() - t0, workers, windows)
+    summary["resumed_from_rows"] = len(done)
+    return summary, matches

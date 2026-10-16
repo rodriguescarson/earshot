@@ -126,6 +126,20 @@ Measured on the held-out seeds 9001-9040 unless stated.
 | Template quality | Foundry fluency and coherence evaluators over every rendered template per language, reported as a limit-aware check, not proof of fluency | Foundry evaluators (S2) |
 | Listening test, blind testers, device | as in the design; reported whichever way they go | Carson / S1 |
 
+**Amendment, 2026-10-16, before `eval-freeze` and before any held-out seed exists.** On the
+development trial (seed 26) the Analyst's gated causes were right 1 time in 22, against 4 in 7 for
+the baseline. Carson decided that causes are **not spoken**: `AIR_CAUSES = False` in
+`earshot.agents.claims`. Analyst lines say only the verified metric change, and the cause stays on
+the claim.
+
+The Explanations criterion is reported the same way otherwise, with two Analyst rows next to the
+baseline, and the run states that no cause airs:
+- **proposed:** every cause the model gave;
+- **gated:** the cause left by `gate_cause` on claims that pass `verify`.
+
+The held-out Analyst run is paced under the existing kill-switch alerts (500K tokens an hour, 3M a
+day). They are not raised for it.
+
 Evaluation profiles: P1 Casual, App voice, nothing followed; P2 Analyst, App voice, followed club
 and player; P3 Casual, screen-reader mode; P4 Analyst, one-ear mode, following shot speed; P5
 Analyst, App voice, nothing followed.
@@ -227,13 +241,97 @@ theirs (2.66 against a 2022-25 EPL span of 2.85-3.28). Shot and pass speeds rema
 seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11, y-band 7), which
 had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 
+### Runs of record after `eval-freeze`
+**The tag:** `eval-freeze` is at `f69549b`, tagged 2026-10-17.
+- Stream 1 confirmed the Analyst prompt, claim, cause, Caller, recap and stat templates, the
+  Checker and the auditor final.
+- The held-out seeds 9001-9040 were generated after the tag. Their manifest, with SHA-256s for
+  events, headers and the hidden truth files, is `reports/heldout-manifest-9001-9040.json`.
+- Re-simulating each seed reproduces its events byte for byte (40/40).
+- **The harness commit:** the runs use `14580ab`. Between the tag and `14580ab`, nothing changed
+  in any frozen path (agents, stats and models, sim and dead times, tools/MCP, live, pipeline,
+  contract, world, voice, baseline, grading): `git diff --stat eval-freeze 14580ab` on those
+  paths is empty. Only the harness gained the auditor and its clock fix, and the load generator
+  its parallel audio fetch.
+
+**Coverage (run of record, full season, as pre-registered):**
+- **Command:** `earshot evaluate --seeds 1-380 --workers 6 --latency reports/latency-of-record-2026-10-17.json`.
+  The latency is the deployed stack at 30 listeners (section below).
+- **Run:** 380/380 matches, 0 failed. Summary in `reports/eval-season-coverage-of-record.json`.
+
+| Profile | Coverage within 3 s (target 0.95) | Shots within 3 s (of 9,324) | Yellow cards within 3 s (of 1,505) | Shot p50 / p95 | Never-drop aired; goal p50 / p95 | Audit blocks |
+|---|---|---|---|---|---|---|
+| P1 Casual, app voice | **0.780** | 7,312 | 1,137 | 1.83 / 3.87 s | all; 0.56 / 2.62 s | 0 |
+| P2 Analyst, app voice, club + player | **0.730** | 7,251 | 649 | 1.82 / 3.87 s | all; 0.58 / 2.56 s | 0 |
+| P3 Casual, screen reader | **0.774** | 7,247 | 1,137 | 1.83 / 3.87 s | all; 0.61 / 2.70 s | 0 |
+| P4 Analyst, one ear, shot speed | **0.707** | 6,979 | 678 | 1.92 / 3.97 s | all; 0.62 / 2.69 s | 0 |
+| P5 Analyst, app voice | **0.729** | 7,225 | 672 | 1.83 / 3.87 s | all; 0.58 / 2.57 s | 0 |
+
+- **Coverage: miss** in every profile, at the 30-listener deployed latency.
+  - Every goal (1,011), red card (49) and penalty (105) airs in every profile.
+  - The auditor blocked nothing.
+  - Casual aired no number outside the allowed set.
+  - P5 airs 5.18 times P1's numeric slots a minute.
+- **Why it misses:** the deployed stack's delivery under 30 listeners adds about 0.5-2.3 s per line.
+  - Lines that wait behind others on the one voice channel then pass 3 s.
+  - Analyst-mode yellow cards suffer most (about 43-45% within 3 s), because they compete with the
+    Analyst's window lines at stoppages.
+- **With no delivery cost** (provisional model, development section) the same season gave
+  0.971-0.979. The difference is the cost of delivery at this load.
+
+**Facts, planted-defect harness (run of record, held-out):**
+- **Command:** `earshot planted --seeds 9001-9040 --languages en,es,ar,hi` at `14580ab`.
+- **Setup:** 25% injection rate, against Stream 1's frozen Caller, Checker and auditor.
+- **Result:** 41 rows. Every row's false-block rate is 0. Summary in
+  `reports/planted-heldout-9001-9040.json`.
+
+| Injection point | Defects (all languages and modes) | Recall |
+|---|---|---|
+| Analyst JSON | 2,514 | 1.0 |
+| Slot values | 34,556 | 1.0 |
+| Roster entries, Checker alone | 4,896 | 0.0 (by design: it reads the same roster) |
+| Roster entries, auditor (reviewed roster) | 4,896 | **1.0** |
+| Template strings, Checker alone | 21,464 | 0.850 (Casual) / 0.920 (Analyst); names in fixed text 0.0, by design |
+| Template strings, auditor (reviewed templates) | 21,464 | **1.0** |
+
+**Pass difficulty and the engine gates on the held-out seeds (run of record for G7):**
+- **Command:** `earshot gate --seeds 9001-9040 --model-seeds 9001-9040`.
+- **Report:** `reports/gate-heldout-9001-9040.json`.
+- **G7, pass difficulty: PASS.** 32,692 passes. Log loss 0.3837 against a base-rate 0.4396, a
+  ratio of 0.873 (criterion at most 0.90). Calibration error 0.0069 (at most 0.03).
+- **The other gates on these 40 matches** (their runs of record are the season):
+  - G1, G2, G4, G6, G9 and G10 pass.
+  - G6: the baseline recalls 67 of 184 changes against the shuffled control.
+  - **G5 press height misses on the held-out seeds**: AUC 0.749 on 55 planted changes, against
+    0.75 needed. The other four settings pass at 0.827-0.908. On the full season (the gated run)
+    press height is 0.803.
+  - G3 is informational on 40 matches. Yellow cards, 3.40 a match, fall outside their band
+    (3.78-4.62).
+
 ### Planted-defect harness (development run, not of record)
-`reports/planted-dev.json`: seeds 1-10, 25% injection rate, against Stream 1's Caller and Checker
-(throwaway local merge with `feat/agents-core`). Analyst JSON 660 defects, recall 1.0, false-block
-0.0 on 2,136 clean claims. Slot values (en, ar) 1,158 defects, recall 1.0, false-block 0.0 on
-7,914 clean lines. Roster entries recall 0.0 and names typed into template text recall 0.0: both
-by design (the Checker reads the same roster and templates), and the auditor's job. Template
-numerals recall 1.0. The run of record is on the held-out seeds.
+`uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
+branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
+independent auditor. 41 rows; every row has at least 7,914 clean lines. Summary in
+`reports/planted-dev.json`.
+
+| Injection point | Defects (per language and mode) | Recall | False-block | Notes |
+|---|---|---|---|---|
+| Analyst JSON | 660 | 1.0 | 0.0 | |
+| Slot values | 1,158 | 1.0 | 0.0 | |
+| Roster entries, Checker alone | 181 | 0.0 | 0.0 | By design: the Checker reads the same roster. |
+| Roster entries, auditor (`reference_blocked`, reviewed roster) | 181 | **1.0** | 0.0 | |
+| Template strings, Checker alone | 639 (Casual) / 633 (Analyst) | 0.845 / 0.921 | 0.0 | Numerals 1.0; names typed into fixed text 0.0, by design. |
+| Template strings, auditor (`Auditor.audit`, reviewed template files) | 639 / 633 | **1.0** | 0.0 | |
+
+**How the auditor reached 1.0 on roster swaps:**
+- The first run (English) gave 0.978. All 4 misses per mode were substitution lines, whose names sit
+  in the `on`/`off` slots, which the auditor did not bind to ids.
+- Stream 1 fixed that in `96df838`: `ID_SLOTS`, a test over every substitution of seed 4.
+- In the same commit, Stream 1 corrected the harness's label: a line is defective when the swapped
+  player is any named role, not only the first. Before that, a correct block counted as a false
+  block.
+
+The run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.
 
 ### G8 on the render match (frames, CEO-4)
 2026-10-16, `uv run earshot frames --seed 26 --out data/frames/m00026.frames.npz` (numbers in
@@ -269,3 +367,182 @@ recounts every number from the event log; it shares no code with the Checker's s
 - The 16 rendered demo clips: 557 lines audited, 0 findings, including the Analyst's claim lines.
 The auditor was changed after seeing these development results, so they are not evidence of its
 recall; the run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.
+
+### Accelerated evaluation run, ET11 (development, not of record)
+2026-10-16. The run of record waits for `eval-freeze`, the held-out seeds and the latency model from
+the deployed load test. Everything here uses the development seasons and a **provisional** latency
+model (ready = `READY_DELAY_MS` 350 ms, Analyst = its whole budget, delivery 0), so none of it is a
+result. It records what the harness measures and what it found.
+
+- **Harness:** `src/earshot/eval/run.py`.
+  - Whole matches run through Stream 1's live broadcaster (`LiveMatch`: the Agent Framework
+    pipeline, window lines, claim gating, StatWatcher, recaps) on a virtual clock, with a
+    `LiveDirector` per profile P1-P5 in English.
+  - Targets come from the event log, not the Spotter: goals, red cards and penalties for
+    never-drop; shots and yellow cards for coverage.
+- **Runtime (ET11 check: 380 matches inside 15 min on 8 workers, failed ids reported):**
+  - `uv run earshot evaluate --seeds 1-380 --workers 8`, at commit `6deb846`, run from a detached
+    worktree: 380/380 matches, 0 failed, **402.5 s**.
+  - The same run at `eaecd2a`: 396.6 s, 0 failed. **PASS.**
+- **The finding it made (fixed by Stream 1 in `24f4efb`):**
+  - Before the fix, the broadcaster's event feeder waited for each Analyst window run, so the card
+    that follows a foul waited for the Analyst.
+  - Seeds 1-40, P1, at `eaecd2a`: yellow cards within 3 s **28/149** (p50 4,367 ms); red-card p95
+    5,756 ms; coverage 0.878.
+  - With window runs on their own task (`--windows background`, now the broadcaster as built):
+    **149/149** (p50 855 ms); red-card p95 709 ms; coverage 0.977.
+  - `--windows inline` still reproduces the old behaviour.
+- **The full season as built**, at `6deb846` with provisional latency; summary in
+  `reports/eval-season-dev-provisional.json`:
+
+| Profile | Never-drop aired (1,011 goals, 49 reds, 105 penalties) | Coverage within 3 s | Shots within 3 s (of 9,324) | Yellow cards within 3 s (of 1,505) | Numeric slots a minute |
+|---|---|---|---|---|---|
+| P1 Casual, app voice | all; p95 447 / 697 / 693 ms | 0.979 | 9,092 | 1,505 | 0.253 |
+| P2 Analyst, app voice, club + player | all | 0.974 | 9,042 | 1,504 | 1.573 |
+| P3 Casual, screen reader | all | 0.979 | 9,092 | 1,505 | 0.253 |
+| P4 Analyst, one ear, shot speed | all | 0.971 | 9,009 | 1,504 | 1.700 |
+| P5 Analyst, app voice | all | 0.976 | 9,062 | 1,504 | 1.573 |
+
+  - P5 airs 6.22 times P1's numeric slots a minute (criterion: at least 3).
+  - Casual numbers outside the allowed set: 0. The first run found `red_card.1` saying "down to N
+    players" 49 times; Stream 1 fixed it in `24f4efb`.
+  - P1 and P3 are identical offline by construction: `est_ms` uses the same airtime formula as the
+    screen-reader estimate.
+- **Baseline cause labels** on the same analysis windows (development season, graded against the
+  truth log; not the held-out Explanations result): 7,186 labels, 1,916 correct (accuracy 0.267),
+  recall 695/1,702 (0.408), 13.9 false alarms a match.
+
+### Real Analyst, trial (development, not of record)
+Seed 26 only: 49 analysis windows, the first 20 called, the rest skipped by `--max-calls 20`. Two
+runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst --max-calls 20
+--tokens-per-hour 300000`.
+
+**The runs:**
+
+| | Run 1 (`bd75a29`) | Run 2 (`50f53ae`, `--analyst-cache`) |
+|---|---|---|
+| Summary | `reports/eval-analyst-trial-seed26.json` | `reports/eval-analyst-trial-seed26-gated.json` |
+| Tokens a call (p50) | 3,802 | 3,796 |
+| Latency p50 / p95 | 3,891 / 5,490 ms | 3,711 / 5,186 ms |
+| Timeouts | 2 of 20 | 1 of 20 |
+
+**Cause labels against the truth log:**
+
+| Run | Model's raw causes (proposed) | Gated causes on verified claims (would have aired; causes are no longer spoken) | Baseline, same windows |
+|---|---|---|---|
+| 1 | 2 of 28 correct | not graded | 4 of 7 |
+| 2 | 1 of 28 correct | 1 of 22 correct; the gate dropped 6 | 4 of 7 |
+
+- **Grading change:** run 1 graded the raw cause on accepted claims. Run 2 grades what airs: the
+  cause `gate_cause` leaves on a claim the live `verify` accepts, as `LiveMatch._window_lines`
+  does. That is the definition for the run of record. Run 1's note that "all 28 labels would have
+  aired" was wrong, because it did not apply the gate.
+- **Signal for the Analyst prompt:** the model gives a cause in most windows, and almost none are
+  right. It is one match, so a signal, not a result.
+- **What this means for the run of record:**
+  - About 2,000-2,800 calls on the 40 held-out matches, about 8-11M tokens.
+  - Under the kill-switch alerts (500K tokens an hour, 3M a day) that is about 3.5 days of paced
+    running (`--tokens-per-hour`, `--resume`).
+  - Raising those alerts for the run is Carson's decision.
+
+### Load test, 30 listeners: the deployed stack (2026-10-17), run of record for Latency
+`earshot loadtest --url <worker> --listeners 30 --minutes 15` against the worker at image
+`f69549b` (the `eval-freeze` commit; one replica), from one machine in India to Sweden Central. The listeners were spread
+over the five profiles' groups. Each listener fetches every line's audio on its own task, as a
+browser does.
+
+**Two corrections, before the numbers:**
+- **Superseded run:** a first run at 0.5 vCPU on 2026-10-16 fetched audio inline, before reading
+  the next message. That turned slow fetches into fake SSE "transit" (p95 10.9 s). Its result, and
+  a Coverage run built from its samples (0.37-0.41), are superseded and withdrawn; the files are kept in `reports/withdrawn/`.
+- **Network floor:** from this machine, fresh connections time out even to an idle worker (4 of
+  10, 2 of 20, 3 of 40 parallel connections), and GitHub connections timed out several times the
+  same day. So the audio-fetch connect timeouts below are mostly the load generator's network.
+  The percentiles cover only fetches that connected.
+
+**Results:** the deployed size is 0.5 vCPU; 1.0 vCPU was a temporary test. Each run had at least
+5 minutes of warm-up beforehand. Summaries: `reports/loadtest-2026-10-17-n30-0.5vcpu.json` and
+`reports/loadtest-2026-10-17-n30-1vcpu.json`.
+
+| 30 listeners, 15 minutes | 0.5 vCPU (deployed) | 1.0 vCPU (test) |
+|---|---|---|
+| Event to first audio byte, Caller lines: p50 / p95 / max | 1,305 / **3,594** / 6,652 ms (1,274 lines) | 968 / **2,891** / 5,444 ms (2,760 lines) |
+| Audio ready (cache or speech): p50 / p95 | 1 / 148 ms | 2 / 199 ms |
+| Event to the Director starting the line: p50 / p95 | 198 / 1,690 ms | 205 / 1,894 ms |
+| Start to sent (serve and encode): p50 / p95 | 4 / 2,311 ms | 3 / 1,031 ms |
+| SSE transit: p50 / p95 | 71 / 75 ms | 68 / 76 ms |
+| Audio first byte: p50 / p95 | 505 / 714 ms | 514 / 782 ms |
+| Audio fetches that did not connect in 10 s | 165 (11.0%) | 292 (9.0%) |
+
+- **Latency criterion** (p95 under 2.0 s on the deployed stack): **miss**, at 3.6 s with 30
+  listeners. Doubling the CPU brings p95 to 2.9 s, still a miss.
+- **Where the time goes:**
+  - the single voice channel's queue: event to the Director's start, p95 1.7-1.9 s;
+  - encoding when a line is not cached: p95 2.3 s at 0.5 vCPU;
+  - the distance to the region: first audio byte p50 about 0.5 s.
+- **Not comparable on traffic:** the 0.5 vCPU run's 15 minutes included the match's half-time
+  break (it restarted with the size change), so it carried fewer lines. Per-line timings are
+  comparable.
+- **No never-drop sample:** no goal fell in either window.
+- **The 1.0 vCPU size** costs $0.0432 an hour more (Sweden Central, active vCPU $0.000024/s).
+  Keeping it is Carson's decision; the worker is back at 0.5.
+
+**The latency model for the runs of record** is in `reports/latency-of-record-2026-10-17.json`:
+- audio-ready and delivery samples from the deployed 0.5 vCPU run;
+- the 18 real Analyst calls the day's load tests recorded (p50 2,318 ms). The deployed run's own 4
+  were response-cache hits of a replayed match, at 0 ms.
+
+### Template quality: Foundry evaluators (development, 2026-10-16)
+`earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip
+cut off (the commands, and why there were two runs, are in the Stream 2 status). Summary and every
+judged sentence with the judge's reason are in `reports/template-eval-2026-10-16.json`.
+
+**What was judged:**
+- The sentences are what the product airs: lines from three development matches through the live
+  broadcaster, one per template, mode and language.
+- Templates no match produced were rendered with slot values seen in that language.
+- The prefix "Earlier: " was judged on a real goal line.
+- Totals: 544 sentences (256 aired, 280 rendered, 8 composed). 20 template-mode pairs per language
+  were not judged, for want of slot values.
+- **Judge:** Foundry's built-in `FluencyEvaluator` and `CoherenceEvaluator` (`azure-ai-evaluation`
+  1.18) on the `fast` deployment (gpt-5.4-mini), keyless. 1,144 judge calls, 550,399 tokens.
+
+| Language | Sentences | Fluency mean (min) | Below 3 | Coherence mean (min) | Below 3 |
+|---|---|---|---|---|---|
+| English | 136 | 2.65 (1) | 42 | 3.71 (2) | 9 |
+| Spanish | 136 | 2.60 (1) | 49 | 3.61 (2) | 10 |
+| Arabic | 136 | 2.63 (2) | 52 | 3.69 (2) | 6 |
+| Hindi | 136 | 2.61 (1) | 50 | 3.57 (2) | 10 |
+
+**How to read this (a limit-aware check, as pre-registered, not proof of fluency):**
+- The four languages score within 0.05 of each other on fluency and 0.14 on coherence. The check
+  finds no language markedly worse than English.
+- The fluency judge scores the product's style, not errors. Its lowest scores go to short
+  broadcast lines ("Galuela, down the left.", "Throw-in, Sparkwheel.", "Saca Saltwings.",
+  "सॉल्टविंग्स ऑफ़साइड।"), which its reasons call fragments.
+- A few low coherence scores are worth a native reader's look rather than a rewrite, for example
+  Arabic `replay.1` "مرة أخرى، بالصوت.".
+
+### Load test, trial (development, not of record)
+`earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
+India to Sweden Central. Summary in `reports/loadtest-trial-2026-10-16.json`.
+
+- **Setup:** 10 SSE listeners spread over the five profiles' groups, each fetching every line's
+  audio. The run makes its own temporary judge code and removes it.
+- **Event to first audio byte (Caller lines):** p50 2,826 ms, **p95 5,866 ms** (target 2.0 s:
+  **miss**).
+
+  | Component | p50 | p95 |
+  |---|---|---|
+  | Audio ready | 123 ms | 688 ms |
+  | Event to the Director starting the line (the single channel's queue) | 302 ms | 2,765 ms |
+  | Start to message sent (`_publish_line`, mostly ffmpeg on 0.5 vCPU) | 716 ms | 2,799 ms |
+  | SSE transit | 52 ms | 59 ms |
+  | Audio first byte | 502 ms | 804 ms |
+
+- **Errors:** 6 connect timeouts.
+- **Limits:**
+  - one load-generator machine, far from the region;
+  - two clocks (the worker's and this machine's), skew not corrected;
+  - 3 minutes.
+- **Proposed to Stream 1:** encode the M4A while the line waits in the queue.

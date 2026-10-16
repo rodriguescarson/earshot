@@ -30,6 +30,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
+from earshot.contract import Language, ListeningMode
 from earshot.contract.claim import Claim, Direction, Metric
 from earshot.contract.events import Event, StoppageStart
 from earshot.contract.match import MatchInfo
@@ -253,7 +254,12 @@ def roster_point(matches, clubs_of, players_of, language, mode, seed: int = 3,
         for ln, m, trig, st, roster in _caller_items(
             events, info, clubs_of(info), swapped, language, mode, wrong
         ):
-            cls = "wrong_name_for_id" if target in m.player_ids[:1] else None
+            # Defective when the line names the swapped player in any role (actor, keeper, on, off),
+            # not only as the actor: "X comes on for <wrong name>" is as wrong as the actor case.
+            names_target = target in m.player_ids and other["short_name"] in {
+                str(v) for v in ln.slots.values()
+            }
+            cls = "wrong_name_for_id" if names_target else None
             if auditor is not None:
                 res.add(cls, auditor(ln, reference), "auditor")
             else:
@@ -293,11 +299,20 @@ TEMPLATE_DEFECTS = ("stray_numeral", "name_in_fixed_text")
 
 
 def template_point(matches, clubs_of, players_of, language, mode, seed: int = 4,
-                   rate: float = DEFECT_RATE) -> PointResult:  # fmt: skip
+                   rate: float = DEFECT_RATE,
+                   auditor: Callable[..., Callable[[Any], Any]] | None = None) -> PointResult:  # fmt: skip
+    """Plant a stray numeral or a club name in the fixed text of some templates in the catalogue the
+    Caller and Checker share. The Checker sees the numeral but not the name (it renders from the same
+    catalogue), so names are the auditor's job: with ``auditor(info, events, clubs, players)`` returning
+    an ``audit(line)`` callable (findings mean blocked), each line is judged by the auditor instead,
+    which reads the reviewed templates from disk."""
     from earshot.agents.checker import check_caller_line  # pyright: ignore[reportMissingImports]
 
     rng = random.Random(seed)
-    res = PointResult("template_strings")
+    res = PointResult("template_strings" if auditor is None else "template_strings_auditor")
+    # Built before the catalogue is patched, so nothing the auditor caches can see the planted text.
+    audits = {info.match_id: auditor(info, events, clubs_of(info), players_of(info))
+              for events, info in matches} if auditor is not None else {}  # fmt: skip
     plan: dict[str, str] = {}
 
     def mutate(templates: dict) -> set[str]:
@@ -316,6 +331,57 @@ def template_point(matches, clubs_of, players_of, language, mode, seed: int = 4,
             for ln, m, trig, st, roster in _caller_items(
                 events, info, clubs_of(info), players_of(info), language, mode
             ):
+                if auditor is not None:
+                    res.add(plan.get(ln.template_id), bool(audits[info.match_id](ln)), "auditor")
+                    continue
                 v = check_caller_line(ln, m, trig, st, roster)
                 res.add(plan.get(ln.template_id), not v.ok, v.reason)
     return res
+
+
+def run_all(
+    seeds: Sequence[int],
+    languages: Sequence[Language] = (Language.EN,),
+    modes: Sequence[ListeningMode] = tuple(ListeningMode),
+    rate: float = DEFECT_RATE,
+) -> dict[str, Any]:
+    """Every injection point over ``seeds``, per language and mode. The roster and template points run
+    twice: against the Checker alone (which reads the same roster and catalogue, so names planted
+    there are invisible to it by design) and with the independent auditor, which checks the reviewed
+    roster (``reference_blocked``) and the reviewed template files (``Auditor.audit``)."""
+    from earshot.agents.auditor import Auditor, reference_blocked  # pyright: ignore[reportMissingImports]
+    from earshot.sim.match import simulate
+    from earshot.world.localize import roster as local_roster
+
+    results = [simulate(s) for s in seeds]
+    matches = [(list(r.events), r.info) for r in results]
+    positions = {p.player_id: p.position for p in local_roster(Language.EN).players}
+    points: list[dict[str, Any]] = [analyst_json_point(matches, positions, rate=rate).summary()]
+    for language in languages:
+        table = local_roster(language)
+
+        def clubs_of(info: MatchInfo, table=table) -> list:
+            return [c for c in table.clubs if c.team_id in (info.home.team_id, info.away.team_id)]
+
+        def players_of(info: MatchInfo, table=table) -> list:
+            return [p for p in table.players if p.team_id in (info.home.team_id, info.away.team_id)]
+
+        for mode in modes:
+            tag = {"language": language.value, "mode": mode.value}
+            for res in (
+                slot_values_point(matches, clubs_of, players_of, language, mode, rate=rate),
+                roster_point(matches, clubs_of, players_of, language, mode),
+                roster_point(matches, clubs_of, players_of, language, mode, auditor=reference_blocked),
+                template_point(matches, clubs_of, players_of, language, mode, rate=rate),
+                template_point(
+                    matches,
+                    clubs_of,
+                    players_of,
+                    language,
+                    mode,
+                    rate=rate,
+                    auditor=lambda i, e, c, p: Auditor(i, e, c, p).audit,
+                ),
+            ):
+                points.append(tag | res.summary())
+    return {"seeds": list(seeds), "rate": rate, "points": points}

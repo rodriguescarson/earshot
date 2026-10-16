@@ -68,7 +68,7 @@ def test_the_real_analyst_carries_its_latency_onto_the_virtual_clock():
 @needs_live
 def test_one_match_through_the_live_broadcaster():
     lat = R.LatencyModel.provisional_default()
-    inline = R.evaluate_match(26, lat)
+    inline = R.evaluate_match(26, lat, windows="inline")
     assert set(inline["profiles"]) == {"P1", "P2", "P3", "P4", "P5"}
     assert not any("P4" in n for n in inline["notes"])  # the focus stat is live: P4 follows shot speed
     assert inline["profiles"]["P4"]["group"].endswith(".shot_speed")
@@ -77,12 +77,17 @@ def test_one_match_through_the_live_broadcaster():
         never = [h for h in p["targets"] if h["kind"] in ("goal", "red_card", "penalty")]
         assert never
         assert all(h["latency_ms"] is not None for h in never)
+    # The independent auditor runs on every offered line, as live; on seed 26 it blocks nothing, so
+    # the half-time and full-time recaps air (they need the clock in step: recaps carry now_ms).
+    assert all(p["audit_blocked"] == [] for p in inline["profiles"].values())
+    assert set(inline["facts"]) == {"en", "es", "ar", "hi"}  # Facts is "in any language"
+    assert all(f["aired"] > 0 and f["audit_blocked"] == [] for f in inline["facts"].values())
     p1, p5 = inline["profiles"]["P1"], inline["profiles"]["P5"]
     assert p5["numeric_slots_per_min"] > p1["numeric_slots_per_min"]
     assert inline["profiles"]["P2"]["group"].endswith(".spa.spa-09.-")  # follows the home club and a forward
 
-    # The finding this harness measured: as built, the event feeder waits for each window run, so a
-    # yellow card shown after a foul waits for the Analyst. Window runs on their own task do not.
+    # The finding this harness measured: when the event feeder waited for each window run (before
+    # 24f4efb), a yellow card shown after a foul waited for the Analyst. As built now, it does not.
     bg = R.evaluate_match(26, lat, windows="background")
 
     def yellow(m):
@@ -90,3 +95,103 @@ def test_one_match_through_the_live_broadcaster():
 
     assert max(yellow(bg)) < max(yellow(inline))
     assert all(x is not None and x <= R.COVERAGE_MS for x in yellow(bg))
+
+
+def test_pacing_keeps_an_hour_under_the_token_budget():
+    from types import SimpleNamespace
+
+    now = [0.0]
+    slept: list[float] = []
+
+    def sleep(s):
+        slept.append(s)
+        now[0] += s
+
+    inner = SimpleNamespace(run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=900))
+    a = R.TimedAnalyst(inner, tokens_per_hour=10_000, clock=lambda: now[0], sleep=sleep)
+    a.pace()
+    a.run(None, "w1", 20_000)
+    assert slept == []
+    a.run(None, "w2", 20_000)  # run never waits: a wait there would trip the window's real-time guard
+    assert slept == []
+    a.pace()  # 12,000 used, about 6,000 more would pass 10,000: wait out the hour
+    assert sum(slept) >= 3_540  # until the first call is an hour old
+    assert a.paused_s == pytest.approx(sum(slept), abs=60)
+    capped = R.TimedAnalyst(inner, max_calls=1)
+    capped.run(None, "w1", 20_000)
+    assert capped.run(None, "w2", 20_000).error == "skipped: call cap"
+    assert len(capped.calls) == 1
+
+
+@needs_live
+def test_real_analyst_path_grades_cause_labels_against_the_truth_log():
+    from earshot.agents.analyst import AnalystResult
+    from earshot.contract.claim import Claim, Direction, Metric
+
+    r = simulate(26)
+    at = {e.event_id: e.wall_ms for e in r.events}
+
+    class Oracle:  # peeks at the truth log: every label it gives must grade as correct
+        def run(self, view, window_id, expected_dead_ms):
+            sid = window_id.removesuffix("-w")
+            t = at[sid]
+            recent = [c for c in r.truth if 0 <= t - c.wall_ms <= 12 * 60_000]
+            claims = [
+                Claim(team_id=c.team_id, metric=Metric.PRESS_HEIGHT, direction=Direction.UP,
+                      window_start_ms=max(0, t - 600_000), window_end_ms=t, cause=c.label,
+                      cited_event_ids=[sid])
+                for c in recent[-1:]
+            ]  # fmt: skip
+            return AnalystResult(window_id, claims=claims, tokens=1_000, latency_ms=800)
+
+    m = R.evaluate_match(26, R.LatencyModel.provisional_default(), R.TimedAnalyst(Oracle()))
+    ex = m["explanations"]
+    assert ex["windows"] == len(m["explanations"]["analyst_calls"])
+    assert ex["analyst_proposed"]["labels"] > 0
+    assert ex["analyst_proposed"]["correct"] == ex["analyst_proposed"]["labels"]
+    assert ex["analyst_gated"]["labels"] <= ex["analyst_proposed"]["labels"]  # the claim check filters
+    assert ex["causes_aired"] is False  # Carson, 2026-10-16: causes are not spoken
+    assert set(ex["baseline"]) == set(R.GRADE_KEYS)
+    s = R.summarize([m], R.LatencyModel.provisional_default(), 1.0, 1)
+    assert s["explanations"]["analyst_proposed"]["accuracy"] == 1.0
+    assert s["explanations"]["analyst_calls"]["tokens_total"] == 1_000 * ex["windows"]
+
+
+def test_a_long_run_resumes_from_its_rows(tmp_path, monkeypatch):
+    calls: list[int] = []
+
+    def fake(args):
+        seed = args[0]
+        calls.append(seed)
+        if seed == 3 and calls.count(3) == 1:
+            return {"seed": 3, "error": "Traceback\nRuntimeError: network\n"}
+        return {"seed": seed, "match_id": f"m{seed:05d}", "minutes": 90.0, "targets": {}, "notes": [],
+                "profiles": {}, "explanations": {}, "wall_s": 1.0}  # fmt: skip
+
+    monkeypatch.setattr(R, "_safe", fake)
+    rows = tmp_path / "e.matches.jsonl"
+    lat = R.LatencyModel.provisional_default()
+    s1, _ = R.run_season([1, 2, 3], lat, workers=1, rows_path=rows)
+    assert s1["failed"] == [{"seed": 3, "error": "RuntimeError: network"}]
+    s2, m2 = R.run_season([1, 2, 3], lat, workers=1, rows_path=rows)
+    assert calls == [1, 2, 3, 3]  # only the failed seed ran again
+    assert s2["ok"] == 3
+    assert s2["resumed_from_rows"] == 2
+    assert [m["seed"] for m in m2] == [1, 2, 3]
+    assert len(rows.read_text().splitlines()) == 3
+
+
+def test_cached_answers_do_not_count_against_the_pace():
+    from types import SimpleNamespace
+
+    now = [0.0]
+    slept: list[float] = []
+    cached = SimpleNamespace(
+        run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=0, cached=True)
+    )
+    a = R.TimedAnalyst(cached, tokens_per_hour=10_000, clock=lambda: now[0], sleep=lambda s: slept.append(s))
+    for i in range(5):
+        a.pace()
+        a.run(None, f"w{i}", 20_000)
+    assert slept == []  # 30,000 tokens of cached answers, nothing spent, no wait
+    assert all(c["cached"] for c in a.calls)

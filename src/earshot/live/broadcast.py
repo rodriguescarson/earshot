@@ -443,7 +443,11 @@ class LiveMatch:
                 log.warning("speech unavailable (cached-only or daily budget): %s airs as text", line.line_id)
                 duration = int(len(line.text) / 14 * 1000) + 300
             else:
-                duration = await asyncio.to_thread(self.audio.warm, line)
+                try:
+                    duration = await asyncio.to_thread(self.audio.warm, line)
+                except Exception as e:  # speech failed (e.g. the kill switch): air it as text (DR-5)
+                    log.warning("speech failed for %s (%s): airs as text", line.line_id, e)
+                    duration = int(len(line.text) / 14 * 1000) + 300
         for act in g.director.offer(line, duration, self.match_ms()):
             if isinstance(act, Cut):
                 log.debug("cut %s", act.line.text)

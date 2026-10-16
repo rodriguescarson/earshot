@@ -287,3 +287,30 @@ def test_a_slow_web_pubsub_never_stalls_the_match_loop():
     assert took < 0.05
     assert q.qsize() == 4  # SSE gets everything, at once
     assert wps.sent == ["line", "state"]  # ball samples never go to Web PubSub
+
+
+def test_a_speech_failure_still_airs_the_line_as_text(match26):
+    # Found when the kill switch cut speech off (Stream 2, 2026-10-16): warm() raised and the line
+    # was never offered. It now reaches the Director and airs without audio.
+    class BrokenAudio(FakeAudio):
+        def warm(self, line):
+            raise RuntimeError("403 from the speech service")
+
+        def serve(self, line, output, *, synthesize=True):
+            raise RuntimeError("403 from the speech service")
+
+    r, _, _ = match26
+    m, sent = _match(match26, BrokenAudio())
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    line = real_lines(match26, 1)[0]
+
+    async def go():
+        await m._offer(g, line)
+        for act in g.director.tick(m.match_ms()):
+            if isinstance(act, Start):
+                await m._publish_line(g, act)
+
+    asyncio.run(go())
+    aired = [msg for _, msg in sent if msg["kind"] == "line"]
+    assert [msg["text"] for msg in aired] == [line.text]
+    assert aired[0]["audio_url"] is None

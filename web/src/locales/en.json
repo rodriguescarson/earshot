@@ -17,7 +17,8 @@
       "dead": "Ball out of play",
       "recorded": "Recorded clip",
       "paused": "Paused",
-      "ended": "Clip over"
+      "ended": "Clip over",
+      "busy": "Busy"
     },
     "onAir": "On air now",
     "waiting": "Waiting for the next line",
@@ -51,7 +52,9 @@
     "recapTitle": {
       "half_time": "Half-time",
       "full_time": "Full-time"
-    }
+    },
+    "busy": "Earshot is busy. Try again in a few minutes, or play the recorded clip.",
+    "playRecorded": "Play the recorded clip"
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",

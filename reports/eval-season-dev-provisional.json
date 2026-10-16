@@ -1,0 +1,313 @@
+{
+ "matches": 380,
+ "ok": 380,
+ "failed": [],
+ "workers": 8,
+ "wall_s": 402.5,
+ "median_match_s": 8.29,
+ "latency_model": {
+  "ready_ms": [
+   350
+  ],
+  "analyst_ms": [],
+  "delivery_ms": [
+   0
+  ],
+  "source": "provisional: ready = READY_DELAY_MS, Analyst = full budget, delivery = 0",
+  "provisional": true
+ },
+ "windows": "background",
+ "notes": [],
+ "profiles": {
+  "P1": {
+   "never_drop": {
+    "goal": {
+     "n": 1011,
+     "aired": 1011,
+     "share": 1.0,
+     "p50_ms": 56,
+     "p95_ms": 447,
+     "max_ms": 579
+    },
+    "red_card": {
+     "n": 49,
+     "aired": 49,
+     "share": 1.0,
+     "p50_ms": 620,
+     "p95_ms": 697,
+     "max_ms": 703
+    },
+    "penalty": {
+     "n": 105,
+     "aired": 105,
+     "share": 1.0,
+     "p50_ms": 625,
+     "p95_ms": 693,
+     "max_ms": 2564
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 9324,
+     "within_3s": 9092,
+     "share_within_3s": 0.9751,
+     "aired_at_all": 9096,
+     "p50_ms": 1167,
+     "p95_ms": 1858
+    },
+    "yellow_card": {
+     "n": 1505,
+     "within_3s": 1505,
+     "share_within_3s": 1.0,
+     "aired_at_all": 1505,
+     "p50_ms": 866,
+     "p95_ms": 2211
+    }
+   },
+   "coverage_share_within_3s": 0.9786,
+   "numeric_slots_per_min": 0.253,
+   "casual_violations": {},
+   "aired_lines": 326883,
+   "dropped": {
+    "stale": 26371
+   }
+  },
+  "P2": {
+   "never_drop": {
+    "goal": {
+     "n": 1011,
+     "aired": 1011,
+     "share": 1.0,
+     "p50_ms": 57,
+     "p95_ms": 449,
+     "max_ms": 579
+    },
+    "red_card": {
+     "n": 49,
+     "aired": 49,
+     "share": 1.0,
+     "p50_ms": 621,
+     "p95_ms": 697,
+     "max_ms": 703
+    },
+    "penalty": {
+     "n": 105,
+     "aired": 105,
+     "share": 1.0,
+     "p50_ms": 631,
+     "p95_ms": 693,
+     "max_ms": 3764
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 9324,
+     "within_3s": 9042,
+     "share_within_3s": 0.9698,
+     "aired_at_all": 9051,
+     "p50_ms": 1167,
+     "p95_ms": 1850
+    },
+    "yellow_card": {
+     "n": 1505,
+     "within_3s": 1504,
+     "share_within_3s": 0.9993,
+     "aired_at_all": 1505,
+     "p50_ms": 877,
+     "p95_ms": 2222
+    }
+   },
+   "coverage_share_within_3s": 0.9739,
+   "numeric_slots_per_min": 1.573,
+   "casual_violations": {},
+   "aired_lines": 339729,
+   "dropped": {
+    "stale": 27146
+   }
+  },
+  "P3": {
+   "never_drop": {
+    "goal": {
+     "n": 1011,
+     "aired": 1011,
+     "share": 1.0,
+     "p50_ms": 56,
+     "p95_ms": 447,
+     "max_ms": 579
+    },
+    "red_card": {
+     "n": 49,
+     "aired": 49,
+     "share": 1.0,
+     "p50_ms": 620,
+     "p95_ms": 697,
+     "max_ms": 703
+    },
+    "penalty": {
+     "n": 105,
+     "aired": 105,
+     "share": 1.0,
+     "p50_ms": 625,
+     "p95_ms": 693,
+     "max_ms": 2564
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 9324,
+     "within_3s": 9092,
+     "share_within_3s": 0.9751,
+     "aired_at_all": 9096,
+     "p50_ms": 1167,
+     "p95_ms": 1858
+    },
+    "yellow_card": {
+     "n": 1505,
+     "within_3s": 1505,
+     "share_within_3s": 1.0,
+     "aired_at_all": 1505,
+     "p50_ms": 866,
+     "p95_ms": 2211
+    }
+   },
+   "coverage_share_within_3s": 0.9786,
+   "numeric_slots_per_min": 0.253,
+   "casual_violations": {},
+   "aired_lines": 326883,
+   "dropped": {
+    "stale": 22429
+   }
+  },
+  "P4": {
+   "never_drop": {
+    "goal": {
+     "n": 1011,
+     "aired": 1011,
+     "share": 1.0,
+     "p50_ms": 61,
+     "p95_ms": 459,
+     "max_ms": 579
+    },
+    "red_card": {
+     "n": 49,
+     "aired": 49,
+     "share": 1.0,
+     "p50_ms": 621,
+     "p95_ms": 697,
+     "max_ms": 703
+    },
+    "penalty": {
+     "n": 105,
+     "aired": 105,
+     "share": 1.0,
+     "p50_ms": 631,
+     "p95_ms": 693,
+     "max_ms": 3964
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 9324,
+     "within_3s": 9009,
+     "share_within_3s": 0.9662,
+     "aired_at_all": 9020,
+     "p50_ms": 1298,
+     "p95_ms": 1954
+    },
+    "yellow_card": {
+     "n": 1505,
+     "within_3s": 1504,
+     "share_within_3s": 0.9993,
+     "aired_at_all": 1505,
+     "p50_ms": 872,
+     "p95_ms": 2218
+    }
+   },
+   "coverage_share_within_3s": 0.9708,
+   "numeric_slots_per_min": 1.7,
+   "casual_violations": {},
+   "aired_lines": 344296,
+   "dropped": {
+    "stale": 31903
+   }
+  },
+  "P5": {
+   "never_drop": {
+    "goal": {
+     "n": 1011,
+     "aired": 1011,
+     "share": 1.0,
+     "p50_ms": 57,
+     "p95_ms": 449,
+     "max_ms": 579
+    },
+    "red_card": {
+     "n": 49,
+     "aired": 49,
+     "share": 1.0,
+     "p50_ms": 621,
+     "p95_ms": 697,
+     "max_ms": 703
+    },
+    "penalty": {
+     "n": 105,
+     "aired": 105,
+     "share": 1.0,
+     "p50_ms": 631,
+     "p95_ms": 693,
+     "max_ms": 3764
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 9324,
+     "within_3s": 9062,
+     "share_within_3s": 0.9719,
+     "aired_at_all": 9073,
+     "p50_ms": 1168,
+     "p95_ms": 1851
+    },
+    "yellow_card": {
+     "n": 1505,
+     "within_3s": 1504,
+     "share_within_3s": 0.9993,
+     "aired_at_all": 1505,
+     "p50_ms": 872,
+     "p95_ms": 2218
+    }
+   },
+   "coverage_share_within_3s": 0.9757,
+   "numeric_slots_per_min": 1.573,
+   "casual_violations": {},
+   "aired_lines": 339703,
+   "dropped": {
+    "stale": 27172
+   }
+  }
+ },
+ "analyst_vs_casual_numeric_ratio": 6.22,
+ "explanations": {
+  "windows": 22340,
+  "baseline": {
+   "labels": 7186,
+   "correct": 1916,
+   "truth_changes": 1702,
+   "recalled": 695,
+   "matches": 380,
+   "accuracy": 0.2666,
+   "recall": 0.4083,
+   "false_alarms_per_match": 13.868
+  },
+  "analyst_aired": null,
+  "analyst_proposed": null,
+  "window_outcomes": {},
+  "analyst_calls": null
+ },
+ "resumed_from_rows": 0,
+ "command": "uv run earshot evaluate --seeds 1-380 --workers 8 --out /private/tmp/claude-501/-Users-carson-Projects-inside-the-game--claude-worktrees-stream2-engine-dc91a9/07ef6734-4bea-4d28-b74f-31cfd81f3611/scratchpad/evalrun/out/eval-season-dev.json"
+}

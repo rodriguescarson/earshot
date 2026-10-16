@@ -29,10 +29,11 @@ dev = [
   "jsonschema>=4.23",
   "ruff>=0.7",
   "pyright>=1.1.385",
+  "azure-ai-evaluation>=1.18",
 ]
 
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.32.4"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

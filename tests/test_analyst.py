@@ -260,3 +260,22 @@ def test_timeout_aims_to_finish_before_the_restart(dead, budget):
 
 def test_thresholds_cover_every_metric():
     assert set(THRESHOLD) == set(Metric)
+
+
+def test_causes_are_proposed_and_graded_but_never_spoken(world):
+    # Carson, 2026-10-16: gated causes were right 1 time in 22 on the first graded match, so only
+    # the verified metric change airs. The cause stays on the claim for offline grading.
+    from earshot.agents.claims import AIR_CAUSES
+
+    assert AIR_CAUSES is False
+    row = notable(world)
+    c = claim_from(world, row, cause=CauseLabel.RED_CARD_REORG)
+    chk = verify(c, world)
+    for lang in Language:
+        ln = claim_line(
+            c, chk, view=world, window_id="m-win-1", language=lang,
+            mode=ListeningMode.ANALYST, wall_ms=0, deadline_wall_ms=1,
+        )  # fmt: skip
+        assert "+" not in ln.template_id
+        assert not ln.template_id.startswith("cause.")
+        assert check_claim_line(ln, c, world).ok

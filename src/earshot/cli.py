@@ -63,6 +63,7 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--reason", default="set by hand")
     s.add_argument("--add-judge-code", default=None, help="add a judge code (only its SHA-256 is stored)")
     s.add_argument("--rotate-judge-codes", action="store_true", help="remove every existing judge code first")
+    s.add_argument("--remove-judge-code", default=None, help="remove one judge code (matched by its SHA-256)")
 
     s = sub.add_parser(
         "frames", help="player frames at 10 Hz for the render match (CEO-4), and its G8 numbers"
@@ -86,10 +87,49 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument(
         "--windows",
         choices=["inline", "background"],
-        default="inline",
-        help="inline: the broadcaster as built; background: window runs off the event feeder",
+        default="background",
+        help="background: as built (window runs on their own task); inline: the feeder waits for each",
+    )
+    s.add_argument(
+        "--real-analyst", action="store_true", help="real Analyst calls (Foundry) in every analysis window"
+    )
+    s.add_argument(
+        "--tokens-per-hour",
+        type=int,
+        default=200_000,
+        help="pace for --real-analyst; the alert is 500K for all use",
+    )
+    s.add_argument("--max-calls", type=int, default=None, help="cap Analyst calls per match (trial runs)")
+    s.add_argument("--resume", action="store_true", help="keep finished rows next to --out and run the rest")
+    s.add_argument(
+        "--analyst-cache", type=Path, default=None, help="cache Analyst responses (re-grading is free)"
     )
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
+
+    s = sub.add_parser(
+        "planted", help="the planted-defect harness: every injection point, Checker and auditor"
+    )
+    s.add_argument("--seeds", type=seed_range, default=seed_range("1-10"))
+    s.add_argument("--languages", default="en", help="comma-separated: en,es,ar,hi")
+    s.add_argument("--out", type=Path, required=True)
+
+    s = sub.add_parser(
+        "template-eval", help="Foundry fluency and coherence evaluators over every template, per language"
+    )
+    s.add_argument("--seeds", type=seed_range, default=seed_range("26,28,31"))
+    s.add_argument(
+        "--tokens-per-hour", type=int, default=200_000, help="judge pace; the alert is 500K for all use"
+    )
+    s.add_argument("--previous", type=Path, default=None, help="an earlier result: re-judge only failed rows")
+    s.add_argument("--out", type=Path, required=True)
+
+    s = sub.add_parser(
+        "loadtest", help="N listeners on the deployed live stream: event to first audio byte, per line"
+    )
+    s.add_argument("--url", required=True, help="the worker's base URL")
+    s.add_argument("--listeners", type=int, default=20)
+    s.add_argument("--minutes", type=float, default=10.0)
+    s.add_argument("--out", type=Path, required=True, help="summary JSON; the latency model goes next to it")
 
     args = parser.parse_args(argv)
     if args.cmd == "schemas":
@@ -201,12 +241,13 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit("set --storage-url or EARSHOT_STORAGE_URL")
         flags = Flags(BlobFlags(url))
         flags.refresh()
-        if args.rotate_judge_codes or args.add_judge_code:
+        if args.rotate_judge_codes or args.add_judge_code or args.remove_judge_code:
             added = [code_hash(args.add_judge_code)] if args.add_judge_code else []
+            removed = {code_hash(args.remove_judge_code)} if args.remove_judge_code else set()
 
             def codes(cur: dict) -> dict:
                 kept = [] if args.rotate_judge_codes else list(cur.get("judge_code_sha256", []))
-                return {**cur, "judge_code_sha256": sorted(set(kept + added))}
+                return {**cur, "judge_code_sha256": sorted(set(kept + added) - removed)}
 
             flags.source.update(codes)
             flags.refresh()
@@ -235,14 +276,80 @@ def main(argv: list[str] | None = None) -> None:
         from earshot.eval.run import LatencyModel, run_season
 
         latency = LatencyModel.load(args.latency) if args.latency else LatencyModel.provisional_default()
-        summary, matches = run_season(args.seeds, latency, workers=args.workers, windows=args.windows)
-        summary["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        analyst = (
+            {
+                "tokens_per_hour": args.tokens_per_hour,
+                "max_calls": args.max_calls,
+                "cache_dir": str(args.analyst_cache) if args.analyst_cache else None,
+            }
+            if args.real_analyst
+            else None
+        )
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(summary, indent=1) + "\n")
         rows = args.out.with_suffix(".matches.jsonl")
-        rows.write_text("".join(json.dumps(m) + "\n" for m in matches))
+        if not args.resume:
+            rows.unlink(missing_ok=True)
+        summary, _ = run_season(
+            args.seeds, latency, workers=args.workers, windows=args.windows, analyst=analyst, rows_path=rows
+        )
+        summary["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        args.out.write_text(json.dumps(summary, indent=1) + "\n")
         brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
         print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
+    elif args.cmd == "planted":
+        from earshot.contract import Language
+        from earshot.eval.planted import run_all
+
+        result = run_all(args.seeds, [Language(x) for x in args.languages.split(",")])
+        result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
+        for pt in result["points"]:
+            where = f"{pt.get('language', '')} {pt.get('mode', '')}".strip()
+            print(f"{pt['point']:28} {where:14} injected {pt['defects_injected']:5} recall {pt['recall']}"
+                  f" false-block {pt.get('false_block_rate')}")  # fmt: skip
+    elif args.cmd == "template-eval":
+        from earshot.eval.templates_eval import run as judge_templates
+
+        previous = json.loads(args.previous.read_text()) if args.previous else None
+        result = judge_templates(args.seeds, args.tokens_per_hour, previous)
+        result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=1, ensure_ascii=False) + "\n")
+        print(
+            json.dumps({k: result[k] for k in ("coverage", "judge_calls", "tokens")} | {"out": str(args.out)})
+        )
+    elif args.cmd == "loadtest":
+        import asyncio
+        import os
+
+        from earshot.eval.loadtest import run as load
+        from earshot.eval.loadtest import temporary_judge_code
+
+        url = os.environ.get("EARSHOT_STORAGE_URL")
+        if not url:
+            sys.exit("set EARSHOT_STORAGE_URL (the flag blob's account) for the run's temporary judge code")
+        with temporary_judge_code(url) as code:
+            result = asyncio.run(load(args.url.rstrip("/"), code, args.listeners, args.minutes))
+        result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
+        model = result.pop("latency_model")
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(result, indent=1) + "\n")
+        latency = args.out.with_suffix(".latency.json")
+        latency.write_text(json.dumps(model) + "\n")
+        keys = (
+            "listeners",
+            "minutes",
+            "received_lines",
+            "event_to_first_audio_byte_ms",
+            "p95_under_2s",
+            "errors",
+        )
+        print(
+            json.dumps(
+                {k: result[k] for k in keys} | {"out": str(args.out), "latency": str(latency)}, indent=1
+            )
+        )
 
 
 if __name__ == "__main__":

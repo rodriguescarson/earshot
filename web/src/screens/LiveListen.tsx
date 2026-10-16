@@ -41,6 +41,7 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
   const [paused, setPaused] = useState(false);
   const [recaps, setRecaps] = useState<RecapMessage[]>([]);
   const [down, setDown] = useState(false);
+  const [refused, setRefused] = useState(false);
   const announcer = useRef<Announcer>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const current = useRef<LineMessage | null>(null);
@@ -110,7 +111,6 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
     const stop = connect(
       group,
       (m) => {
-        setDown(false);
         if (m.kind === "line") playRef.current(m);
         else if (m.kind === "state")
           setScore((s) => ({ home: m.home_score, away: m.away_score, minute: m.minute ?? s.minute }));
@@ -121,7 +121,11 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
           announcer.current?.announce(tRef.current(`listen.recapReady.${m.period}`));
         }
       },
-      () => setDown(true),
+      (state) => {
+        setDown(state === "reconnecting");
+        setRefused(state === "refused");
+        if (state === "refused") layer.current?.pause(); // no match coming: the crowd bed goes quiet
+      },
     );
     return stop;
   }, [group, paused, reader, oneEar]);
@@ -134,6 +138,10 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
   useEffect(() => {
     if (down) announcer.current?.announce(t("listen.reconnecting"), true);
   }, [down, t]);
+
+  useEffect(() => {
+    if (refused) announcer.current?.announce(t("listen.busy"), true);
+  }, [refused, t]);
 
   useEffect(
     () => () => {
@@ -176,10 +184,24 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
           })}
           <span className="score__status">
             {" "}
-            {down ? t("listen.reconnecting") : paused ? t("listen.status.paused") : t("listen.status.live")}
+            {refused
+              ? t("listen.status.busy")
+              : down
+                ? t("listen.reconnecting")
+                : paused
+                  ? t("listen.status.paused")
+                  : t("listen.status.live")}
           </span>
         </h1>
       </section>
+      {refused && (
+        <p className="plate busy" role="status">
+          {t("listen.busy")}{" "}
+          <a href="/" className="busy__link">
+            {t("listen.playRecorded")}
+          </a>
+        </p>
+      )}
       <section className="onair" aria-label={t("listen.onAir")}>
         <Dot state={onAir ? (onAir.never_drop ? "never-drop" : "on-air") : "waiting"} />
         <p className="onair__text">{onAir ? onAir.text : t("listen.waiting")}</p>
