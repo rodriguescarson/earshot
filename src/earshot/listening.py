@@ -87,7 +87,7 @@ def headphone_check(out: Path, cache: Path) -> str:
     """'Left.' hard left, then 'Right.' hard right: the left/right check before every session."""
     import numpy as np
 
-    from earshot.render import encode_aac
+    from earshot.voice.encode import encode_aac
     from earshot.voice.tts import SAMPLE_RATE, Synthesizer, read_mono, write_stereo
 
     synth = Synthesizer(cache)

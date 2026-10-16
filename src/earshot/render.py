@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
-import subprocess
 from dataclasses import replace
 from pathlib import Path
 
@@ -46,6 +44,7 @@ from earshot.contract import (
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.pitch import attacks_right, to_attacking
 from earshot.tools.snapshots import MatchView
+from earshot.voice.encode import encode_aac
 from earshot.voice.mix import REPLAY_TEMPLATE, Arm, BallPoint, mix
 from earshot.voice.replay import REPLAY_MS, replay_audio
 from earshot.voice.tts import SAMPLE_RATE, Clip, Synthesizer, read_mono, ssml_for, write_stereo
@@ -420,35 +419,6 @@ def render_fixture(
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
     return manifest
-
-
-def encode_aac(wav: Path, m4a: Path, bitrate: int = 128_000) -> None:
-    """AAC in an M4A container (plays on iOS Safari). ffmpeg where it works, else macOS afconvert."""
-    if shutil.which("ffmpeg"):
-        r = subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-loglevel",
-                "error",
-                "-i",
-                str(wav),
-                "-c:a",
-                "aac",
-                "-b:a",
-                str(bitrate),
-                str(m4a),
-            ],
-            capture_output=True,
-        )
-        if r.returncode == 0:
-            return
-    if shutil.which("afconvert"):
-        subprocess.run(
-            ["afconvert", "-f", "m4af", "-d", "aac", "-b", str(bitrate), str(wav), str(m4a)], check=True
-        )
-        return
-    raise RuntimeError("no working AAC encoder: install ffmpeg")
 
 
 def main(argv: list[str] | None = None) -> None:
