@@ -20,7 +20,8 @@ from openai import OpenAI, RateLimitError
 from pydantic import ValidationError
 
 from earshot.contract import AnalystResponse, CauseLabel, Claim, Metric
-from earshot.tools import match as tools
+from earshot.tools import match_tools as tools
+from earshot.tools.snapshots import MatchView
 
 SCOPE = "https://cognitiveservices.azure.com/.default"
 MAX_TURNS = 3
@@ -199,7 +200,7 @@ class Analyst:
             path.write_text(json.dumps(out))
         return out, False
 
-    def run(self, view: tools.MatchView, window_id: str, expected_dead_ms: int) -> AnalystResult:
+    def run(self, view: MatchView, window_id: str, expected_dead_ms: int) -> AnalystResult:
         res = AnalystResult(window_id)
         budget = timeout_for(expected_dead_ms)
         t0 = time.perf_counter()
@@ -208,11 +209,12 @@ class Analyst:
             {"role": "system", "content": SYSTEM},
             {
                 "role": "user",
-                "content": json.dumps({"window_id": window_id, "now_wall_ms": view.now_wall_ms, **ctx}),
+                "content": json.dumps({"window_id": window_id, "now_wall_ms": view.as_of_wall_ms, **ctx}),
             },
         ]
-        specs = _tool_specs(view.teams.home_id, view.teams.away_id)
-        schema = response_schema(view.teams.home_id, view.teams.away_id)
+        home, away = view.info.home.team_id, view.info.away.team_id
+        specs = _tool_specs(home, away)
+        schema = response_schema(home, away)
         all_cached = True
         try:
             for turn in range(MAX_TURNS):
@@ -277,7 +279,7 @@ def _parse(content: str, res: AnalystResult) -> None:
     res.claims = AnalystResponse(window_id=res.window_id, claims=res.claims[:6]).claims
 
 
-def _dispatch(view: tools.MatchView, name: str, args: dict) -> Any:
+def _dispatch(view: MatchView, name: str, args: dict) -> Any:
     try:
         if name == "match_context":
             return tools.match_context(view)
@@ -288,5 +290,5 @@ def _dispatch(view: tools.MatchView, name: str, args: dict) -> Any:
         if name == "recent_events":
             return tools.recent_events(view, args.get("team_id"), args.get("minutes", 5))
         return {"error": f"unknown tool {name}"}
-    except (ValueError, KeyError) as e:
+    except (tools.ToolInputError, ValueError, KeyError) as e:
         return {"error": str(e)}

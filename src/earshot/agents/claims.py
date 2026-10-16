@@ -24,7 +24,8 @@ from earshot.contract import (
 )
 from earshot.contract.line import SlotValue
 from earshot.stats.claims import verify_claim
-from earshot.tools.match import THRESHOLD, MatchView
+from earshot.tools.match_tools import THRESHOLD, metric_change
+from earshot.tools.snapshots import MatchView
 
 SHARE_METRICS = frozenset({Metric.DIRECTNESS, Metric.POSSESSION_SHARE})
 MAX_CLAIM_AGE_MS = 15 * 60_000
@@ -43,14 +44,27 @@ class ClaimCheck:
         return 0.0 if self.before is None or self.after is None else abs(self.after - self.before)
 
 
+def teams_of(view: MatchView) -> tuple[str, str]:
+    return view.info.home.team_id, view.info.away.team_id
+
+
+def club_name(view: MatchView, team_id: str) -> str:
+    return view.clubs[team_id].short_name
+
+
+def positions_of(view: MatchView) -> dict[str, str]:
+    return {pid: p.position for pid, p in view.players.items()}
+
+
 def verify(claim: Claim, view: MatchView) -> ClaimCheck:
     """Recompute a claim with the single shared verifier (``earshot.stats.claims``), plus two
     checks that only make sense at airtime: the team is in this match, and the window is recent."""
-    if claim.team_id not in (view.teams.home_id, view.teams.away_id):
+    home, away = teams_of(view)
+    if claim.team_id not in (home, away):
         return ClaimCheck(False, f"unknown team {claim.team_id}")
-    if claim.window_start_ms < view.now_wall_ms - MAX_CLAIM_AGE_MS:
+    if claim.window_start_ms < view.as_of_wall_ms - MAX_CLAIM_AGE_MS:
         return ClaimCheck(False, "window too old to air")
-    v = verify_claim(claim, view.events, view.teams.home_id, view.positions, view.now_wall_ms)
+    v = verify_claim(claim, list(view.events), home, positions_of(view), view.as_of_wall_ms)
     return ClaimCheck(v.ok, "" if v.ok else v.reason, v.before, v.after)
 
 
@@ -95,13 +109,13 @@ def gate_cause(claim: Claim, view: MatchView) -> tuple[Claim, str | None]:
     preconditions can: a team cannot chase a game it is winning, and "going direct" cannot explain
     a change in width. Returns the claim (cause removed if unsupported) and the reason, if any.
     """
-    from earshot.tools.match import match_context
+    from earshot.tools.match_tools import match_context
 
     cause = claim.cause
     if cause is None:
         return claim, None
     ctx = match_context(view)
-    side = "home" if claim.team_id == view.teams.home_id else "away"
+    side = "home" if claim.team_id == teams_of(view)[0] else "away"
     other = "away" if side == "home" else "home"
     mine, theirs = ctx[side]["score"], ctx[other]["score"]
     reason = None
@@ -122,10 +136,10 @@ def _recent_red(view: MatchView, team_id: str) -> bool:
     from earshot.contract import Card
     from earshot.contract.events import CardColor
 
-    lo = view.now_wall_ms - RED_CARD_WINDOW_MS
+    lo = view.as_of_wall_ms - RED_CARD_WINDOW_MS
     return any(
         isinstance(e, Card) and e.color is CardColor.RED and e.team_id == team_id and e.wall_ms >= lo
-        for e in view.past()
+        for e in view.events
     )
 
 
@@ -179,9 +193,7 @@ def claim_line(
     pan: float = 0.0,
 ) -> Line:
     ids = claim_template_ids(claim)
-    text, slots = render_claim(
-        language, mode, ids, claim_slots(claim, check, view.teams.names[claim.team_id])
-    )
+    text, slots = render_claim(language, mode, ids, claim_slots(claim, check, club_name(view, claim.team_id)))
     return Line(
         line_id=f"{window_id}-{claim.team_id}-{claim.metric.value}-{language.value}-{mode.value}",
         match_id=window_id.split("-win-")[0],
@@ -243,7 +255,7 @@ def check_claim_line(line: Line, claim: Claim, view: MatchView) -> ClaimCheck:
         return chk
     ids = claim_template_ids(claim)
     text, slots = render_claim(
-        line.language, line.listening_mode, ids, claim_slots(claim, chk, view.teams.names[claim.team_id])
+        line.language, line.listening_mode, ids, claim_slots(claim, chk, club_name(view, claim.team_id))
     )
     if line.template_id != "+".join(ids) or dict(line.slots) != slots or line.text != text:
         return ClaimCheck(False, "line does not match the verified claim's rendering", chk.before, chk.after)
@@ -271,17 +283,15 @@ def window_summary_line(
     deadline_wall_ms: int,
 ) -> Line | None:
     """The code fallback when the Analyst times out or nothing verifies: who has had the ball."""
-    from earshot.tools.match import metric_change
-
     best = None
-    for team in (view.teams.home_id, view.teams.away_id):
+    for team in teams_of(view):
         mc = metric_change(view, team, Metric.POSSESSION_SHARE, 5)
         if mc["after"] is not None and mc["after"] >= 0.5 and (best is None or mc["after"] > best[1]):
             best = (team, mc["after"])
     if best is None:
         return None
     slots: dict[str, SlotValue] = {
-        "club": view.teams.names[best[0]],
+        "club": club_name(view, best[0]),
         "percent": round(best[1] * 100),
         "window_min": 5,
     }

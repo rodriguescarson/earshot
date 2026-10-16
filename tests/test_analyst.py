@@ -27,34 +27,40 @@ from earshot.contract import (
     StoppageStart,
 )
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
-from earshot.tools.match import (
+from earshot.tools.match_tools import (
     THRESHOLD,
-    MatchView,
-    Teams,
+    ToolInputError,
     match_context,
     metric_change,
     metric_table,
     recent_events,
 )
+from earshot.tools.snapshots import MatchView
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "clip-demo.json"
 EV = TypeAdapter(Event)
 
 
 @pytest.fixture(scope="module")
-def world():
+def world_and_events():
     from earshot.sim.match import simulate
 
     d = json.loads(FIXTURE.read_text())
     match = MatchInfo(**d["match"])
     roster = Roster.build(match, [ClubInfo(**c) for c in d["clubs"]], [PlayerInfo(**p) for p in d["players"]])
     events = simulate(d["seed"]).events
-    teams = Teams(roster.home_id, roster.away_id, {t: c.short_name for t, c in roster.clubs.items()})
-    positions = {p.player_id: p.position for p in roster.players.values()}
     stop = next(
         e for e in events if isinstance(e, StoppageStart) and e.wall_ms >= d["clip"]["start_wall_ms"] + 60_000
     )
-    return MatchView(events, teams, positions, now_wall_ms=stop.wall_ms)
+    view = MatchView.of(
+        match, list(roster.clubs.values()), list(roster.players.values()), events, stop.wall_ms
+    )
+    return view, events
+
+
+@pytest.fixture(scope="module")
+def world(world_and_events):
+    return world_and_events[0]
 
 
 def notable(view):
@@ -80,25 +86,30 @@ def claim_from(view, row, **over):
     return Claim(**{**base, **over})
 
 
-def test_tools_never_see_the_future(world):
-    later = [e for e in world.events if e.wall_ms >= world.now_wall_ms]
+def test_tools_never_see_the_future(world_and_events):
+    world, events = world_and_events
+    later = [e for e in events if e.wall_ms > world.as_of_wall_ms]
     assert later, "fixture should have events after now"
-    seen = {r["event_id"] for r in recent_events(world, minutes=10, limit=10_000)}
+    assert all(e.wall_ms <= world.as_of_wall_ms for e in world.events)
+    seen = {r["event_id"] for r in recent_events(world, minutes=10, limit=50)}
     assert not seen & {e.event_id for e in later}
     for r in metric_table(world)["rows"]:
-        assert set(r["evidence_event_ids"]) <= {e.event_id for e in world.past()}
+        assert set(r["evidence_event_ids"]) <= {e.event_id for e in world.events}
 
 
 def test_metric_change_rejects_bad_arguments(world):
-    with pytest.raises(ValueError, match="minutes"):
-        metric_change(world, world.teams.home_id, Metric.TEMPO, 7)
-    with pytest.raises(ValueError, match="unknown team"):
+    with pytest.raises(ToolInputError, match="minutes"):
+        metric_change(world, world.info.home.team_id, Metric.TEMPO, 7)
+    with pytest.raises(ToolInputError, match="unknown team"):
         metric_change(world, "nobody", Metric.TEMPO, 5)
 
 
 def test_context_reports_both_teams(world):
     ctx = match_context(world)
-    assert {ctx["home"]["team_id"], ctx["away"]["team_id"]} == {world.teams.home_id, world.teams.away_id}
+    assert {ctx["home"]["team_id"], ctx["away"]["team_id"]} == {
+        world.info.home.team_id,
+        world.info.away.team_id,
+    }
 
 
 def test_a_true_claim_verifies_with_the_recomputed_numbers(world):
@@ -134,8 +145,8 @@ def test_planted_claim_defects_are_rejected(world, defect, reason):
     elif defect == "future_window":
         c = c.model_copy(
             update={
-                "window_end_ms": world.now_wall_ms + 60_000,
-                "window_start_ms": world.now_wall_ms - 240_000,
+                "window_end_ms": world.as_of_wall_ms + 60_000,
+                "window_start_ms": world.as_of_wall_ms - 240_000,
             }
         )
     elif defect == "odd_window":
@@ -164,7 +175,7 @@ def test_cause_gate_drops_score_and_metric_contradictions(world):
     row = notable(world)
     c = claim_from(world, row)
     ctx = match_context(world)
-    side = "home" if c.team_id == world.teams.home_id else "away"
+    side = "home" if c.team_id == world.info.home.team_id else "away"
     other = "away" if side == "home" else "home"
     level_or_ahead = ctx[side]["score"] >= ctx[other]["score"]
     gated, why = gate_cause(c.model_copy(update={"cause": CauseLabel.CHASING_GAME}), world)
@@ -217,8 +228,9 @@ def test_a_claim_does_not_repeat_within_ten_minutes(world):
     row = notable(world)
     cc = (claim_from(world, row), verify(claim_from(world, row), world))
     key = (cc[0].team_id, cc[0].metric.value, cc[0].direction.value)
-    assert fresh([cc], {key: world.now_wall_ms - 60_000}, world.now_wall_ms) == []
-    assert fresh([cc], {key: world.now_wall_ms - 11 * 60_000}, world.now_wall_ms) == [cc]
+    now = world.as_of_wall_ms
+    assert fresh([cc], {key: now - 60_000}, now) == []
+    assert fresh([cc], {key: now - 11 * 60_000}, now) == [cc]
 
 
 def test_schema_is_strict_and_lists_every_metric_and_cause():

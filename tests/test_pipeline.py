@@ -271,7 +271,7 @@ def test_replay_with_the_real_agents():
             idx = max(
                 i
                 for i, e in enumerate(r.events)
-                if isinstance(e, StoppageStart) and e.wall_ms < view.now_wall_ms
+                if isinstance(e, StoppageStart) and e.wall_ms < view.as_of_wall_ms
             )
             stoppage = r.events[idx]
             assert isinstance(stoppage, StoppageStart)

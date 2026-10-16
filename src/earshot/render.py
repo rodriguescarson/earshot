@@ -45,7 +45,7 @@ from earshot.contract import (
 )
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.pitch import attacks_right, to_attacking
-from earshot.tools.match import MatchView, Teams
+from earshot.tools.snapshots import MatchView
 from earshot.voice.mix import REPLAY_TEMPLATE, Arm, BallPoint, mix
 from earshot.voice.replay import REPLAY_MS, replay_audio
 from earshot.voice.tts import SAMPLE_RATE, Clip, Synthesizer, read_mono, ssml_for, write_stereo
@@ -84,6 +84,24 @@ def replay_clip(
     return Clip(path, int(len(audio) / SAMPLE_RATE * 1000))
 
 
+def localized(d: dict, language: Language) -> tuple[list[ClubInfo], list[PlayerInfo]]:
+    """Club and player names in the language's script (Arabic, Devanagari); Latin otherwise.
+
+    Names come from the reviewed roster tables (``earshot.world.localize``) by id, never from a
+    model at runtime, so the Checker's slot rule still holds.
+    """
+    clubs = [ClubInfo(**c) for c in d["clubs"]]
+    players = [PlayerInfo(**p) for p in d["players"]]
+    if language not in (Language.AR, Language.HI):
+        return clubs, players
+    from earshot.world.localize import roster as local_roster
+
+    table = local_roster(language)
+    by_club = {c.team_id: c for c in table.clubs}
+    by_player = {p.player_id: p for p in table.players}
+    return [by_club.get(c.team_id, c) for c in clubs], [by_player.get(p.player_id, p) for p in players]
+
+
 def full_match_events(d: dict) -> list[Event]:
     """The whole match up to the clip, so the Analyst can compare windows before the clip started.
 
@@ -110,7 +128,7 @@ def render_fixture(
 ) -> dict:
     d = json.loads(fixture.read_text())
     match = MatchInfo(**d["match"])
-    roster = Roster.build(match, [ClubInfo(**c) for c in d["clubs"]], [PlayerInfo(**p) for p in d["players"]])
+    roster = Roster.build(match, *localized(d, language))
     clip = d["clip"]
     t0 = clip["start_wall_ms"]
     all_events = full_match_events(d) if analyst else [EV.validate_python(r) for r in d["events"]]
@@ -127,8 +145,6 @@ def render_fixture(
             away_score=clip["away_score_at_start"],
             status="live",
         )
-    teams = Teams(roster.home_id, roster.away_id, {t: c.short_name for t, c in roster.clubs.items()})
-    positions = {p.player_id: p.position for p in roster.players.values()}
     the_analyst = Analyst(cache_dir=cache.parent / "analyst-cache", patient=True) if analyst else None
     if the_analyst:
         the_analyst.warm()
@@ -188,7 +204,9 @@ def render_fixture(
 
     def analyse_window(ev: StoppageStart) -> list[Line]:
         assert the_analyst is not None
-        view = MatchView(all_events, teams, positions, now_wall_ms=ev.wall_ms)
+        view = MatchView.of(
+            match, list(roster.clubs.values()), list(roster.players.values()), all_events, ev.wall_ms
+        )
         window_id = f"{match.match_id}-win-{ev.event_id}"
         res = the_analyst.run(view, window_id, ev.expected_dead_ms)
         budget_ms = int(timeout_for(ev.expected_dead_ms) * 1000)
@@ -209,7 +227,9 @@ def render_fixture(
             tools_used = ", ".join(dict.fromkeys(res.tool_calls)) or "no tools"
             log(ready, "Analyst", f"{len(res.claims)} claims via {tools_used} ({res.tokens} tokens)")
         for (c, why), k in gated:
-            label = f"{view.teams.names[c.team_id]} {c.metric.value.replace('_', ' ')} {c.direction.value}"
+            label = (
+                f"{roster.clubs[c.team_id].short_name} {c.metric.value.replace('_', ' ')} {c.direction.value}"
+            )
             if k.ok:
                 log(ready, "Checker", f"claim verified: {label} ({k.before:.2f} to {k.after:.2f})", "ok")
             else:

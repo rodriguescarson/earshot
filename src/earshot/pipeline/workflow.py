@@ -404,14 +404,13 @@ class MatchPipeline:
         from earshot.agents.state import MatchState, Roster  # pyright: ignore[reportMissingImports]
 
         roster = Roster.build(info, list(clubs), list(players))
-        names = {c.team_id: c.short_name for c in clubs}
 
         def check(line: Line, moment: Moment, ev: Event, state: Any) -> tuple[bool, str]:
             v = check_caller_line(line, moment, ev, state, roster)
             return v.ok, v.reason
 
         def verify(claim: Claim, step: WindowStep) -> tuple[bool, str]:
-            v = verify_claim(claim, tool_view(step, names))
+            v = verify_claim(claim, tool_view(step, info, clubs, players))
             return v.ok, v.reason
 
         return cls(
@@ -424,30 +423,28 @@ class MatchPipeline:
             caller=Caller(roster),
             check=check,
             targets=targets,
-            analyst=analyst_from_agents(analyst, names) if analyst is not None else no_analyst,
+            analyst=analyst_from_agents(analyst, info, clubs, players) if analyst is not None else no_analyst,
             verify=verify,
             timeout_scale=timeout_scale,
         )
 
 
-def tool_view(step: WindowStep, names: Mapping[str, str]) -> Any:
-    """The match as Stream 1's in-process tools see it (``earshot.tools.match.MatchView``)."""
-    from earshot.tools.match import MatchView, Teams  # pyright: ignore[reportMissingImports]
+def tool_view(step: WindowStep, info: Any, clubs: Sequence[Any], players: Sequence[Any]) -> Any:
+    """The match as the shared match tools see it (``earshot.tools.snapshots.MatchView``)."""
+    from earshot.tools.snapshots import MatchView
 
-    return MatchView(
-        events=step.events.value,
-        teams=Teams(step.home_id, step.away_id, names),
-        positions=step.positions.value,
-        now_wall_ms=step.stoppage.wall_ms + 1,
-    )
+    return MatchView.of(info, list(clubs), list(players), list(step.events.value), step.stoppage.wall_ms + 1)
 
 
-def analyst_from_agents(analyst: Any, names: Mapping[str, str]) -> AnalystFn:
+def analyst_from_agents(analyst: Any, info: Any, clubs: Sequence[Any], players: Sequence[Any]) -> AnalystFn:
     """Wrap ``Analyst.run`` (blocking HTTP) as an ``AnalystFn``, run off the event loop."""
 
     async def run(step: WindowStep, budget_ms: int) -> AnalystOutcome:
         res = await asyncio.to_thread(
-            analyst.run, tool_view(step, names), f"{step.stoppage.event_id}-w", step.stoppage.expected_dead_ms
+            analyst.run,
+            tool_view(step, info, clubs, players),
+            f"{step.stoppage.event_id}-w",
+            step.stoppage.expected_dead_ms,
         )
         failure = "timeout" if res.timed_out else (f"error: {res.error}" if res.error else None)
         if failure is None and res.invalid:
