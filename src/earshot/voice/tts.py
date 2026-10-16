@@ -77,9 +77,16 @@ class Synthesizer:
             self._token = (tok.token, tok.expires_on)
         return self._token[0]
 
+    def _path(self, ssml: str) -> Path:
+        return self.cache_dir / f"v2-{hashlib.sha256(ssml.encode()).hexdigest()[:32]}.wav"
+
+    def cached(self, ssml: str) -> Clip | None:
+        """The clip if it is already in the cache; never calls the service."""
+        path = self._path(ssml)
+        return Clip(path, wav_duration_ms(path)) if path.exists() else None
+
     def synthesize(self, ssml: str) -> Clip:
-        key = "v2-" + hashlib.sha256(ssml.encode()).hexdigest()[:32]
-        path = self.cache_dir / f"{key}.wav"
+        path = self._path(ssml)
         if not path.exists():
             r: httpx.Response | None = None
             for attempt in range(5):

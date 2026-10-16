@@ -7,7 +7,8 @@
     "listen": "Escuchar ahora",
     "headphones": "Mejor con auriculares. Oirás izquierda y luego derecha.",
     "connecting": "Conectando…",
-    "choose": "Elegir idioma y estilo"
+    "choose": "Elegir idioma y estilo",
+    "live": "Unirse al partido en directo"
   },
   "listen": {
     "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}.",
@@ -41,7 +42,8 @@
     "outputReader": "Mi lector de pantalla",
     "outputAppHint": "Earshot dice cada frase y sitúa el balón en el sonido.",
     "outputReaderHint": "Las frases van a tu lector de pantalla a tu ritmo. El sonido del balón sigue sonando.",
-    "close": "Volver al partido"
+    "close": "Volver al partido",
+    "reconnecting": "Reconectando con el partido…"
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}",

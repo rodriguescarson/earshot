@@ -7,7 +7,8 @@
     "listen": "Listen now",
     "headphones": "Best with headphones. You'll hear left, then right.",
     "connecting": "Connecting…",
-    "choose": "Choose language and style"
+    "choose": "Choose language and style",
+    "live": "Join the live match"
   },
   "listen": {
     "score": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}.",
@@ -41,7 +42,8 @@
     "outputReader": "My screen reader",
     "outputAppHint": "Earshot speaks every line, with the ball placed in sound.",
     "outputReaderHint": "Lines go to your screen reader at your own speed. The ball sound keeps playing.",
-    "close": "Back to the match"
+    "close": "Back to the match",
+    "reconnecting": "Reconnecting to the match…"
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",

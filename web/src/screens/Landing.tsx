@@ -4,10 +4,12 @@ import { useTranslation } from "react-i18next";
 export function Landing({
   onListen,
   onChoose,
+  onLive,
   busy,
 }: {
   onListen: () => void;
   onChoose: () => void;
+  onLive?: () => void;
   busy: boolean;
 }) {
   const { t } = useTranslation();
@@ -30,6 +32,11 @@ export function Landing({
       <button type="button" className="link" onClick={onChoose}>
         {t("landing.choose")}
       </button>
+      {onLive && (
+        <button type="button" className="link" onClick={onLive}>
+          {t("landing.live")}
+        </button>
+      )}
       <p className="landing__small">{t("landing.fiction")}</p>
     </main>
   );

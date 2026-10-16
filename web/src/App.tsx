@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { deviceLanguage, setLanguage } from "./i18n";
+import { type LiveSummary, liveAvailable, liveSummary } from "./live/client";
 import { unlockAudio } from "./player/audioElement";
 import { type Choices, clipBase, loadChoices, saveChoices } from "./player/choices";
 import { loadManifest, type Manifest } from "./player/manifest";
 import { Landing } from "./screens/Landing";
 import { Listen } from "./screens/Listen";
+import { LiveListen } from "./screens/LiveListen";
 import { Setup } from "./screens/Setup";
 import { TestPage } from "./screens/TestPage";
 
 type Screen =
   | { name: "landing" }
   | { name: "setup" }
-  | { name: "listen"; manifest: Manifest; choices: Choices };
+  | { name: "listen"; manifest: Manifest; choices: Choices }
+  | { name: "live"; summary: LiveSummary; choices: Choices };
 
 const defaults: Choices = loadChoices({ lang: deviceLanguage(), output: "app", mode: "casual" });
 void setLanguage(defaults.lang);
@@ -46,7 +49,21 @@ export function App() {
     }
   };
 
+  const join = async (c: Choices) => {
+    unlockAudio();
+    setBusy(true);
+    setFailed(false);
+    try {
+      setScreen({ name: "live", summary: await liveSummary(), choices: c });
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (hash === "#test") return <TestPage />;
+  if (screen.name === "live") return <LiveListen choices={screen.choices} summary={screen.summary} />;
   if (screen.name === "listen")
     return (
       <Listen
@@ -62,6 +79,7 @@ export function App() {
         busy={busy}
         onListen={() => void start(choices)}
         onChoose={() => setScreen({ name: "setup" })}
+        onLive={liveAvailable() ? () => void join(choices) : undefined}
       />
       {failed && (
         <p role="alert" className="landing__error">

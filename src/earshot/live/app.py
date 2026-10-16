@@ -19,6 +19,7 @@ import logging
 import os
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -28,15 +29,16 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from earshot.agents.analyst import Analyst
+from earshot.agents.analyst import Analyst, AnalystResult
 from earshot.agents.caller import zone_key
 from earshot.agents.catalog import load, placeholders
 from earshot.agents.state import spoken_minute
 from earshot.contract import Language, Line, LineSource
 from earshot.contract.line import SlotValue
 from earshot.live.audio import AudioStore
-from earshot.live.broadcast import GroupKey, LiveMatch
+from earshot.live.broadcast import GroupError, GroupKey, LiveMatch
 from earshot.sim.io import load_events, load_info
+from earshot.tools.snapshots import MatchView
 from earshot.world.localize import roster as local_roster
 
 log = logging.getLogger("earshot.live")
@@ -70,6 +72,18 @@ class Hub:
                 log.warning("web pubsub send failed: %s", e)
 
 
+class GatedAnalyst:
+    """The Analyst, skipped while ``off()`` holds (the window falls back to a summary)."""
+
+    def __init__(self, analyst: Analyst, off: Callable[[], bool]) -> None:
+        self.analyst, self.off = analyst, off
+
+    def run(self, view: MatchView, window_id: str, expected_dead_ms: int) -> AnalystResult:
+        if self.off():
+            return AnalystResult(window_id, error="cached-only mode")
+        return self.analyst.run(view, window_id, expected_dead_ms)
+
+
 class Live:
     def __init__(self) -> None:
         self.match_dir = Path(os.environ.get("EARSHOT_MATCH_DIR", "data/matches"))
@@ -85,6 +99,12 @@ class Live:
             else None
         )
         self.last_ondemand: dict[str, float] = {}
+        self.cached_only: Callable[[], bool] = lambda: False
+        """The worker points this at its kill-switch flag: no new speech or model calls while set."""
+
+    def analyst_off(self) -> bool:
+        # No model calls in cached-only mode, or while nobody is listening.
+        return self.cached_only() or self.match is None or not self.match.groups
 
     def logs(self) -> list[Path]:
         return sorted(self.match_dir.glob("*.events.jsonl"))
@@ -106,8 +126,9 @@ class Live:
                     players,
                     audio=self.audio,
                     send=self.hub.send,
-                    analyst=self.analyst,
+                    analyst=GatedAnalyst(self.analyst, self.analyst_off) if self.analyst else None,
                     speed=self.speed,
+                    cached_only=lambda: self.cached_only(),
                 )
                 log.info("live: %s kicks off", info.match_id)
                 await self.match.run()
@@ -138,11 +159,15 @@ async def stream(request: Request) -> Response:
         )
     if key.match_id != m.info.match_id:
         return JSONResponse({"error": "that match is not live", "live": m.info.match_id}, status_code=409)
+    try:
+        m.join(key)
+    except GroupError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
     q: asyncio.Queue[str] = asyncio.Queue(maxsize=200)
     live.hub.subscribers[key.name].add(q)
-    m.join(key)
 
     async def events():
+        touched = time.monotonic()
         try:
             yield ": connected\n\n"
             while True:
@@ -150,8 +175,14 @@ async def stream(request: Request) -> Response:
                     data = await asyncio.wait_for(q.get(), timeout=15)
                     yield f"data: {data}\n\n"
                 except TimeoutError:
-                    m.join(key)
                     yield ": keep-alive\n\n"
+                if time.monotonic() - touched >= 15:
+                    # Keep the group alive while someone listens, including across a match restart.
+                    touched = time.monotonic()
+                    current = live.match
+                    if current is not None and current.info.match_id == key.match_id:
+                        with contextlib.suppress(GroupError):
+                            current.join(key)
         finally:
             live.hub.subscribers[key.name].discard(q)
 
@@ -161,21 +192,28 @@ async def stream(request: Request) -> Response:
 async def ondemand(request: Request) -> Response:
     """'Where's the ball?' and 'Catch me up': answered for the asker only, from code templates."""
     m = live.match
-    body = await request.json()
+    key: GroupKey | None = None
     try:
+        body = await request.json()
         key = GroupKey.parse(str(body.get("group", "")))
         kind = str(body.get("kind"))
-        assert kind in ("where", "catchup")
-    except (AssertionError, ValueError, KeyError):
+    except (ValueError, KeyError, AttributeError):
+        kind = ""
+    if key is None or kind not in ("where", "catchup"):
         return JSONResponse({"error": "group and kind (where or catchup) are required"}, status_code=400)
     if m is None or key.match_id != m.info.match_id:
         return JSONResponse({"error": "that match is not live"}, status_code=409)
+    if key.name not in m.groups:
+        return JSONResponse({"error": "join the match stream first"}, status_code=409)
     now = time.monotonic()
     if now - live.last_ondemand.get(key.name + kind, 0) < ONDEMAND_GAP_S:
         return JSONResponse({"error": "once every 3 seconds"}, status_code=429)
     live.last_ondemand[key.name + kind] = now
     line = ondemand_line(m, key, kind)
-    served = await asyncio.to_thread(live.audio.serve, line, key.output_mode)
+    speak = await asyncio.to_thread(live.audio.cached_ms, line) is not None or (
+        not m.cached_only() and m.budget.allow(len(line.text))
+    )
+    served = await asyncio.to_thread(live.audio.serve, line, key.output_mode, synthesize=speak)
     return JSONResponse(
         {
             "id": line.line_id,
