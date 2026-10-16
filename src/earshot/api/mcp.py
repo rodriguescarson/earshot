@@ -173,8 +173,20 @@ class RateLimited:
 def build_app(source: MatchSource | None = None, codes: JudgeCodes | None = None):
     server = build_server(source or source_from_env())
     inner = server.streamable_http_app(stateless_http=True, json_response=True, host="0.0.0.0")
-    codes_path = os.environ.get("EARSHOT_JUDGE_CODES_FILE")
-    return RateLimited(inner, codes or JudgeCodes(Path(codes_path) if codes_path else None))
+    return RateLimited(inner, codes or codes_from_env())
+
+
+def codes_from_env() -> JudgeCodes:
+    """Judge-code hashes: the shared flag blob when deployed, else a local file (or none)."""
+    url = os.environ.get("EARSHOT_STORAGE_URL")
+    if url:
+        from earshot.api.flags import BlobFlags, Flags, JudgeCodesFromFlags
+
+        flags = Flags(BlobFlags(url))
+        flags.refresh()
+        return JudgeCodesFromFlags(flags, refresh=True)
+    path = os.environ.get("EARSHOT_JUDGE_CODES_FILE")
+    return JudgeCodes(Path(path) if path else None)
 
 
 def __getattr__(name: str):

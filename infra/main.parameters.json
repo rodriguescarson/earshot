@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "earshot" },
+    "location": { "value": "swedencentral" },
+    "webPubSubSku": { "value": "Free_F1" },
+    "workerImage": { "value": "${SERVICE_WORKER_IMAGE_NAME=}" },
+    "mcpImage": { "value": "${SERVICE_MCP_IMAGE_NAME=}" },
+    "allowedOrigins": { "value": "https://kind-island-0f3823d0f.5.azurestaticapps.net" }
+  }
+}
