@@ -297,3 +297,59 @@ def test_stoppage_without_window():
     assert wf.opens_window(throw) == (throw.expected_dead_ms >= 15_000)
     ft = next(e for e in r.events if isinstance(e, StoppageStart) and e.kind is StoppageKind.FULL_TIME)
     assert not wf.opens_window(ft)
+
+
+def test_push_moment_does_not_wait_for_the_window():
+    """A live caller runs windows on their own task: later events are not held behind the Analyst."""
+    r, _ = pipeline(3)
+    seen: list[tuple[str, int]] = []
+    release = asyncio.Event()
+
+    async def slow(step: wf.WindowStep, budget_ms: int):
+        await release.wait()
+        seen.append((step.stoppage.event_id, len(step.events.value)))
+        return wf.AnalystOutcome((), None)
+
+    async def go():
+        p = wf.MatchPipeline(
+            fake_step, FakeState(), r.info.home.team_id, r.info.away.team_id, {}, FakeSpotter(), FakeCaller(),
+            fake_check, TARGETS, slow,
+        )  # fmt: skip
+        first = next(i for i, e in enumerate(r.events) if wf.opens_window(e))
+        tasks = []
+        for ev in r.events[: first + 40]:
+            moment, wstep = await p.push_moment(ev)
+            assert moment.event_id == ev.event_id
+            if wstep is not None:
+                tasks.append(asyncio.create_task(p.run_window(wstep)))
+        assert tasks
+        assert not any(t.done() for t in tasks)
+        assert p.state.n == first + 40
+        release.set()
+        windows = await asyncio.gather(*tasks)
+        return first, windows
+
+    first, windows = asyncio.run(go())
+    assert all(w is not None and w.fallback == "window_summary" for w in windows)
+    # Each window saw the history up to its own stoppage, never the events pushed while it waited.
+    idx = {e.event_id: i for i, e in enumerate(r.events)}
+    assert seen
+    assert all(n == idx[sid] + 1 for sid, n in seen)
+    assert seen[0][0] == r.events[first].event_id
+
+
+def test_push_still_returns_the_window_inline():
+    r, p = pipeline(3)
+    inline = asyncio.run(p.replay(r.events))
+    r2, p2 = pipeline(3)
+
+    async def split():
+        out = []
+        for ev in r2.events:
+            m, wstep = await p2.push_moment(ev)
+            out.append((m, await p2.run_window(wstep) if wstep is not None else None))
+        return out
+
+    assert [(m.lines, w and w.window_id) for m, w in inline] == [
+        (m.lines, w and w.window_id) for m, w in asyncio.run(split())
+    ]
