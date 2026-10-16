@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { sharedAudio, unlockAudio } from "../player/audioElement";
+import { CLIP_BASE } from "../player/choices";
 
 /**
  * Listening test, facilitator view (protocol earshot-listening-v1, pre-registered in EVALUATION.md).
@@ -42,7 +43,7 @@ interface Answer {
   where: boolean;
 }
 
-const BASE = "/clips/listen-test";
+const BASE = `${CLIP_BASE}/listen-test`;
 const QUESTIONS: { key: "score" | "possession" | "where"; ask: string }[] = [
   { key: "score", ask: "What's the score?" },
   { key: "possession", ask: "Who has the ball?" },
