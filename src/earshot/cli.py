@@ -57,6 +57,21 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("fit", help="fit xT and pass difficulty on development seeds and save the models")
     s.add_argument("--seeds", type=seed_range, default=seed_range("1-40"))
 
+    s = sub.add_parser("flags", help="show or set the runtime flags (cached-only mode, judge codes)")
+    s.add_argument("--storage-url", default=None, help="Blob account URL (default: EARSHOT_STORAGE_URL)")
+    s.add_argument("--cached-only", choices=["on", "off"], default=None)
+    s.add_argument("--reason", default="set by hand")
+    s.add_argument("--add-judge-code", default=None, help="add a judge code (only its SHA-256 is stored)")
+    s.add_argument("--rotate-judge-codes", action="store_true", help="remove every existing judge code first")
+
+    s = sub.add_parser(
+        "frames", help="player frames at 10 Hz for the render match (CEO-4), and its G8 numbers"
+    )
+    s.add_argument("--seed", type=int, default=26)
+    s.add_argument(
+        "--out", type=Path, required=True, help="an .npz file: t_ms, period and one (n, 2) array per player"
+    )
+
     s = sub.add_parser("roster", help="write the league roster (clubs and players) as JSON")
     s.add_argument("--out", type=Path, required=True)
 
@@ -159,6 +174,39 @@ def main(argv: list[str] | None = None) -> None:
                 {"xt": str(xt.MODEL_PATH), "pass_difficulty": str(passes.MODEL_PATH), "fitted_on": label}
             )
         )
+    elif args.cmd == "flags":
+        import os
+
+        from earshot.api.flags import BlobFlags, Flags
+        from earshot.api.ratelimit import code_hash
+
+        url = args.storage_url or os.environ.get("EARSHOT_STORAGE_URL")
+        if not url:
+            sys.exit("set --storage-url or EARSHOT_STORAGE_URL")
+        flags = Flags(BlobFlags(url))
+        flags.refresh()
+        if args.rotate_judge_codes or args.add_judge_code:
+            hashes = [] if args.rotate_judge_codes else list(flags.values.get("judge_code_sha256", []))
+            if args.add_judge_code:
+                hashes.append(code_hash(args.add_judge_code))
+            flags.source.write({**flags.source.read(), "judge_code_sha256": sorted(set(hashes))})
+            flags.refresh()
+        if args.cached_only:
+            flags.set_cached_only(args.cached_only == "on", args.reason)
+        shown = {k: v for k, v in flags.values.items() if k != "judge_code_sha256"}
+        shown["judge_codes"] = len(flags.values.get("judge_code_sha256", []))
+        print(json.dumps(shown, indent=1, sort_keys=True))
+    elif args.cmd == "frames":
+        import numpy as np
+
+        from earshot.sim.frames import g8, render_frames
+
+        fr = render_frames(args.seed)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        arrays: dict[str, np.ndarray] = {"t_ms": fr.t_ms, "period": fr.period, **fr.players}
+        np.savez_compressed(args.out, allow_pickle=False, **arrays)
+        ok, numbers = g8(fr)
+        print(json.dumps({"out": str(args.out), "g8_passed": ok, **numbers}, indent=1))
     elif args.cmd == "roster":
         from earshot.world.clubs import world
 

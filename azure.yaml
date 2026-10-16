@@ -1,0 +1,24 @@
+# azd: `azd provision` (infra/main.bicep, resource group rg-earshot) and `azd deploy` (remote image
+# builds in ACR). Pin the subscription first: azd env set AZURE_SUBSCRIPTION_ID "$EARSHOT_SUBSCRIPTION".
+name: earshot
+metadata:
+  template: earshot@0.1.0
+infra:
+  provider: bicep
+  path: infra
+  module: main
+services:
+  worker:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: Dockerfile
+      remoteBuild: true
+  mcp:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: Dockerfile
+      remoteBuild: true

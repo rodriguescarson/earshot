@@ -1,0 +1,45 @@
+name: deploy
+# Builds the image in ACR and rolls the worker and MCP Container Apps to it, through GitHub OIDC
+# (no stored Azure credentials). Runs on pushes to main while the repository variable
+# DEPLOY_ENABLED is "true"; set it to "false" at submission (Rule 5, CEO Section 9 / T5) so that
+# after the deadline only a manual restore of the submitted revision ships.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: vars.DEPLOY_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RG: rg-earshot
+      ACR: ${{ vars.ACR_NAME }}
+      IMAGE: ${{ vars.ACR_NAME }}.azurecr.io/earshot:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Build the image remotely in ACR
+        run: az acr build --registry "$ACR" --image "earshot:${{ github.sha }}" --file Dockerfile . --only-show-errors
+      - name: Roll the worker and the MCP app (single-revision mode)
+        run: |
+          az containerapp update -g "$RG" -n ca-earshot-worker --image "$IMAGE" --only-show-errors -o none
+          az containerapp update -g "$RG" -n ca-earshot-mcp --image "$IMAGE" --only-show-errors -o none
+      - name: Smoke tests
+        run: |
+          set -e
+          W=$(az containerapp show -g "$RG" -n ca-earshot-worker --query properties.configuration.ingress.fqdn -o tsv)
+          M=$(az containerapp show -g "$RG" -n ca-earshot-mcp --query properties.configuration.ingress.fqdn -o tsv)
+          for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS "https://$W/healthz" && break || sleep 15; done
+          curl -fsS "https://$W/api/status"
+          for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS "https://$M/healthz" && break || sleep 15; done
