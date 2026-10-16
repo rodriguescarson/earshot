@@ -17,9 +17,9 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Protocol
 
-from earshot.agents.analyst import Analyst
+from earshot.agents.analyst import AnalystResult
 from earshot.agents.claims import (
     check_claim_line,
     claim_key,
@@ -58,7 +58,9 @@ log = logging.getLogger("earshot.live")
 TICK_S = 0.1
 SUMMARY_GAP_MS = 10 * 60_000
 BALL_EVERY_MS = 500
-DAILY_SPEECH_CHARS = 400_000
+DAILY_SPEECH_CHARS = 150_000
+MAX_GROUPS = 64
+"""4 languages x 2 modes x 3 outputs is 24; following a club or player adds more."""
 """App-level cap (SEC1), below the 500K-characters-a-day alert that fires the kill switch."""
 
 Send = Callable[[str, dict], Awaitable[None]]
@@ -118,6 +120,14 @@ class Group:
     last_seen: float = field(default_factory=time.monotonic)
 
 
+class WindowAnalyst(Protocol):
+    def run(self, view: MatchView, window_id: str, expected_dead_ms: int) -> AnalystResult: ...
+
+
+class GroupError(ValueError):
+    """A group this match will not create (unknown club or player, or the cap is reached)."""
+
+
 @dataclass
 class SpeechBudget:
     limit: int = DAILY_SPEECH_CHARS
@@ -145,10 +155,12 @@ class LiveMatch:
         audio: AudioStore,
         send: Send,
         audio_base: str = "/audio",
-        analyst: Analyst | None = None,
+        analyst: WindowAnalyst | None = None,
         speed: float = 1.0,
+        cached_only: Callable[[], bool] = lambda: False,
     ) -> None:
         self.info, self.events = info, events
+        self.cached_only = cached_only
         self.audio, self.send, self.audio_base = audio, send, audio_base.rstrip("/")
         self.speed = speed
         self.budget = SpeechBudget()
@@ -182,8 +194,10 @@ class LiveMatch:
     # ----- groups --------------------------------------------------------------------------------
 
     def join(self, key: GroupKey) -> Group:
+        """Join (or create) a group. Raises ``GroupError`` for a group this match cannot serve."""
         g = self.groups.get(key.name)
         if g is None:
+            self._check(key)
             profile = Profile(
                 listening_mode=key.listening_mode,
                 output_mode=key.output_mode,
@@ -195,6 +209,19 @@ class LiveMatch:
             self._spawn(self._send_state(g))
         g.last_seen = time.monotonic()
         return g
+
+    def _check(self, key: GroupKey) -> None:
+        # Every new group costs speech, so only groups this match can actually serve are created.
+        if key.match_id != self.info.match_id:
+            raise GroupError("not the live match")
+        if key.club is not None and key.club not in {self.info.home.team_id, self.info.away.team_id}:
+            raise GroupError("unknown club")
+        if key.player is not None and key.player not in self.roster.players:
+            raise GroupError("unknown player")
+        if key.stat is not None:
+            raise GroupError("focus stats are not live yet")
+        if len(self.groups) >= MAX_GROUPS:
+            raise GroupError("too many listening groups")
 
     def summary(self) -> dict[str, Any]:
         names = {c.team_id: c.short_name for c in self.views[Language.EN][0]}
@@ -315,8 +342,11 @@ class LiveMatch:
         if g.key.output_mode is OutputMode.SCREEN_READER:
             duration = int(len(line.text) / 14 * 1000) + 300  # the reader speaks it; estimate its airtime
         else:
-            if not self.budget.allow(len(line.text)):
-                log.warning("daily speech budget reached: %s airs as text only", line.line_id)
+            cached = await asyncio.to_thread(self.audio.cached_ms, line)
+            if cached is not None:
+                duration = cached
+            elif self.cached_only() or not self.budget.allow(len(line.text)):
+                log.warning("speech unavailable (cached-only or daily budget): %s airs as text", line.line_id)
                 duration = int(len(line.text) / 14 * 1000) + 300
             else:
                 duration = await asyncio.to_thread(self.audio.warm, line)
@@ -325,7 +355,9 @@ class LiveMatch:
                 log.debug("cut %s", act.line.text)
 
     async def _publish_line(self, g: Group, start: Start) -> None:
-        served = await asyncio.to_thread(self.audio.serve, start.line, g.key.output_mode)
+        served = await asyncio.to_thread(
+            self.audio.serve, start.line, g.key.output_mode, synthesize=not self.cached_only()
+        )
         msg = LineMsg(
             id=start.line.line_id,
             priority=start.line.priority,

@@ -43,7 +43,8 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
       seq.current += 1;
       const entry = { seq: seq.current, line };
       setSpoken((xs) => [entry, ...xs].slice(0, 50));
-      if (reader) {
+      if (reader || !line.audio_url) {
+        // Screen-reader mode, or no speech for this line (cached-only mode or the daily speech cap).
         announcer.current?.announce(
           line.voice_role === "explanation" ? `${t("listen.analysisPrefix")} ${line.text}` : line.text,
           line.never_drop,
