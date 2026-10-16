@@ -153,7 +153,7 @@ separately and are not results of record.
 | G5 planted signal | PASS | AUC / direction right: press height 0.803 / 87.6%, tempo 0.880 / 98.0%, directness 0.813 / 94.9%, width 0.858 / 98.1%, line height 0.878 / 96.0%; none above 0.97 |
 | G6 baseline detector | PASS | recall 0.408 against 0.093 for time-shuffled truth (4.4x, needed 1.5x); accuracy 0.267; 13.9 false alarms per match |
 | G7 pass difficulty | PASS | rounds 31-38 (seeds 301-380), 65,934 passes: log loss 0.379 vs 0.435 base rate (0.872x, needed <= 0.90x); calibration error 0.0068 (needed <= 0.03; also inside the plan's 0.02) |
-| G8 physical | not run yet | applies to the render match only, once its frames exist |
+| G8 physical | PASS (render match) | seed 26: see the G8 section below |
 | G9 speed | PASS | 380 matches in 3.67 s on 8 workers; slowest match 0.076 s |
 | G10 dead-ball windows | PASS | median 70.5 windows of 15 s or more per match (min 43, max 99); every home goal ends at the right goal |
 
@@ -197,3 +197,20 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 7,914 clean lines. Roster entries recall 0.0 and names typed into template text recall 0.0: both
 by design (the Checker reads the same roster and templates), and the auditor's job. Template
 numerals recall 1.0. The run of record is on the held-out seeds.
+
+### G8 on the render match (frames, CEO-4)
+2026-10-16, `uv run earshot frames --seed 26 --out data/frames/m00026.frames.npz` (numbers in
+`reports/g8-frames.json`). Frames are steered at 10 Hz towards the engine's own recorded team shapes
+under a 9.3 m/s speed cap and a 7.5 m/s^2 acceleration cap; recording leaves the events byte-identical.
+
+| Match | Median outfield distance | Median sprint (> 7 m/s) | Actions with ball within 1.5 m | Max speed | Max accel | G8 |
+|---|---|---|---|---|---|---|
+| 26 (render match) | 9.85 km | 202 m | 99.3% | 9.3 m/s | 7.5 m/s^2 | PASS |
+| 5 (not tuned on) | 9.55 km | 374 m | **98.9%** | 9.3 m/s | 7.5 m/s^2 | miss (ball-near) |
+| 17 (not tuned on) | 9.59 km | 286 m | **98.8%** | 9.3 m/s | 7.5 m/s^2 | miss (ball-near) |
+
+Stated plainly: the two frame parameters (off-ball drift 13 m, look-ahead 4 s) were tuned on the render
+match itself, so its PASS is a plausibility check of the frame model, not an independent result. On two
+matches it never saw, the ball-near criterion misses by about 0.1 percentage points (the engine sometimes
+picks an interceptor further away than a player can run in the ball's flight time). G8 was pre-registered
+for the render match only, as the CEO plan scoped it.
