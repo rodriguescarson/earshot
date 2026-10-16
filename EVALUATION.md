@@ -445,8 +445,8 @@ runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst -
     running (`--tokens-per-hour`, `--resume`).
   - Raising those alerts for the run is Carson's decision.
 
-### Load test, 30 listeners: the deployed stack (2026-10-17)
-`earshot loadtest --url <worker> --listeners 30 --minutes 15` against the worker at image
+### Load test, 30 listeners: the deployed stack (2026-10-17), run of record for Latency
+`earshot loadtest --url <worker> --listeners 30 --minutes 15` against the worker at image (the `eval-freeze` commit)
 `f69549b` (one replica), from one machine in India to Sweden Central. The listeners were spread
 over the five profiles' groups. Each listener fetches every line's audio on its own task, as a
 browser does.
