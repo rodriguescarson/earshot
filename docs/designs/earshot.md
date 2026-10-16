@@ -2844,6 +2844,13 @@ Branch `feat/agents-core` (PR #3). Checks at a628a25 and after: ruff, pyright (0
 - Danger is rare by construction: 1, 5 and 7 crossings in seeds 26, 3 and 11.
 - Pass difficulty is frequent: 61-123 a match.
 
+**Decision (Carson, 2026-10-16): causes are not aired.** Stream 2's graded trial on seed 26: the
+gated causes that would air were right 1 time in 22, against 4 in 7 for the baseline detector.
+Analyst lines now speak only the verified metric change (`AIR_CAUSES = False` in the claims
+module); the Analyst still proposes causes, which are logged and graded for the Explanations
+criterion. All 16 demo clips re-rendered without causes (557 lines, 0 auditor findings). The final
+held-out run is paced under the existing spend alerts (Carson, same day).
+
 **Not verified yet:**
 - Live mode on Azure: Stream 2's worker integration is in progress on `feat/integration`.
 - End-to-end latency at 1x.

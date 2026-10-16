@@ -82,6 +82,11 @@ happened.
   a real player's name in the wrong place.
 - That test run also caught one real mistake of our own: a possession figure that could be off by
   one percent. It is fixed.
+- We also tested whether the AI could say *why* a team changed its tactics, against the hidden log
+  of what each team really did. On the first graded match it was right 1 time in 22, worse than a
+  simple rule-based guess (4 in 7). So Earshot doesn't say why. The AI still picks which changes
+  are worth hearing, and code checks every number in them. [PENDING: the same test on the 40
+  unseen matches.]
 - [PENDING: the run on 40 matches the system had never seen. Facts, coverage, never-drop and the
   Analyst against a simple baseline.]
 - [PENDING: the listening test with eyes closed, Oct 18-19, with the number of listeners stated.]
@@ -94,8 +99,9 @@ happened.
 3. To try another language or mode, choose **Choose language and style**.
 4. On a screen 1024 px or wider, the agents' decisions appear in a second column.
 5. To hear a match as it happens, choose **Join the live match** on the first screen. The match
-   loops all day, so you may join in the middle of it. Judges' link: [PENDING: the link with the
-   judge code, from Stream 2; it skips the per-visitor limits.]
+   loops all day, so you may join in the middle of it. Judges' link: [PASTE AT SUBMISSION: the link
+   in judge-link.txt, which Stream 2 opened for you. It skips the per-visitor limits. It never
+   goes in the repo.]
 
 No sign-in. Every match, club and player is made up.
 
