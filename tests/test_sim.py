@@ -27,7 +27,7 @@ from earshot.stats.aggregates import aggregate, goals
 
 GOLDEN = {
     # seed: sha256 of the canonical events file. Changes only with an ENGINE_VERSION bump.
-    1: "e2bba485991137b08c41b547ff5d6f1f77312163e16c30d765293d194941543b",
+    1: "7e07a674369e3940de44361c6b9e2b31526c58e027ebc048fc3a940af3c8d8f2",
 }
 
 

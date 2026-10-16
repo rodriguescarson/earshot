@@ -24,7 +24,7 @@ invariants, not on a particular player or score, because a recalibration changes
 | `players` | both 25-man squads (names, short names for commentary, shirts, positions) | `PlayerInfo` |
 | `clip` | window bounds (`start_wall_ms`, `end_wall_ms`), period, clock and score at the start | |
 | `events` | every event in the window, in order; parse each with `TypeAdapter(Event)` | `Event` |
-| `ball` | the 10 Hz ball track for the window | `BallSample` |
+| `ball` | the 10 Hz ball track for the window, with `danger` (0-1, from the frozen xT) for the team in possession | `BallSample` |
 
 Conventions (from the contract):
 - Positions are in the broadcast frame: x 0-105 m left to right as the main camera sees it,

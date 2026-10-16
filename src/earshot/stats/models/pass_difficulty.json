@@ -1,0 +1,41 @@
+{
+ "fitted_on": "seeds 1-40, engine 1.1.0",
+ "features": [
+  "distance_m",
+  "abs_angle_rad",
+  "forward_share",
+  "end_x_frac",
+  "end_wide_frac",
+  "end_in_box",
+  "under_pressure",
+  "nearest_opp_m_capped",
+  "is_cross",
+  "forward_m",
+  "end_beyond_75"
+ ],
+ "beta": [
+  -3.052355,
+  0.014659,
+  -0.459398,
+  -0.023997,
+  1.210381,
+  0.992225,
+  -0.05519,
+  0.851763,
+  -0.003626,
+  2.644121,
+  0.007854,
+  -0.330308
+ ],
+ "deciles": [
+  0.044741,
+  0.062956,
+  0.08188,
+  0.100586,
+  0.119509,
+  0.142348,
+  0.173898,
+  0.221969,
+  0.296703
+ ]
+}

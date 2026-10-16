@@ -1,6 +1,6 @@
 {
  "environment": {
-  "engine_version": "1.0.0",
+  "engine_version": "1.1.0",
   "numpy": "2.5.4",
   "pydantic": "2.14.1",
   "python": "3.12.14"
@@ -21,7 +21,7 @@
   },
   {
    "detail": {
-    "events": 75673,
+    "events": 70428,
     "matches": "40/40"
    },
    "failures": [],
@@ -31,9 +31,441 @@
   },
   {
    "detail": {
-    "max": 81,
-    "median_windows_15s": 60.0,
-    "min": 42
+    "matches": 40,
+    "rows": [
+     {
+      "band": [
+       2.565,
+       3.608
+      ],
+      "engine": 3.1,
+      "gated": true,
+      "inside_band": true,
+      "metric": "goals",
+      "reference": [
+       2.85,
+       3.28,
+       2.99
+      ],
+      "seasons": "EPL 2022-23, 2023-24, 2024-25 (to 24 Mar 2025)",
+      "source": "https://www.premierleague.com/news/4271974",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       22.77,
+       30.36
+      ],
+      "engine": 26.75,
+      "gated": true,
+      "inside_band": true,
+      "metric": "shots",
+      "reference": [
+       25.3,
+       27.6,
+       26.1
+      ],
+      "seasons": "EPL 2022-23, 2023-24, 2024-25 (to 24 Mar 2025)",
+      "source": "https://www.premierleague.com/news/4271974",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       0.783,
+       0.867
+      ],
+      "engine": 0.8352,
+      "gated": true,
+      "inside_band": true,
+      "metric": "pass_completion",
+      "reference": [
+       0.813,
+       0.829,
+       0.837
+      ],
+      "seasons": "EPL 2022-23, 2023-24, 2024-25",
+      "source": "https://www.premierleague.com/en/news/4426039",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       3.78,
+       4.62
+      ],
+      "engine": 3.725,
+      "gated": true,
+      "inside_band": false,
+      "metric": "yellows",
+      "reference": [
+       4.2
+      ],
+      "seasons": "EPL 2023-24",
+      "source": "https://theanalyst.com/articles/premier-league-2024-25-data-trends-stats",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       49.338,
+       63.998
+      ],
+      "engine": 54.6793,
+      "gated": true,
+      "inside_band": true,
+      "metric": "effective_play_min",
+      "reference": [
+       54.82,
+       58.18,
+       56.98
+      ],
+      "seasons": "EPL 2022-23, 2023-24, 2024-25",
+      "source": "https://theanalyst.com/articles/premier-league-ball-in-play-are-we-seeing-less-football-2025-26",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       9.2132,
+       11.2605
+      ],
+      "engine": 10.325,
+      "gated": true,
+      "inside_band": true,
+      "metric": "corners",
+      "reference": [
+       10.236842105263158
+      ],
+      "seasons": "EPL 2024-25",
+      "source": "https://theanalyst.com/articles/premier-league-ball-in-play-are-we-seeing-less-football-2025-26",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       0.36,
+       0.514
+      ],
+      "engine": 0.425,
+      "gated": true,
+      "inside_band": true,
+      "metric": "home_win_share",
+      "reference": [
+       0.484,
+       0.39
+      ],
+      "seasons": "EPL 2022-23; 2024-25 (part season)",
+      "source": "https://theanalyst.com/articles/premier-league-home-wins-covid-levels",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       19.35,
+       24.31
+      ],
+      "engine": 21.9,
+      "gated": false,
+      "inside_band": true,
+      "metric": "fouls",
+      "reference": [
+       21.5,
+       22.1
+      ],
+      "seasons": "EPL 2023-24",
+      "source": "https://doi.org/10.3389/fpsyg.2025.1510928",
+      "tag": "calibrated-to",
+      "verified_source": false
+     },
+     {
+      "band": [
+       0.198,
+       0.308
+      ],
+      "engine": 0.475,
+      "gated": false,
+      "inside_band": false,
+      "metric": "penalties",
+      "reference": [
+       0.26,
+       0.28,
+       0.22
+      ],
+      "seasons": "EPL 2022-23, 2023-24, 2024-25 (part)",
+      "source": "https://www.premierleague.com/news/4271974",
+      "tag": "calibrated-to",
+      "verified_source": true
+     },
+     {
+      "band": [
+       804.15,
+       1035.1
+      ],
+      "engine": 841.625,
+      "gated": false,
+      "inside_band": true,
+      "metric": "passes",
+      "reference": [
+       905.7,
+       941.0,
+       893.5
+      ],
+      "seasons": "EPL 2022-23, 2023-24, 2024-25",
+      "source": "https://www.premierleague.com/en/news/4426039",
+      "tag": "emergent",
+      "verified_source": true
+     },
+     {
+      "band": [
+       35.1,
+       42.9
+      ],
+      "engine": 40.275,
+      "gated": false,
+      "inside_band": true,
+      "metric": "throw_ins",
+      "reference": [
+       39.0
+      ],
+      "seasons": "top-5 leagues 2022-23 (StatsBomb)",
+      "source": "https://doi.org/10.1080/24748668.2025.2481697",
+      "tag": "calibrated-to",
+      "verified_source": false
+     },
+     {
+      "band": [
+       15.3,
+       18.7
+      ],
+      "engine": 17.625,
+      "gated": false,
+      "inside_band": true,
+      "metric": "goal_kicks",
+      "reference": [
+       17.0
+      ],
+      "seasons": "Bundesliga sample",
+      "source": "https://doi.org/10.1080/02640414.2012.667877",
+      "tag": "emergent",
+      "verified_source": false
+     },
+     {
+      "band": [
+       29.7,
+       36.3
+      ],
+      "engine": 25.45,
+      "gated": false,
+      "inside_band": false,
+      "metric": "free_kicks_incl_offside",
+      "reference": [
+       33.0
+      ],
+      "seasons": "Bundesliga sample",
+      "source": "https://doi.org/10.1080/02640414.2012.667877",
+      "tag": "emergent",
+      "verified_source": false
+     },
+     {
+      "band": [
+       97.2,
+       118.8
+      ],
+      "engine": 97.25,
+      "gated": false,
+      "inside_band": true,
+      "metric": "interruptions",
+      "reference": [
+       108.0
+      ],
+      "seasons": "Bundesliga sample",
+      "source": "https://doi.org/10.1080/02640414.2012.667877",
+      "tag": "emergent",
+      "verified_source": false
+     },
+     {
+      "band": [
+       3.456,
+       4.224
+      ],
+      "engine": 4.025,
+      "gated": false,
+      "inside_band": true,
+      "metric": "offsides",
+      "reference": [
+       3.84
+      ],
+      "seasons": "EPL 2023-24 (sum of team tables)",
+      "source": "https://www.statmuse.com/fc",
+      "tag": "calibrated-to",
+      "verified_source": false
+     },
+     {
+      "band": [
+       8.19,
+       10.868
+      ],
+      "engine": 9.05,
+      "gated": false,
+      "inside_band": true,
+      "metric": "shots_on_target",
+      "reference": [
+       9.88,
+       9.1
+      ],
+      "seasons": "EPL 2023-24, 2024-25 (sum of team tables)",
+      "source": "https://www.statmuse.com/fc",
+      "tag": "emergent",
+      "verified_source": false
+     },
+     {
+      "band": [
+       0.072,
+       0.1705
+      ],
+      "engine": 0.125,
+      "gated": false,
+      "inside_band": true,
+      "metric": "reds",
+      "reference": [
+       0.08,
+       0.155
+      ],
+      "seasons": "EPL 2022-23, 2023-24",
+      "source": "https://www.statmuse.com/fc",
+      "tag": "calibrated-to",
+      "verified_source": false
+     },
+     {
+      "band": [
+       8.757,
+       10.703
+      ],
+      "engine": 9.2257,
+      "gated": false,
+      "inside_band": true,
+      "metric": "added_time_min",
+      "reference": [
+       9.73
+      ],
+      "seasons": "EPL 2024-25 (match length minus 90)",
+      "source": "https://theanalyst.com/articles/premier-league-ball-in-play-are-we-seeing-less-football-2025-26",
+      "tag": "emergent",
+      "verified_source": true
+     }
+    ]
+   },
+   "failures": [
+    "yellows 3.725 outside [3.78, 4.62]"
+   ],
+   "gate": "G3",
+   "name": "realism (season means)",
+   "passed": false
+  },
+  {
+   "detail": {
+    "red_cards": 5,
+    "truth_changes": 198
+   },
+   "failures": [],
+   "gate": "G4",
+   "name": "truth vocabulary",
+   "passed": true
+  },
+  {
+   "detail": {
+    "per_setting": {
+     "directness": {
+      "auc": 0.848,
+      "auc_needed": 0.75,
+      "direction_right": 0.895,
+      "null": 185,
+      "passed": true,
+      "planted": 38,
+      "too_easy": false
+     },
+     "line_height": {
+      "auc": 0.928,
+      "auc_needed": 0.7,
+      "direction_right": 0.98,
+      "null": 184,
+      "passed": true,
+      "planted": 51,
+      "too_easy": false
+     },
+     "press_height": {
+      "auc": 0.816,
+      "auc_needed": 0.75,
+      "direction_right": 0.831,
+      "null": 185,
+      "passed": true,
+      "planted": 59,
+      "too_easy": false
+     },
+     "tempo": {
+      "auc": 0.932,
+      "auc_needed": 0.75,
+      "direction_right": 0.952,
+      "null": 182,
+      "passed": true,
+      "planted": 42,
+      "too_easy": false
+     },
+     "width": {
+      "auc": 0.872,
+      "auc_needed": 0.75,
+      "direction_right": 0.958,
+      "null": 185,
+      "passed": true,
+      "planted": 24,
+      "too_easy": false
+     }
+    },
+    "too_easy": []
+   },
+   "failures": [],
+   "gate": "G5",
+   "name": "planted signal",
+   "passed": true
+  },
+  {
+   "detail": {
+    "accuracy": 0.2323,
+    "correct": 190,
+    "false_alarms_per_match": 15.7,
+    "labels": 818,
+    "matches": 40,
+    "needed": 1.5,
+    "ratio": 4.07,
+    "recall": 0.3636,
+    "recalled": 72,
+    "shuffled_recall": 0.0894,
+    "truth_changes": 198
+   },
+   "failures": [],
+   "gate": "G6",
+   "name": "baseline detector",
+   "passed": true
+  },
+  {
+   "detail": {
+    "matches": 40,
+    "slowest_match_s": 0.088,
+    "wall_s": 0.87,
+    "workers": 8
+   },
+   "failures": [],
+   "gate": "G9",
+   "name": "speed",
+   "passed": true
+  },
+  {
+   "detail": {
+    "max": 99,
+    "median_windows_15s": 72.0,
+    "min": 48
    },
    "failures": [],
    "gate": "G10",

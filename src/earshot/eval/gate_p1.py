@@ -14,8 +14,8 @@ from itertools import pairwise
 from earshot.contract.events import Action, Card, Event, Substitution, check_stream
 from earshot.contract.match import MatchInfo
 from earshot.contract.spadl import SHOT_TYPES, ActionType
-from earshot.season.run import MatchOutput, run_many
 from earshot.sim.io import parse_events, sha256
+from earshot.sim.runner import MatchOutput, run_many
 from earshot.stats.aggregates import goals
 
 
@@ -148,3 +148,114 @@ def g10_dead_ball(outputs: list[MatchOutput]) -> GateResult:
         {"median_windows_15s": med, "min": min(windows), "max": max(windows)},
         fails[:50],
     )
+
+
+# ----- checks that need the truth log or the fitted models -------------------------------------
+
+
+def _parsed(o: MatchOutput):
+    from earshot.contract.truth import TruthChange
+
+    events = parse_events(o.events)
+    info = MatchInfo.model_validate_json(o.info)
+    truth = [TruthChange.model_validate_json(x) for x in o.truth.decode().splitlines() if x]
+    return events, info, truth
+
+
+def _positions() -> dict:
+    from earshot.world.clubs import world
+
+    return {p.player_id: p.position for p in world().players.values()}
+
+
+def g4_truth(outputs: list[MatchOutput]) -> GateResult:
+    """The truth vocabulary is closed, and every red card is followed by RED_CARD_REORG within 60 s."""
+    from earshot.contract.claim import CauseLabel
+
+    fails = []
+    reds = changes = 0
+    for o in outputs:
+        events, _info, truth = _parsed(o)  # parsing rejects any label outside CauseLabel
+        changes += len(truth)
+        for e in events:
+            if isinstance(e, Card) and e.color == "red":
+                reds += 1
+                ok = any(
+                    t.label is CauseLabel.RED_CARD_REORG
+                    and t.team_id == e.team_id
+                    and 0 <= t.wall_ms - e.wall_ms <= 60_000
+                    for t in truth
+                )
+                if not ok:
+                    fails.append(f"{o.match_id}: red card {e.event_id} has no RED_CARD_REORG within 60 s")
+    return GateResult(
+        "G4", "truth vocabulary", not fails, {"truth_changes": changes, "red_cards": reds}, fails
+    )
+
+
+def g5_planted_signal(outputs: list[MatchOutput]) -> GateResult:
+    from earshot.eval.signal import match_samples, summarise
+
+    pos = _positions()
+    samples = []
+    for o in outputs:
+        events, info, truth = _parsed(o)
+        samples += match_samples(events, info, truth, pos, o.seed)
+    per = summarise(samples)
+    fails = [f"{k}: {v}" for k, v in per.items() if not v["passed"]]
+    flags = [k for k, v in per.items() if v["too_easy"]]
+    return GateResult("G5", "planted signal", not fails, {"per_setting": per, "too_easy": flags}, fails)
+
+
+def g6_baseline(outputs: list[MatchOutput], shuffles: int = 20) -> GateResult:
+    """The baseline detector's recall is at least 1.5x its recall against time-shuffled truth."""
+    from earshot.eval import baseline_detector as bd
+    from earshot.eval import grading
+
+    pos = _positions()
+    preds, truth, spans = [], {}, {}
+    for o in outputs:
+        events, info, tr = _parsed(o)
+        truth[o.match_id], spans[o.match_id] = tr, (0, events[-1].wall_ms)
+        preds += [
+            grading.Prediction(o.match_id, t, w, lab) for (w, t, lab) in bd.predictions(events, info, pos)
+        ]
+    real = grading.grade(preds, truth)
+    ctrl = statistics.mean(
+        grading.grade(preds, grading.shuffled(truth, spans, k)).recall for k in range(shuffles)
+    )
+    ratio = real.recall / ctrl if ctrl else float("inf")
+    detail = {**real.as_dict(), "shuffled_recall": round(ctrl, 4), "ratio": round(ratio, 2), "needed": 1.5}
+    return GateResult(
+        "G6", "baseline detector", ratio >= 1.5, detail, [] if ratio >= 1.5 else [f"ratio {ratio:.2f}"]
+    )
+
+
+def g7_pass_model(outputs: list[MatchOutput], model=None) -> GateResult:
+    """Pass difficulty on held-out matches: log loss <= 0.90x base rate, calibration error <= 0.03."""
+    import numpy as np
+
+    from earshot.stats import irls, passes
+
+    m = model or passes.DifficultyModel.load()
+    pairs = []
+    for o in outputs:
+        info = MatchInfo.model_validate_json(o.info)
+        pairs.append((parse_events(o.events), info.home.team_id))
+    x, y = passes.dataset(pairs)
+    p = irls.predict(np.array(m.beta), x)
+    ll, base = irls.log_loss(y, p), irls.log_loss(y, np.full(len(y), y.mean()))
+    ece = irls.calibration_error(y, p)
+    ok = ll <= 0.90 * base and ece <= 0.03
+    detail = {"passes": len(y), "log_loss": round(ll, 4), "base_rate_log_loss": round(base, 4),
+              "ratio": round(ll / base, 4), "calibration_error": round(ece, 4), "fitted_on": m.fitted_on,
+              "xg_model": "not built (xT replaces xG, CEO-7 note)"}  # fmt: skip
+    return GateResult("G7", "pass difficulty model", ok, detail, [] if ok else ["thresholds missed"])
+
+
+def g9_speed(outputs: list[MatchOutput], wall_seconds: float, workers: int) -> GateResult:
+    per_match = max(o.seconds for o in outputs)
+    ok = per_match < 0.5 and (len(outputs) < 380 or wall_seconds <= 300)
+    detail = {"matches": len(outputs), "workers": workers, "wall_s": round(wall_seconds, 2),
+              "slowest_match_s": round(per_match, 3)}  # fmt: skip
+    return GateResult("G9", "speed", ok, detail, [] if ok else ["too slow"])

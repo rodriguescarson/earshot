@@ -31,13 +31,13 @@ class DeadTime:
 
 
 DEAD_TIME: dict[K, DeadTime] = {
-    K.THROW_IN: DeadTime(11_000, 0.35, 5_000, 45_000),
-    K.GOAL_KICK: DeadTime(21_000, 0.30, 10_000, 70_000),
-    K.CORNER: DeadTime(29_000, 0.25, 15_000, 80_000),
-    K.FREE_KICK: DeadTime(20_000, 0.40, 8_000, 90_000),
-    K.OFFSIDE: DeadTime(18_000, 0.30, 8_000, 60_000),
+    K.THROW_IN: DeadTime(14_700, 0.35, 6_000, 50_000),
+    K.GOAL_KICK: DeadTime(27_000, 0.30, 12_000, 80_000),
+    K.CORNER: DeadTime(32_500, 0.25, 15_000, 90_000),
+    K.FREE_KICK: DeadTime(15_000, 0.40, 6_000, 90_000),
+    K.OFFSIDE: DeadTime(16_000, 0.30, 8_000, 60_000),
     K.PENALTY: DeadTime(70_000, 0.25, 40_000, 180_000),
-    K.GOAL: DeadTime(62_000, 0.20, 40_000, 150_000),
+    K.GOAL: DeadTime(68_000, 0.20, 40_000, 150_000),
     K.INJURY: DeadTime(70_000, 0.40, 30_000, 240_000),
     K.SUBSTITUTION: DeadTime(30_000, 0.30, 15_000, 90_000),
     K.CARD: DeadTime(20_000, 0.30, 10_000, 60_000),
@@ -46,7 +46,7 @@ DEAD_TIME: dict[K, DeadTime] = {
     K.FULL_TIME: DeadTime(0, 0.0, 0, 0),
 }
 
-FREE_KICK_DANGEROUS = DeadTime(42_000, 0.25, 20_000, 120_000)
+FREE_KICK_DANGEROUS = DeadTime(38_000, 0.25, 20_000, 120_000)
 """A free kick in shooting range: the wall is set and measured."""
 
 EXTRA: dict[str, DeadTime] = {
