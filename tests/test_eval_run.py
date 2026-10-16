@@ -77,6 +77,9 @@ def test_one_match_through_the_live_broadcaster():
         never = [h for h in p["targets"] if h["kind"] in ("goal", "red_card", "penalty")]
         assert never
         assert all(h["latency_ms"] is not None for h in never)
+    # The independent auditor runs on every offered line, as live; on seed 26 it blocks nothing, so
+    # the half-time and full-time recaps air (they need the clock in step: recaps carry now_ms).
+    assert all(p["audit_blocked"] == [] for p in inline["profiles"].values())
     p1, p5 = inline["profiles"]["P1"], inline["profiles"]["P5"]
     assert p5["numeric_slots_per_min"] > p1["numeric_slots_per_min"]
     assert inline["profiles"]["P2"]["group"].endswith(".spa.spa-09.-")  # follows the home club and a forward

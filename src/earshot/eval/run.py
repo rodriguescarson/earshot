@@ -2,7 +2,8 @@
 
 What is real: the engine's events, the Agent Framework pipeline (Spotter, Caller, Checker, and the
 window run with the claim check), Stream 1's ``LiveMatch`` (state, per-group window lines, claim
-gating) and its ``LiveDirector`` for every evaluation profile. What is modelled: time. The clock is
+gating, and the independent auditor on every offered line, which stops a line with any finding) and
+its ``LiveDirector`` for every evaluation profile. What is modelled: time. The clock is
 virtual, so a 100-minute match runs in seconds, and the parts that wait on a network draw their
 latency from a ``LatencyModel``:
 
@@ -182,6 +183,8 @@ class GroupLog:
     aired: list[AiredLine] = field(default_factory=list)
     dropped: Counter[str] = field(default_factory=Counter)
     cut: int = 0
+    audit_blocked: list[str] = field(default_factory=list)
+    """Lines the independent auditor stopped before they reached the Director (as live)."""
 
 
 class LatencyAnalyst:
@@ -351,6 +354,10 @@ def _virtual_match_class():
             raise RuntimeError("a virtual-clock coroutine suspended")
 
         async def _offer(self, g, line: Line) -> None:
+            # As LiveMatch._offer: the independent auditor first; a line with any finding never airs.
+            if not self._audit_ok(line):
+                self.logs[g.key.name].audit_blocked.append(f"{line.template_id}: {line.text}")
+                return
             if g.key.output_mode is OutputMode.SCREEN_READER:
                 duration = int(len(line.text) / 14 * 1000) + 300  # as LiveMatch estimates the reader
             else:
@@ -385,12 +392,13 @@ def _virtual_match_class():
                     ev = self.events[i]
                     i += 1
                     self.vnow, self.push_ms = max(ev.wall_ms, busy_until), 0
+                    self.now_ms = self.vnow  # LiveMatch stamps recaps and window lines with now_ms
                     if self.timer is not None:
                         self.timer.last_ms = 0
                     await self._push_all([ev], final=i == n)
                     if self.windows_block and self.timer is not None and self.timer.last_ms:
                         busy_until = self.vnow + self.timer.last_ms  # as built: the feeder waits
-                self.vnow = t
+                self.vnow = self.now_ms = t
                 while self.offers and self.offers[0][0] <= t:
                     ready, _, name, line, dur = heapq.heappop(self.offers)
                     g = self.groups[name]
@@ -524,6 +532,7 @@ def evaluate_match(
             "numeric_slots": nums,
             "numeric_slots_per_min": round(nums / minutes, 3) if minutes else None,
             "casual_violations": viol,
+            "audit_blocked": log.audit_blocked,
             "by_source": dict(Counter(a.line.source.value for a in log.aired)),
         }
     out["explanations"] = explanations(r, clubs, players, vm.windows, real_analyst)
@@ -689,6 +698,8 @@ def summarize(
             else None,
             "casual_violations": dict(violations.most_common()),
             "aired_lines": sum(r["aired"] for r in rows),
+            "audit_blocked": sum(len(r.get("audit_blocked", [])) for r in rows),
+            "audit_blocked_examples": [x for r in rows for x in r.get("audit_blocked", [])][:10],
             "dropped": dict(sum((Counter(r["dropped"]) for r in rows), Counter())),
         }
     expl = summarize_explanations(ok)
