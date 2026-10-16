@@ -50,13 +50,12 @@ def _weight(ev: Event) -> float:
 
 
 def _is_goal(ev: Event) -> bool:
-    return isinstance(ev, Action) and (
-        (ActionType(ev.type) in SHOT_TYPES and ev.result == "success") or ev.result == "owngoal"
-    )
+    """A scored shot. Own goals still add to a window's weight but never anchor a judge clip."""
+    return isinstance(ev, Action) and ActionType(ev.type) in SHOT_TYPES and ev.result == "success"
 
 
 def best_clip(result: MatchResult, goal_from_ms: int = 60_000, goal_to_ms: int = 90_000) -> Clip | None:
-    """The densest window that starts at an in-play action and has a goal 60-90 s in."""
+    """The densest window that starts at an in-play action and has a scored shot 60-90 s in."""
     ev = result.events
     best: Clip | None = None
     for gi, g in enumerate(ev):
