@@ -97,6 +97,7 @@ def main(argv: list[str] | None = None) -> None:
         "--tokens-per-hour", type=int, default=400_000, help="pace for --real-analyst (alert: 500K)"
     )
     s.add_argument("--max-calls", type=int, default=None, help="cap Analyst calls per match (trial runs)")
+    s.add_argument("--resume", action="store_true", help="keep finished rows next to --out and run the rest")
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
 
     s = sub.add_parser(
@@ -257,14 +258,15 @@ def main(argv: list[str] | None = None) -> None:
             if args.real_analyst
             else None
         )
-        summary, matches = run_season(
-            args.seeds, latency, workers=args.workers, windows=args.windows, analyst=analyst
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        rows = args.out.with_suffix(".matches.jsonl")
+        if not args.resume:
+            rows.unlink(missing_ok=True)
+        summary, _ = run_season(
+            args.seeds, latency, workers=args.workers, windows=args.windows, analyst=analyst, rows_path=rows
         )
         summary["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
-        args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(summary, indent=1) + "\n")
-        rows = args.out.with_suffix(".matches.jsonl")
-        rows.write_text("".join(json.dumps(m) + "\n" for m in matches))
         brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
         print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
     elif args.cmd == "loadtest":

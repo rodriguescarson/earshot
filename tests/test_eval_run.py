@@ -146,3 +146,27 @@ def test_real_analyst_path_grades_cause_labels_against_the_truth_log():
     s = R.summarize([m], R.LatencyModel.provisional_default(), 1.0, 1)
     assert s["explanations"]["analyst_proposed"]["accuracy"] == 1.0
     assert s["explanations"]["analyst_calls"]["tokens_total"] == 1_000 * ex["windows"]
+
+
+def test_a_long_run_resumes_from_its_rows(tmp_path, monkeypatch):
+    calls: list[int] = []
+
+    def fake(args):
+        seed = args[0]
+        calls.append(seed)
+        if seed == 3 and calls.count(3) == 1:
+            return {"seed": 3, "error": "Traceback\nRuntimeError: network\n"}
+        return {"seed": seed, "match_id": f"m{seed:05d}", "minutes": 90.0, "targets": {}, "notes": [],
+                "profiles": {}, "explanations": {}, "wall_s": 1.0}  # fmt: skip
+
+    monkeypatch.setattr(R, "_safe", fake)
+    rows = tmp_path / "e.matches.jsonl"
+    lat = R.LatencyModel.provisional_default()
+    s1, _ = R.run_season([1, 2, 3], lat, workers=1, rows_path=rows)
+    assert s1["failed"] == [{"seed": 3, "error": "RuntimeError: network"}]
+    s2, m2 = R.run_season([1, 2, 3], lat, workers=1, rows_path=rows)
+    assert calls == [1, 2, 3, 3]  # only the failed seed ran again
+    assert s2["ok"] == 3
+    assert s2["resumed_from_rows"] == 2
+    assert [m["seed"] for m in m2] == [1, 2, 3]
+    assert len(rows.read_text().splitlines()) == 3

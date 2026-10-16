@@ -729,20 +729,47 @@ def run_season(
     workers: int = 8,
     windows: str = "background",
     analyst: dict[str, Any] | None = None,
+    rows_path: Path | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """``windows``: "background" is the broadcaster as built (window runs on their own task, since
     Stream 1's 24f4efb); "inline" is the broadcaster before it, whose event feeder waited for each
     window run. Kept so that finding stays reproducible.
 
     ``analyst``: {"tokens_per_hour": ..., "max_calls": ...} for real Analyst calls; each worker
-    process gets its share of the hourly tokens."""
+    process gets its share of the hourly tokens.
+
+    ``rows_path``: each match's row is appended there as it finishes, and seeds that already have a
+    good row are not run again, so a long paced run can stop and resume. ``wall_s`` counts this
+    invocation only."""
     t0 = time.perf_counter()
     if analyst and analyst.get("tokens_per_hour"):
         analyst = analyst | {"tokens_per_hour": analyst["tokens_per_hour"] // max(1, workers)}
-    jobs = [(s, latency, windows, analyst) for s in seeds]
+    done: dict[int, dict[str, Any]] = {}
+    if rows_path is not None and rows_path.exists():
+        for raw in rows_path.read_text().splitlines():
+            row = json.loads(raw)
+            if "error" not in row and row["seed"] in set(seeds):
+                done[row["seed"]] = row
+        rows_path.write_text("".join(json.dumps(r) + "\n" for r in done.values()))  # drop failed rows
+    todo = [s for s in seeds if s not in done]
+    jobs = [(s, latency, windows, analyst) for s in todo]
+    new: list[dict[str, Any]] = []
+
+    def keep(row: dict[str, Any]) -> None:
+        new.append(row)
+        if rows_path is not None:
+            with rows_path.open("a") as f:
+                f.write(json.dumps(row) + "\n")
+
     if workers <= 1:
-        matches = [_safe(j) for j in jobs]
+        for j in jobs:
+            keep(_safe(j))
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
-            matches = list(pool.map(_safe, jobs, chunksize=1))
-    return summarize(matches, latency, time.perf_counter() - t0, workers, windows), matches
+            for row in pool.map(_safe, jobs, chunksize=1):
+                keep(row)
+    by_seed = done | {r["seed"]: r for r in new}
+    matches = [by_seed[s] for s in seeds if s in by_seed]
+    summary = summarize(matches, latency, time.perf_counter() - t0, workers, windows)
+    summary["resumed_from_rows"] = len(done)
+    return summary, matches
