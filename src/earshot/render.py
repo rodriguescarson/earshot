@@ -29,11 +29,13 @@ EV = TypeAdapter(Event)
 EXCITED = frozenset({MomentKind.GOAL, MomentKind.OWN_GOAL, MomentKind.RED_CARD, MomentKind.PENALTY_AWARDED})
 
 
-def danger(x: float, y: float, team_id: str | None, period_id: int, roster: Roster) -> float:
-    """Placeholder danger until the xT model lands: how deep into the attacking half the ball is."""
-    if team_id is None:
+def danger(b: dict, roster: Roster) -> float:
+    """xT danger from the engine's ball track; a positional fallback for tracks rendered without it."""
+    if b.get("danger") is not None:
+        return float(b["danger"])
+    if b.get("team_id") is None or not b.get("in_play", True):
         return 0.0
-    ax, _ = to_attacking(x, y, attacks_right(team_id == roster.home_id, period_id))
+    ax, _ = to_attacking(b["x"], b["y"], attacks_right(b["team_id"] == roster.home_id, b["period_id"]))
     return max(0.0, (ax - 52.5) / 52.5) ** 2
 
 
@@ -104,16 +106,7 @@ def render_fixture(
             clips[a.line.line_id] = synth.synthesize(ssml_for(late_line, excited=True))
             aired[i] = replace(a, line=late_line)
 
-    ball = [
-        BallPoint(
-            b["wall_ms"],
-            b["x"],
-            b["y"],
-            b["in_play"],
-            danger(b["x"], b["y"], b["team_id"], b["period_id"], roster),
-        )
-        for b in d["ball"]
-    ]
+    ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     out_dir.mkdir(parents=True, exist_ok=True)
     end_ms = clip["end_wall_ms"]
     files = {}
