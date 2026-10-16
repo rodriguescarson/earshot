@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "CardColor": {
+      "enum": [
+        "yellow",
+        "red"
+      ],
+      "title": "CardColor",
+      "type": "string"
+    },
+    "CardReason": {
+      "enum": [
+        "foul",
+        "second_yellow",
+        "dissent",
+        "handball",
+        "time_wasting",
+        "denying_goal_chance"
+      ],
+      "title": "CardReason",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "clock_ms": {
+      "minimum": 0,
+      "title": "Clock Ms",
+      "type": "integer"
+    },
+    "color": {
+      "$ref": "#/$defs/CardColor"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "period_id": {
+      "enum": [
+        1,
+        2
+      ],
+      "title": "Period Id",
+      "type": "integer"
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Id"
+    },
+    "reason": {
+      "$ref": "#/$defs/CardReason"
+    },
+    "team_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Team Id"
+    },
+    "type": {
+      "const": "card",
+      "default": "card",
+      "title": "Type",
+      "type": "string"
+    },
+    "wall_ms": {
+      "minimum": 0,
+      "title": "Wall Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "event_id",
+    "match_id",
+    "period_id",
+    "clock_ms",
+    "wall_ms",
+    "color",
+    "reason"
+  ],
+  "title": "Card",
+  "type": "object"
+}

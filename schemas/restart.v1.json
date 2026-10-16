@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "StoppageKind": {
+      "enum": [
+        "throw_in",
+        "goal_kick",
+        "corner",
+        "free_kick",
+        "penalty",
+        "offside",
+        "goal",
+        "substitution",
+        "injury",
+        "card",
+        "var",
+        "half_time",
+        "full_time"
+      ],
+      "title": "StoppageKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "clock_ms": {
+      "minimum": 0,
+      "title": "Clock Ms",
+      "type": "integer"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/StoppageKind"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "period_id": {
+      "enum": [
+        1,
+        2
+      ],
+      "title": "Period Id",
+      "type": "integer"
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Id"
+    },
+    "team_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Team Id"
+    },
+    "type": {
+      "const": "restart",
+      "default": "restart",
+      "title": "Type",
+      "type": "string"
+    },
+    "wall_ms": {
+      "minimum": 0,
+      "title": "Wall Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "event_id",
+    "match_id",
+    "period_id",
+    "clock_ms",
+    "wall_ms",
+    "kind"
+  ],
+  "title": "Restart",
+  "type": "object"
+}

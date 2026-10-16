@@ -1,0 +1,191 @@
+{
+  "$defs": {
+    "BallMsg": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "danger": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Danger",
+          "type": "number"
+        },
+        "kind": {
+          "const": "ball",
+          "default": "ball",
+          "title": "Kind",
+          "type": "string"
+        },
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "clock_ms",
+        "x",
+        "y",
+        "danger"
+      ],
+      "title": "BallMsg",
+      "type": "object"
+    },
+    "LineMsg": {
+      "additionalProperties": false,
+      "properties": {
+        "audio_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Audio Url"
+        },
+        "deadline_ms": {
+          "title": "Deadline Ms",
+          "type": "integer"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "line",
+          "default": "line",
+          "title": "Kind",
+          "type": "string"
+        },
+        "late": {
+          "default": false,
+          "title": "Late",
+          "type": "boolean"
+        },
+        "never_drop": {
+          "title": "Never Drop",
+          "type": "boolean"
+        },
+        "preempt": {
+          "title": "Preempt",
+          "type": "boolean"
+        },
+        "priority": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "ssml_hash": {
+          "title": "Ssml Hash",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "voice_role": {
+          "$ref": "#/$defs/VoiceRole"
+        }
+      },
+      "required": [
+        "id",
+        "priority",
+        "preempt",
+        "never_drop",
+        "audio_url",
+        "text",
+        "ssml_hash",
+        "deadline_ms",
+        "voice_role"
+      ],
+      "title": "LineMsg",
+      "type": "object"
+    },
+    "StateMsg": {
+      "additionalProperties": false,
+      "properties": {
+        "away_score": {
+          "title": "Away Score",
+          "type": "integer"
+        },
+        "clock_ms": {
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "home_score": {
+          "title": "Home Score",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "state",
+          "default": "state",
+          "title": "Kind",
+          "type": "string"
+        },
+        "period": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "before_kickoff",
+            "live",
+            "half_time",
+            "full_time"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "home_score",
+        "away_score",
+        "clock_ms",
+        "period",
+        "status"
+      ],
+      "title": "StateMsg",
+      "type": "object"
+    },
+    "VoiceRole": {
+      "enum": [
+        "facts",
+        "explanation"
+      ],
+      "title": "VoiceRole",
+      "type": "string"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "ball": "#/$defs/BallMsg",
+      "line": "#/$defs/LineMsg",
+      "state": "#/$defs/StateMsg"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/LineMsg"
+    },
+    {
+      "$ref": "#/$defs/BallMsg"
+    },
+    {
+      "$ref": "#/$defs/StateMsg"
+    }
+  ]
+}
