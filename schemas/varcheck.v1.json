@@ -1,0 +1,90 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "clock_ms": {
+      "minimum": 0,
+      "title": "Clock Ms",
+      "type": "integer"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "stands",
+        "overturned"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "period_id": {
+      "enum": [
+        1,
+        2
+      ],
+      "title": "Period Id",
+      "type": "integer"
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Id"
+    },
+    "subject": {
+      "enum": [
+        "goal",
+        "penalty",
+        "red_card",
+        "offside"
+      ],
+      "title": "Subject",
+      "type": "string"
+    },
+    "team_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Team Id"
+    },
+    "type": {
+      "const": "var_check",
+      "default": "var_check",
+      "title": "Type",
+      "type": "string"
+    },
+    "wall_ms": {
+      "minimum": 0,
+      "title": "Wall Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "event_id",
+    "match_id",
+    "period_id",
+    "clock_ms",
+    "wall_ms",
+    "subject",
+    "outcome"
+  ],
+  "title": "VarCheck",
+  "type": "object"
+}

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Never push straight to main or master: all work lands through pull requests.
+set -euo pipefail
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main | refs/heads/master)
+      echo "pre-push: refusing to push to ${remote_ref#refs/heads/}; open a pull request instead." >&2
+      exit 1
+      ;;
+  esac
+done

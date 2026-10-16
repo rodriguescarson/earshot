@@ -1,0 +1,941 @@
+{
+  "$defs": {
+    "Action": {
+      "additionalProperties": false,
+      "description": "An on-ball SPADL action in the broadcast frame.",
+      "properties": {
+        "bodypart": {
+          "$ref": "#/$defs/Bodypart"
+        },
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "end_x": {
+          "maximum": 105.0,
+          "minimum": 0.0,
+          "title": "End X",
+          "type": "number"
+        },
+        "end_y": {
+          "maximum": 68.0,
+          "minimum": 0.0,
+          "title": "End Y",
+          "type": "number"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "flight_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Flight Ms"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "nearest_opp_m": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nearest Opp M"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "result": {
+          "$ref": "#/$defs/Result"
+        },
+        "start_x": {
+          "maximum": 105.0,
+          "minimum": 0.0,
+          "title": "Start X",
+          "type": "number"
+        },
+        "start_y": {
+          "maximum": 68.0,
+          "minimum": 0.0,
+          "title": "Start Y",
+          "type": "number"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "enum": [
+            "pass",
+            "cross",
+            "throw_in",
+            "freekick_crossed",
+            "freekick_short",
+            "corner_crossed",
+            "corner_short",
+            "take_on",
+            "foul",
+            "tackle",
+            "interception",
+            "shot",
+            "shot_penalty",
+            "shot_freekick",
+            "keeper_save",
+            "keeper_claim",
+            "keeper_punch",
+            "keeper_pick_up",
+            "clearance",
+            "bad_touch",
+            "non_action",
+            "dribble",
+            "goal_kick"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms",
+        "type",
+        "result",
+        "bodypart",
+        "start_x",
+        "start_y",
+        "end_x",
+        "end_y"
+      ],
+      "title": "Action",
+      "type": "object"
+    },
+    "Bodypart": {
+      "enum": [
+        "foot",
+        "head",
+        "other",
+        "head/other",
+        "foot_left",
+        "foot_right"
+      ],
+      "title": "Bodypart",
+      "type": "string"
+    },
+    "Card": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "color": {
+          "$ref": "#/$defs/CardColor"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "reason": {
+          "$ref": "#/$defs/CardReason"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "card",
+          "default": "card",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms",
+        "color",
+        "reason"
+      ],
+      "title": "Card",
+      "type": "object"
+    },
+    "CardColor": {
+      "enum": [
+        "yellow",
+        "red"
+      ],
+      "title": "CardColor",
+      "type": "string"
+    },
+    "CardReason": {
+      "enum": [
+        "foul",
+        "second_yellow",
+        "dissent",
+        "handball",
+        "time_wasting",
+        "denying_goal_chance"
+      ],
+      "title": "CardReason",
+      "type": "string"
+    },
+    "Injury": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "injury",
+          "default": "injury",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms"
+      ],
+      "title": "Injury",
+      "type": "object"
+    },
+    "Kickoff": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "kickoff",
+          "default": "kickoff",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms"
+      ],
+      "title": "Kickoff",
+      "type": "object"
+    },
+    "PeriodEnd": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "period_end",
+          "default": "period_end",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms"
+      ],
+      "title": "PeriodEnd",
+      "type": "object"
+    },
+    "Restart": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/StoppageKind"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "restart",
+          "default": "restart",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms",
+        "kind"
+      ],
+      "title": "Restart",
+      "type": "object"
+    },
+    "Result": {
+      "enum": [
+        "fail",
+        "success",
+        "offside",
+        "owngoal",
+        "yellow_card",
+        "red_card"
+      ],
+      "title": "Result",
+      "type": "string"
+    },
+    "StoppageKind": {
+      "enum": [
+        "throw_in",
+        "goal_kick",
+        "corner",
+        "free_kick",
+        "penalty",
+        "offside",
+        "goal",
+        "substitution",
+        "injury",
+        "card",
+        "var",
+        "half_time",
+        "full_time"
+      ],
+      "title": "StoppageKind",
+      "type": "string"
+    },
+    "StoppageStart": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "expected_dead_ms": {
+          "minimum": 0,
+          "title": "Expected Dead Ms",
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/$defs/StoppageKind"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "restart_team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Restart Team Id"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "stoppage_start",
+          "default": "stoppage_start",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        },
+        "x": {
+          "anyOf": [
+            {
+              "maximum": 105.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "X"
+        },
+        "y": {
+          "anyOf": [
+            {
+              "maximum": 68.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Y"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms",
+        "kind",
+        "restart_team_id",
+        "expected_dead_ms"
+      ],
+      "title": "StoppageStart",
+      "type": "object"
+    },
+    "Substitution": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "off_id": {
+          "title": "Off Id",
+          "type": "string"
+        },
+        "on_id": {
+          "title": "On Id",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "substitution",
+          "default": "substitution",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms",
+        "off_id",
+        "on_id"
+      ],
+      "title": "Substitution",
+      "type": "object"
+    },
+    "VarCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "clock_ms": {
+          "minimum": 0,
+          "title": "Clock Ms",
+          "type": "integer"
+        },
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "stands",
+            "overturned"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "period_id": {
+          "enum": [
+            1,
+            2
+          ],
+          "title": "Period Id",
+          "type": "integer"
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "subject": {
+          "enum": [
+            "goal",
+            "penalty",
+            "red_card",
+            "offside"
+          ],
+          "title": "Subject",
+          "type": "string"
+        },
+        "team_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Team Id"
+        },
+        "type": {
+          "const": "var_check",
+          "default": "var_check",
+          "title": "Type",
+          "type": "string"
+        },
+        "wall_ms": {
+          "minimum": 0,
+          "title": "Wall Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "event_id",
+        "match_id",
+        "period_id",
+        "clock_ms",
+        "wall_ms",
+        "subject",
+        "outcome"
+      ],
+      "title": "VarCheck",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "bad_touch": "#/$defs/Action",
+      "card": "#/$defs/Card",
+      "clearance": "#/$defs/Action",
+      "corner_crossed": "#/$defs/Action",
+      "corner_short": "#/$defs/Action",
+      "cross": "#/$defs/Action",
+      "dribble": "#/$defs/Action",
+      "foul": "#/$defs/Action",
+      "freekick_crossed": "#/$defs/Action",
+      "freekick_short": "#/$defs/Action",
+      "goal_kick": "#/$defs/Action",
+      "injury": "#/$defs/Injury",
+      "interception": "#/$defs/Action",
+      "keeper_claim": "#/$defs/Action",
+      "keeper_pick_up": "#/$defs/Action",
+      "keeper_punch": "#/$defs/Action",
+      "keeper_save": "#/$defs/Action",
+      "kickoff": "#/$defs/Kickoff",
+      "non_action": "#/$defs/Action",
+      "pass": "#/$defs/Action",
+      "period_end": "#/$defs/PeriodEnd",
+      "restart": "#/$defs/Restart",
+      "shot": "#/$defs/Action",
+      "shot_freekick": "#/$defs/Action",
+      "shot_penalty": "#/$defs/Action",
+      "stoppage_start": "#/$defs/StoppageStart",
+      "substitution": "#/$defs/Substitution",
+      "tackle": "#/$defs/Action",
+      "take_on": "#/$defs/Action",
+      "throw_in": "#/$defs/Action",
+      "var_check": "#/$defs/VarCheck"
+    },
+    "propertyName": "type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Action"
+    },
+    {
+      "$ref": "#/$defs/StoppageStart"
+    },
+    {
+      "$ref": "#/$defs/Restart"
+    },
+    {
+      "$ref": "#/$defs/Kickoff"
+    },
+    {
+      "$ref": "#/$defs/Substitution"
+    },
+    {
+      "$ref": "#/$defs/Card"
+    },
+    {
+      "$ref": "#/$defs/Injury"
+    },
+    {
+      "$ref": "#/$defs/VarCheck"
+    },
+    {
+      "$ref": "#/$defs/PeriodEnd"
+    }
+  ]
+}

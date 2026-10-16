@@ -1,0 +1,62 @@
+{
+  "endpoint": "(EARSHOT_AI_ENDPOINT)",
+  "auth": "Entra (az login), no keys",
+  "chat": {
+    "latency_ms": 1900,
+    "model": "gpt-5.4-mini-2026-03-17",
+    "reply": "Earshot P0 ok",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 15,
+      "total_tokens": 23,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      },
+      "latency_checkpoint": {
+        "engine_tbt_ms": 5,
+        "engine_ttft_ms": 28,
+        "engine_ttlt_ms": 75,
+        "pre_inference_ms": 109,
+        "service_tbt_ms": 5,
+        "service_ttft_ms": 214,
+        "service_ttlt_ms": 257,
+        "user_visible_ttft_ms": 105
+      }
+    }
+  },
+  "voices": {
+    "ar-SA": "ar-SA-ZariyahNeural",
+    "en-GB": "en-GB-AdaMultilingualNeural"
+  },
+  "tts": [
+    {
+      "locale": "en-GB",
+      "voice": "en-GB-AdaMultilingualNeural",
+      "latency_ms": 2166,
+      "chars": 60,
+      "seconds": 7.19,
+      "pan": -0.6,
+      "file": "smoke-en-GB.wav"
+    },
+    {
+      "locale": "ar-SA",
+      "voice": "ar-SA-ZariyahNeural",
+      "latency_ms": 1970,
+      "chars": 59,
+      "seconds": 9.89,
+      "pan": 0.6,
+      "file": "smoke-ar-SA.wav"
+    }
+  ]
+}

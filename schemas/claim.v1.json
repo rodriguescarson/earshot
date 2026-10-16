@@ -1,0 +1,128 @@
+{
+  "$defs": {
+    "CauseLabel": {
+      "description": "Closed vocabulary. The first nine are scripted changes; the last three follow match events.",
+      "enum": [
+        "PRESS_HIGHER",
+        "DROP_DEEPER",
+        "GO_DIRECT",
+        "RAISE_TEMPO",
+        "SLOW_TEMPO",
+        "WIDEN",
+        "NARROW",
+        "PARK_THE_BUS",
+        "ALL_OUT_ATTACK",
+        "RED_CARD_REORG",
+        "CHASING_GAME",
+        "PROTECTING_LEAD"
+      ],
+      "title": "CauseLabel",
+      "type": "string"
+    },
+    "Direction": {
+      "enum": [
+        "up",
+        "down"
+      ],
+      "title": "Direction",
+      "type": "string"
+    },
+    "Metric": {
+      "enum": [
+        "press_height",
+        "tempo",
+        "directness",
+        "width",
+        "line_height",
+        "possession_share",
+        "shot_count"
+      ],
+      "title": "Metric",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "cause": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CauseLabel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "cited_event_ids": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 12,
+      "minItems": 1,
+      "title": "Cited Event Ids",
+      "type": "array"
+    },
+    "direction": {
+      "$ref": "#/$defs/Direction"
+    },
+    "metric": {
+      "$ref": "#/$defs/Metric"
+    },
+    "rank": {
+      "default": 1,
+      "maximum": 3,
+      "minimum": 1,
+      "title": "Rank",
+      "type": "integer"
+    },
+    "team_id": {
+      "title": "Team Id",
+      "type": "string"
+    },
+    "value_after": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value After"
+    },
+    "value_before": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value Before"
+    },
+    "window_end_ms": {
+      "minimum": 0,
+      "title": "Window End Ms",
+      "type": "integer"
+    },
+    "window_start_ms": {
+      "minimum": 0,
+      "title": "Window Start Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "team_id",
+    "metric",
+    "direction",
+    "window_start_ms",
+    "window_end_ms",
+    "cited_event_ids"
+  ],
+  "title": "Claim",
+  "type": "object"
+}

@@ -1,0 +1,201 @@
+{
+  "$defs": {
+    "FocusStat": {
+      "enum": [
+        "press_height",
+        "danger",
+        "pass_difficulty",
+        "shot_speed",
+        "possession"
+      ],
+      "title": "FocusStat",
+      "type": "string"
+    },
+    "Language": {
+      "enum": [
+        "en",
+        "es",
+        "ar",
+        "hi"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "LineSource": {
+      "enum": [
+        "caller",
+        "analyst",
+        "statwatcher",
+        "fallback",
+        "on_demand",
+        "recap",
+        "notice"
+      ],
+      "title": "LineSource",
+      "type": "string"
+    },
+    "ListeningMode": {
+      "enum": [
+        "casual",
+        "analyst"
+      ],
+      "title": "ListeningMode",
+      "type": "string"
+    },
+    "VoiceRole": {
+      "enum": [
+        "facts",
+        "explanation"
+      ],
+      "title": "VoiceRole",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "club_tags": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Club Tags",
+      "type": "array"
+    },
+    "deadline_wall_ms": {
+      "minimum": 0,
+      "title": "Deadline Wall Ms",
+      "type": "integer"
+    },
+    "est_ms": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Est Ms",
+      "type": "integer"
+    },
+    "language": {
+      "$ref": "#/$defs/Language"
+    },
+    "late": {
+      "default": false,
+      "title": "Late",
+      "type": "boolean"
+    },
+    "line_id": {
+      "title": "Line Id",
+      "type": "string"
+    },
+    "listening_mode": {
+      "$ref": "#/$defs/ListeningMode"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "moment_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Moment Id"
+    },
+    "never_drop": {
+      "default": false,
+      "title": "Never Drop",
+      "type": "boolean"
+    },
+    "pan": {
+      "default": 0.0,
+      "maximum": 1.0,
+      "minimum": -1.0,
+      "title": "Pan",
+      "type": "number"
+    },
+    "player_ids": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Player Ids",
+      "type": "array"
+    },
+    "preempt": {
+      "default": false,
+      "title": "Preempt",
+      "type": "boolean"
+    },
+    "priority": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Priority",
+      "type": "integer"
+    },
+    "slots": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          }
+        ]
+      },
+      "title": "Slots",
+      "type": "object"
+    },
+    "source": {
+      "$ref": "#/$defs/LineSource"
+    },
+    "stat_tag": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FocusStat"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "template_id": {
+      "title": "Template Id",
+      "type": "string"
+    },
+    "text": {
+      "title": "Text",
+      "type": "string"
+    },
+    "voice_role": {
+      "$ref": "#/$defs/VoiceRole",
+      "default": "facts"
+    },
+    "wall_ms": {
+      "minimum": 0,
+      "title": "Wall Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "line_id",
+    "match_id",
+    "moment_id",
+    "source",
+    "language",
+    "listening_mode",
+    "template_id",
+    "slots",
+    "text",
+    "priority",
+    "wall_ms",
+    "deadline_wall_ms"
+  ],
+  "title": "Line",
+  "type": "object"
+}

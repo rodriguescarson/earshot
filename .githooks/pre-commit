@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Format and lint staged Python before every commit.
+set -euo pipefail
+files=$(git diff --cached --name-only --diff-filter=ACM -- '*.py')
+[ -z "$files" ] && exit 0
+# shellcheck disable=SC2086
+uv run ruff format $files
+# shellcheck disable=SC2086
+uv run ruff check --fix $files
+# shellcheck disable=SC2086
+git add $files

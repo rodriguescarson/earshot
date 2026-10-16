@@ -1,0 +1,23 @@
+# Secrets: never commit. Templates (*.example) are allowed.
+.env
+.env.*
+!*.example
+*.pem
+*.key
+
+# Local tooling state
+.gstack/
+.impeccable/live/
+.impeccable/config.local.json
+.impeccable/mocks/
+.impeccable/review/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+
+# Generated data and audio
+data/
+p0/evidence/*.wav
+.impeccable/questions/
