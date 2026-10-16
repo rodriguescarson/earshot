@@ -279,6 +279,35 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 - **With no delivery cost** (provisional model, development section) the same season gave
   0.971-0.979. The difference is the cost of delivery at this load.
 
+**Facts, planted-defect harness (run of record, held-out):**
+- **Command:** `earshot planted --seeds 9001-9040 --languages en,es,ar,hi` at `14580ab`.
+- **Setup:** 25% injection rate, against Stream 1's frozen Caller, Checker and auditor.
+- **Result:** 41 rows. Every row's false-block rate is 0. Summary in
+  `reports/planted-heldout-9001-9040.json`.
+
+| Injection point | Defects (all languages and modes) | Recall |
+|---|---|---|
+| Analyst JSON | 2,514 | 1.0 |
+| Slot values | 34,556 | 1.0 |
+| Roster entries, Checker alone | 4,896 | 0.0 (by design: it reads the same roster) |
+| Roster entries, auditor (reviewed roster) | 4,896 | **1.0** |
+| Template strings, Checker alone | 21,464 | 0.850 (Casual) / 0.920 (Analyst); names in fixed text 0.0, by design |
+| Template strings, auditor (reviewed templates) | 21,464 | **1.0** |
+
+**Pass difficulty and the engine gates on the held-out seeds (run of record for G7):**
+- **Command:** `earshot gate --seeds 9001-9040 --model-seeds 9001-9040`.
+- **Report:** `reports/gate-heldout-9001-9040.json`.
+- **G7, pass difficulty: PASS.** 32,692 passes. Log loss 0.3837 against a base-rate 0.4396, a
+  ratio of 0.873 (criterion at most 0.90). Calibration error 0.0069 (at most 0.03).
+- **The other gates on these 40 matches** (their runs of record are the season):
+  - G1, G2, G4, G6, G9 and G10 pass.
+  - G6: the baseline recalls 67 of 184 changes against the shuffled control.
+  - **G5 press height misses on the held-out seeds**: AUC 0.749 on 55 planted changes, against
+    0.75 needed. The other four settings pass at 0.827-0.908. On the full season (the gated run)
+    press height is 0.803.
+  - G3 is informational on 40 matches. Yellow cards, 3.40 a match, fall outside their band
+    (3.78-4.62).
+
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
 branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
