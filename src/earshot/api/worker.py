@@ -43,6 +43,55 @@ SECURITY_HEADERS = {
 }
 
 
+MAX_BODY_BYTES = 16 * 1024
+"""Every request body the public endpoints take is a small JSON object."""
+
+
+class BodyLimit:
+    """ASGI middleware: refuse request bodies over ``MAX_BODY_BYTES`` (413), declared or streamed,
+    before an endpoint reads them. Bodies are read here (they are small) and replayed to the app;
+    after the body, ``receive`` is the server's again, so disconnects still reach a stream."""
+
+    def __init__(self, app, limit: int = MAX_BODY_BYTES) -> None:
+        self.app, self.limit = app, limit
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http" or scope.get("method") in ("GET", "HEAD", "OPTIONS"):
+            await self.app(scope, receive, send)
+            return
+        declared = dict(scope.get("headers") or []).get(b"content-length")
+        if declared is not None and (not declared.isdigit() or int(declared) > self.limit):
+            await self._too_large(send)
+            return
+        body, more = b"", True
+        while more:
+            message = await receive()
+            if message["type"] != "http.request":  # the client went away
+                return
+            body += message.get("body", b"")
+            more = message.get("more_body", False)
+            if len(body) > self.limit:
+                await self._too_large(send)
+                return
+        replayed = False
+
+        async def replay():
+            nonlocal replayed
+            if not replayed:
+                replayed = True
+                return {"type": "http.request", "body": body, "more_body": False}
+            return await receive()
+
+        await self.app(scope, replay, send)
+
+    @staticmethod
+    async def _too_large(send) -> None:
+        body = b'{"error": "request body too large"}'
+        headers = [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]
+        await send({"type": "http.response.start", "status": 413, "headers": headers})
+        await send({"type": "http.response.body", "body": body})
+
+
 class SecurityHeaders:
     """ASGI middleware: the SEC5 headers on every response the worker sends."""
 
@@ -163,6 +212,7 @@ def build_app(
         ],
         middleware=[
             Middleware(SecurityHeaders),
+            Middleware(BodyLimit),
             Middleware(
                 CORSMiddleware,
                 allow_origins=origins,
