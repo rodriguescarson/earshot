@@ -42,3 +42,34 @@ def test_listeners_cover_every_profile():
     assert len(groups) == 5
     assert "m00026.en.analyst.app_voice.spa.spa-09.-" in groups
     assert "m00026.en.casual.screen_reader.-.-.-" in groups
+
+
+def test_the_temporary_judge_code_is_removed_however_the_run_ends(monkeypatch):
+    import pytest
+
+    from earshot.eval import loadtest
+
+    store: dict = {"judge_code_sha256": ["carsons"]}
+
+    class Fake:
+        def __init__(self, url):
+            pass
+
+        def update(self, mutate):
+            store.update(mutate(dict(store)))
+            return store
+
+    monkeypatch.setattr("earshot.api.flags.BlobFlags", Fake)
+    monkeypatch.setattr(loadtest, "POLL_WAIT_S", 0)
+    seen: list[int] = []
+
+    def failing_run():
+        with loadtest.temporary_judge_code("https://x") as code:
+            assert code.startswith("lt-")
+            seen.append(len(store["judge_code_sha256"]))
+            raise RuntimeError("the run failed")
+
+    with pytest.raises(RuntimeError):
+        failing_run()
+    assert seen == [2]
+    assert store["judge_code_sha256"] == ["carsons"]  # only the run's own code went

@@ -10,17 +10,22 @@ The run also writes the latency model the accelerated evaluation draws from
 (``earshot evaluate --latency``): audio-ready samples, Analyst samples, and delivery samples (the
 Director's start to the listener's first audio byte).
 
-Listeners spread round-robin over the evaluation profiles' groups in English. One judge code
-(``X-Earshot-Code``, read from the environment, never written anywhere) buys the ticket that lifts
-the per-IP stream limit for a load from one machine, and reads ``/api/metrics``.
+Listeners spread round-robin over the evaluation profiles' groups in English. A judge code buys
+the ticket that lifts the per-IP stream limit for a load from one machine, and reads
+``/api/metrics``. ``temporary_judge_code`` makes one for the run: it lives only in this process
+(never in argv, a file or the output), its hash is added to the flag blob, and it is removed in a
+``finally`` however the run ends.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import secrets
 import time
 from collections import Counter
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -29,6 +34,28 @@ import httpx
 from earshot.eval.run import PROFILES, pct
 
 TARGET_P95_MS = 2_000
+
+
+POLL_WAIT_S = 40
+"""The worker re-reads the flag blob every 30 s; a new code works after the next poll."""
+
+
+@contextlib.contextmanager
+def temporary_judge_code(storage_url: str) -> Iterator[str]:
+    from earshot.api.flags import BlobFlags
+    from earshot.api.ratelimit import code_hash
+
+    code = "lt-" + secrets.token_urlsafe(18)
+    h = code_hash(code)
+    src = BlobFlags(storage_url)
+    src.update(lambda cur: {**cur, "judge_code_sha256": sorted({*cur.get("judge_code_sha256", []), h})})
+    try:
+        time.sleep(POLL_WAIT_S)
+        yield code
+    finally:
+        src.update(
+            lambda cur: {**cur, "judge_code_sha256": [x for x in cur.get("judge_code_sha256", []) if x != h]}
+        )
 
 
 def now_ms() -> int:

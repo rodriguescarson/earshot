@@ -68,7 +68,7 @@ def test_the_real_analyst_carries_its_latency_onto_the_virtual_clock():
 @needs_live
 def test_one_match_through_the_live_broadcaster():
     lat = R.LatencyModel.provisional_default()
-    inline = R.evaluate_match(26, lat)
+    inline = R.evaluate_match(26, lat, windows="inline")
     assert set(inline["profiles"]) == {"P1", "P2", "P3", "P4", "P5"}
     assert not any("P4" in n for n in inline["notes"])  # the focus stat is live: P4 follows shot speed
     assert inline["profiles"]["P4"]["group"].endswith(".shot_speed")
@@ -81,8 +81,8 @@ def test_one_match_through_the_live_broadcaster():
     assert p5["numeric_slots_per_min"] > p1["numeric_slots_per_min"]
     assert inline["profiles"]["P2"]["group"].endswith(".spa.spa-09.-")  # follows the home club and a forward
 
-    # The finding this harness measured: as built, the event feeder waits for each window run, so a
-    # yellow card shown after a foul waits for the Analyst. Window runs on their own task do not.
+    # The finding this harness measured: when the event feeder waited for each window run (before
+    # 24f4efb), a yellow card shown after a foul waited for the Analyst. As built now, it does not.
     bg = R.evaluate_match(26, lat, windows="background")
 
     def yellow(m):

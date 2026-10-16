@@ -87,8 +87,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument(
         "--windows",
         choices=["inline", "background"],
-        default="inline",
-        help="inline: the broadcaster as built; background: window runs off the event feeder",
+        default="background",
+        help="background: as built (window runs on their own task); inline: the feeder waits for each",
     )
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
 
@@ -258,11 +258,13 @@ def main(argv: list[str] | None = None) -> None:
         import os
 
         from earshot.eval.loadtest import run as load
+        from earshot.eval.loadtest import temporary_judge_code
 
-        code = os.environ.get("EARSHOT_LOADTEST_CODE")
-        if not code:
-            sys.exit("set EARSHOT_LOADTEST_CODE to a judge code (it is never written anywhere)")
-        result = asyncio.run(load(args.url.rstrip("/"), code, args.listeners, args.minutes))
+        url = os.environ.get("EARSHOT_STORAGE_URL")
+        if not url:
+            sys.exit("set EARSHOT_STORAGE_URL (the flag blob's account) for the run's temporary judge code")
+        with temporary_judge_code(url) as code:
+            result = asyncio.run(load(args.url.rstrip("/"), code, args.listeners, args.minutes))
         result["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
         model = result.pop("latency_model")
         args.out.parent.mkdir(parents=True, exist_ok=True)

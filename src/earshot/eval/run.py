@@ -8,8 +8,8 @@ latency from a ``LatencyModel``:
 
 - ``ready_ms``: from the moment a line is offered to the moment its audio is ready (speech
   synthesis or the cache), added to the measured compute time of the pipeline for that event;
-- ``analyst_ms``: one Analyst call. Window lines wait for it, and so does the event feeder, as it
-  does live (``LiveMatch`` awaits the window run before it pushes the next event);
+- ``analyst_ms``: one Analyst call. Window lines wait for it. With ``windows="inline"`` the event
+  feeder waits for it too, as the broadcaster did before window runs moved to their own task;
 - ``delivery_ms``: from the Director starting a line to the listener hearing its first byte.
 
 The deployed load test measures these. A model built in code says so in ``source``, and results run
@@ -229,7 +229,7 @@ def _virtual_match_class():
             latency: LatencyModel,
             rng: np.random.Generator,
             analyst: LatencyAnalyst | TimedAnalyst | None,
-            windows: str = "inline",
+            windows: str = "background",
         ) -> None:
             super().__init__(
                 info, events, clubs, players, audio=cast(Any, None), send=self._discard, analyst=analyst
@@ -397,7 +397,7 @@ def evaluate_match(
     latency: LatencyModel,
     real_analyst: Any | None = None,
     profiles: Sequence[EvalProfile] = PROFILES,
-    windows: str = "inline",
+    windows: str = "background",
 ) -> dict[str, Any]:
     from earshot.sim.match import simulate
     from earshot.world.localize import roster
@@ -488,7 +488,7 @@ def summarize(
     latency: LatencyModel,
     wall_s: float,
     workers: int,
-    windows: str = "inline",
+    windows: str = "background",
 ) -> dict[str, Any]:
     ok = [m for m in matches if "error" not in m]
     failed = [
@@ -566,11 +566,11 @@ def summarize(
 
 
 def run_season(
-    seeds: Sequence[int], latency: LatencyModel, workers: int = 8, windows: str = "inline"
+    seeds: Sequence[int], latency: LatencyModel, workers: int = 8, windows: str = "background"
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """``windows``: "inline" measures the broadcaster as built (the event feeder waits for each
-    window run); "background" models a broadcaster that runs windows on their own task
-    (``MatchPipeline.push_moment`` + ``run_window``)."""
+    """``windows``: "background" is the broadcaster as built (window runs on their own task, since
+    Stream 1's 24f4efb); "inline" is the broadcaster before it, whose event feeder waited for each
+    window run. Kept so that finding stays reproducible."""
     t0 = time.perf_counter()
     jobs = [(s, latency, windows) for s in seeds]
     if workers <= 1:
