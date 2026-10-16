@@ -1,0 +1,45 @@
+{
+ "environment": {
+  "engine_version": "1.0.0",
+  "numpy": "2.5.4",
+  "pydantic": "2.14.1",
+  "python": "3.12.14"
+ },
+ "results": [
+  {
+   "detail": {
+    "matches": 40,
+    "workers": [
+     8,
+     1
+    ]
+   },
+   "failures": [],
+   "gate": "G1",
+   "name": "determinism",
+   "passed": true
+  },
+  {
+   "detail": {
+    "events": 75673,
+    "matches": "40/40"
+   },
+   "failures": [],
+   "gate": "G2",
+   "name": "completeness",
+   "passed": true
+  },
+  {
+   "detail": {
+    "max": 81,
+    "median_windows_15s": 60.0,
+    "min": 42
+   },
+   "failures": [],
+   "gate": "G10",
+   "name": "dead-ball windows",
+   "passed": true
+  }
+ ],
+ "seeds": "1-40"
+}

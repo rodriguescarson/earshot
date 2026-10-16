@@ -7,10 +7,13 @@ from pathlib import Path
 
 from pydantic import BaseModel, TypeAdapter
 
+from earshot.contract.ball import BallSample
 from earshot.contract.claim import AnalystResponse, Claim
 from earshot.contract.events import EVENT_MODELS, Event
 from earshot.contract.line import Line
+from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo, Roster, TeamSheet
 from earshot.contract.moment import Moment
+from earshot.contract.truth import TruthChange
 from earshot.contract.wire import WireMsg
 
 VERSION = "v1"
@@ -21,7 +24,9 @@ def all_schemas() -> dict[str, dict]:
         "event": TypeAdapter(Event).json_schema(),
         "wire": TypeAdapter(WireMsg).json_schema(),
     }
-    for model in (*EVENT_MODELS, Moment, Line, Claim, AnalystResponse):
+    models = (*EVENT_MODELS, Moment, Line, Claim, AnalystResponse, MatchInfo, TeamSheet, PlayerInfo, ClubInfo,
+              Roster, BallSample, TruthChange)  # fmt: skip
+    for model in models:
         assert issubclass(model, BaseModel)
         out[f"{model.__name__.lower()}"] = model.model_json_schema()
     return out

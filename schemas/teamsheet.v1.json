@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "bench": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Bench",
+      "type": "array"
+    },
+    "formation": {
+      "title": "Formation",
+      "type": "string"
+    },
+    "starting": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 11,
+      "minItems": 11,
+      "title": "Starting",
+      "type": "array"
+    },
+    "team_id": {
+      "title": "Team Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "formation",
+    "starting",
+    "bench"
+  ],
+  "title": "TeamSheet",
+  "type": "object"
+}

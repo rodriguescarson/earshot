@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "coach": {
+      "title": "Coach",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "short_name": {
+      "title": "Short Name",
+      "type": "string"
+    },
+    "stadium": {
+      "title": "Stadium",
+      "type": "string"
+    },
+    "team_id": {
+      "title": "Team Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "team_id",
+    "name",
+    "short_name",
+    "stadium",
+    "coach"
+  ],
+  "title": "ClubInfo",
+  "type": "object"
+}

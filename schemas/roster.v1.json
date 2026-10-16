@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "ClubInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "coach": {
+          "title": "Coach",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "short_name": {
+          "title": "Short Name",
+          "type": "string"
+        },
+        "stadium": {
+          "title": "Stadium",
+          "type": "string"
+        },
+        "team_id": {
+          "title": "Team Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "team_id",
+        "name",
+        "short_name",
+        "stadium",
+        "coach"
+      ],
+      "title": "ClubInfo",
+      "type": "object"
+    },
+    "PlayerInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "player_id": {
+          "title": "Player Id",
+          "type": "string"
+        },
+        "position": {
+          "enum": [
+            "GK",
+            "DF",
+            "MF",
+            "FW"
+          ],
+          "title": "Position",
+          "type": "string"
+        },
+        "shirt": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Shirt",
+          "type": "integer"
+        },
+        "short_name": {
+          "title": "Short Name",
+          "type": "string"
+        },
+        "team_id": {
+          "title": "Team Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "player_id",
+        "team_id",
+        "name",
+        "short_name",
+        "shirt",
+        "position"
+      ],
+      "title": "PlayerInfo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "All clubs and players in the fictional league.",
+  "properties": {
+    "clubs": {
+      "items": {
+        "$ref": "#/$defs/ClubInfo"
+      },
+      "title": "Clubs",
+      "type": "array"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/PlayerInfo"
+      },
+      "title": "Players",
+      "type": "array"
+    }
+  },
+  "required": [
+    "clubs",
+    "players"
+  ],
+  "title": "Roster",
+  "type": "object"
+}

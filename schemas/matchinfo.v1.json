@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "TeamSheet": {
+      "additionalProperties": false,
+      "properties": {
+        "bench": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Bench",
+          "type": "array"
+        },
+        "formation": {
+          "title": "Formation",
+          "type": "string"
+        },
+        "starting": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 11,
+          "minItems": 11,
+          "title": "Starting",
+          "type": "array"
+        },
+        "team_id": {
+          "title": "Team Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "team_id",
+        "formation",
+        "starting",
+        "bench"
+      ],
+      "title": "TeamSheet",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Header for one simulated match. Home attacks right (towards x=105) in the first half.",
+  "properties": {
+    "away": {
+      "$ref": "#/$defs/TeamSheet"
+    },
+    "engine_version": {
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "half_time_ms": {
+      "minimum": 0,
+      "title": "Half Time Ms",
+      "type": "integer"
+    },
+    "home": {
+      "$ref": "#/$defs/TeamSheet"
+    },
+    "kickoff_team_id": {
+      "title": "Kickoff Team Id",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "referee": {
+      "title": "Referee",
+      "type": "string"
+    },
+    "round": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Round"
+    },
+    "seed": {
+      "title": "Seed",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "match_id",
+    "seed",
+    "engine_version",
+    "home",
+    "away",
+    "referee",
+    "kickoff_team_id",
+    "half_time_ms"
+  ],
+  "title": "MatchInfo",
+  "type": "object"
+}

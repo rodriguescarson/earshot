@@ -22,4 +22,8 @@ class TruthChange(BaseModel):
     wall_ms: Annotated[int, Field(ge=0)]
     ramp_ms: Annotated[int, Field(ge=0)]
     setting: str
+    """The primary tactical setting the change moves (press_height, tempo, directness, width, line_height)."""
     delta: float
+    """Shift of the primary setting, on its 0-1 scale."""
+    deltas: dict[str, float] = {}
+    """Every setting the change moves, including the primary one (composite labels move several)."""
