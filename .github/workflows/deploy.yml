@@ -42,4 +42,6 @@ jobs:
           M=$(az containerapp show -g "$RG" -n ca-earshot-mcp --query properties.configuration.ingress.fqdn -o tsv)
           for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS "https://$W/healthz" && break || sleep 15; done
           curl -fsS "https://$W/api/status"
+          # The live broadcaster is mounted: /api/live answers 200 (a match is on) or 503 (between matches).
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://$W/api/live"); [ "$code" = 200 ] || [ "$code" = 503 ]
           for i in 1 2 3 4 5 6 7 8 9 10; do curl -fsS "https://$M/healthz" && break || sleep 15; done
