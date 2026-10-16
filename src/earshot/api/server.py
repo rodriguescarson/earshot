@@ -12,6 +12,9 @@ The SSE stream gets the negotiate endpoint's limits (``earshot.api.streams``): t
 EventSource connects to it directly, so limits that only negotiate applied would bind nobody.
 Judges trade their code for a signed ticket at ``POST /api/ticket``.
 
+``GET /api/metrics`` (judge code) serves the broadcaster's latency samples for the load test
+(``earshot.api.livemetrics``).
+
 Spend (SEC1) for both surfaces runs through one persisted ``SpendMeter``:
 - ``Live.cached_only`` reads the kill-switch flag, so the live app's own gate stops new speech and
   Analyst calls the moment the flag flips (it also skips the Analyst while nobody listens);
@@ -22,11 +25,13 @@ Spend (SEC1) for both surfaces runs through one persisted ``SpendMeter``:
 
 from __future__ import annotations
 
+import time
 from typing import Any, cast
 
 from starlette.routing import Route
 
 from earshot.api.flags import JudgeCodesFromFlags, SpendMeter
+from earshot.api.livemetrics import LiveMetrics, instrumented, metrics_endpoint
 from earshot.api.streams import StreamGuard, Tickets, guard_stream, ticket_endpoint
 from earshot.api.worker import build_app as build_worker
 
@@ -37,15 +42,18 @@ ANALYST_CALL_TOKENS = 6_000
 class MeteredAnalyst:
     """Wraps the Foundry Analyst: no call once the daily token cap would be passed."""
 
-    def __init__(self, inner: Any, meter: SpendMeter) -> None:
-        self.inner, self.meter = inner, meter
+    def __init__(self, inner: Any, meter: SpendMeter, metrics: LiveMetrics | None = None) -> None:
+        self.inner, self.meter, self.metrics = inner, meter, metrics
 
     def run(self, view: Any, window_id: str, expected_dead_ms: int) -> Any:
         from earshot.agents.analyst import AnalystResult
 
         if not self.meter.allow(tokens=ANALYST_CALL_TOKENS):
             return AnalystResult(window_id, error="daily token cap or cached-only mode")
+        t0 = time.perf_counter()
         res = self.inner.run(view, window_id, expected_dead_ms)
+        if self.metrics is not None:
+            self.metrics.analyst_ms.append(int((time.perf_counter() - t0) * 1000))
         self.meter.add(tokens=int(getattr(res, "tokens", 0) or 0))
         return res
 
@@ -77,21 +85,28 @@ def build_app():
     assert any(isinstance(r, Route) and r.path == "/api/stream" for r in live.ROUTES), (
         "live stream route moved"
     )
-    holder: dict[str, Any] = {}
+    metrics = LiveMetrics()
+    late: dict[str, Any] = {}  # endpoints that need the worker's flags, which build_worker makes
 
-    async def ticket(request):  # the judge codes come from the worker's flags, built below
-        return await holder["ticket"](request)
+    async def ticket(request):
+        return await late["ticket"](request)
 
-    routes.append(Route("/api/ticket", ticket, methods=["POST"]))
+    async def metrics_route(request):
+        return await late["metrics"](request)
+
+    routes += [Route("/api/ticket", ticket, methods=["POST"]), Route("/api/metrics", metrics_route)]
     worker = build_worker(extra_routes=routes, extra_lifespans=[live.lifespan])
     flags, meter = worker.state.flags, cast(SpendMeter, worker.state.meter)
-    holder["ticket"] = ticket_endpoint(JudgeCodesFromFlags(flags), tickets)
-    worker.state.stream_guard = guard
+    codes = JudgeCodesFromFlags(flags)
+    late["ticket"] = ticket_endpoint(codes, tickets)
+    late["metrics"] = metrics_endpoint(codes, metrics)
+    worker.state.stream_guard, worker.state.metrics = guard, metrics
+    live.LiveMatch = instrumented(broadcast.LiveMatch, metrics)  # type: ignore[attr-defined]
     limit = broadcast.DAILY_SPEECH_CHARS
     broadcast.SpeechBudget = lambda: MeteredSpeechBudget(meter, limit)  # type: ignore[assignment]
     live.live.cached_only = lambda: flags.cached_only
     if live.live.analyst is not None:
-        live.live.analyst = cast(Any, MeteredAnalyst(live.live.analyst, meter))
+        live.live.analyst = cast(Any, MeteredAnalyst(live.live.analyst, meter, metrics))
     worker.state.live = live.live
     return worker
 
