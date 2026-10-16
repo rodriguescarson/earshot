@@ -58,6 +58,25 @@ def temporary_judge_code(storage_url: str) -> Iterator[str]:
         )
 
 
+CONTROL_TIMEOUT_S = 30.0
+CONTROL_TRIES = 3
+
+
+async def control(client: httpx.AsyncClient, method: str, url: str, **kw: Any) -> httpx.Response:
+    """The run's own setup and read-back calls (live match, ticket, metrics). The worker is under the
+    test's load, so these get a longer timeout and retries; losing the metrics read loses the run."""
+    for attempt in range(CONTROL_TRIES):
+        try:
+            r = await client.request(method, url, timeout=CONTROL_TIMEOUT_S, **kw)
+            r.raise_for_status()
+            return r
+        except httpx.HTTPError:
+            if attempt == CONTROL_TRIES - 1:
+                raise
+            await asyncio.sleep(5)
+    raise AssertionError("unreachable")
+
+
 def now_ms() -> int:
     return int(time.time() * 1000)
 
@@ -91,8 +110,25 @@ def groups_for(match: dict[str, Any], roster_fw: str | None) -> list[str]:
     return out
 
 
-async def listen(client: httpx.AsyncClient, base: str, lst: Listener, ticket: str, until: float) -> None:
+async def fetch_audio(client: httpx.AsyncClient, base: str, lst: Listener, rec: dict[str, Any]) -> None:
+    t0 = time.perf_counter()
+    try:
+        async with client.stream("GET", f"{base}{rec['audio']}", timeout=10) as a:
+            async for _ in a.aiter_bytes():
+                rec["ttfb_ms"] = int((time.perf_counter() - t0) * 1000)
+                break
+            rec["audio_status"] = a.status_code
+    except httpx.HTTPError as e:
+        lst.errors[type(e).__name__] += 1
+
+
+async def listen(
+    client: httpx.AsyncClient, audio: httpx.AsyncClient, base: str, lst: Listener, ticket: str, until: float
+) -> None:
+    """One listener. Audio is fetched on its own task, as a browser loads an audio element while its
+    EventSource keeps reading: an inline fetch would hold up the next message and count as transit."""
     params = {"group": lst.group, "ticket": ticket}
+    fetches: list[asyncio.Task[None]] = []
     try:
         async with client.stream("GET", f"{base}/api/stream", params=params, timeout=None) as r:
             if r.status_code != 200:
@@ -109,37 +145,36 @@ async def listen(client: httpx.AsyncClient, base: str, lst: Listener, ticket: st
                     continue
                 rec: dict[str, Any] = {"id": msg["id"], "recv_ms": now_ms(), "audio": msg.get("audio_url")}
                 if rec["audio"]:
-                    t0 = time.perf_counter()
-                    try:
-                        async with client.stream("GET", f"{base}{rec['audio']}", timeout=10) as a:
-                            async for _ in a.aiter_bytes():
-                                rec["ttfb_ms"] = int((time.perf_counter() - t0) * 1000)
-                                break
-                            rec["audio_status"] = a.status_code
-                    except httpx.HTTPError as e:
-                        lst.errors[type(e).__name__] += 1
+                    fetches.append(asyncio.create_task(fetch_audio(audio, base, lst, rec)))
                 lst.received.append(rec)
     except httpx.HTTPError as e:
         lst.errors[type(e).__name__] += 1
+    if fetches:
+        await asyncio.gather(*fetches)
 
 
 async def run(base: str, code: str, listeners: int, minutes: float) -> dict[str, Any]:
     started = now_ms()
-    async with httpx.AsyncClient(
-        http2=False, limits=httpx.Limits(max_connections=listeners * 2 + 10)
-    ) as client:
-        match = (await client.get(f"{base}/api/live")).json()
-        t = await client.post(f"{base}/api/ticket", headers={"x-earshot-code": code})
-        t.raise_for_status()
+    # Streams and audio on separate pools: a browser keeps its EventSource open beside the audio
+    # element's own connections.
+    async with (
+        httpx.AsyncClient(http2=False, limits=httpx.Limits(max_connections=listeners + 10)) as client,
+        httpx.AsyncClient(http2=False, limits=httpx.Limits(max_connections=listeners * 2)) as audio,
+    ):
+        match = (await control(client, "GET", f"{base}/api/live")).json()
+        t = await control(client, "POST", f"{base}/api/ticket", headers={"x-earshot-code": code})
         ticket = t.json()["ticket"]
         groups = groups_for(match, followed_forward(match["match_id"]))
         lsts = [Listener(groups[i % len(groups)]) for i in range(listeners)]
         until = time.time() + minutes * 60
-        await asyncio.gather(*(listen(client, base, x, ticket, until) for x in lsts))
-        m = await client.get(
-            f"{base}/api/metrics", params={"since_ms": started}, headers={"x-earshot-code": code}
+        await asyncio.gather(*(listen(client, audio, base, x, ticket, until) for x in lsts))
+        m = await control(
+            client,
+            "GET",
+            f"{base}/api/metrics",
+            params={"since_ms": started},
+            headers={"x-earshot-code": code},
         )
-        m.raise_for_status()
         server = m.json()
     return summarize(base, match, listeners, minutes, lsts, server)
 

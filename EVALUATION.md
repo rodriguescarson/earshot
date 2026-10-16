@@ -378,6 +378,55 @@ runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst -
     running (`--tokens-per-hour`, `--resume`).
   - Raising those alerts for the run is Carson's decision.
 
+### Load test, 30 listeners (2026-10-16, deployed stack)
+`earshot loadtest --url <worker> --listeners 30 --minutes 15`, against the worker at image `f69549b`
+(0.5 vCPU, 1 GiB, one replica), from one machine in India to Sweden Central. The listeners were
+spread over the five profiles' groups. Summary in `reports/loadtest-2026-10-16-n30.json`; latency
+samples in `reports/loadtest-2026-10-16-n30.latency.json`.
+
+- **Traffic:** 5,157 lines and 51,807 ball samples received; 2,188 Caller lines with audio joined
+  to the server's timings.
+- **Event to first audio byte:** p50 2,930 ms, **p95 15,996 ms**, max 29,522 ms. Target: p95 under
+  2.0 s. **Miss.**
+
+| Component | p50 | p95 |
+|---|---|---|
+| Audio ready (cache or speech) | 102 ms | 491 ms |
+| Event to the Director starting the line | 252 ms | 1,790 ms |
+| Start to sent (`_publish_line`: serve and encode M4A) | 1,371 ms | 2,693 ms |
+| SSE transit | 59 ms | **10,888 ms** |
+| Audio first byte | 559 ms | **5,903 ms** |
+
+- **Errors:** 290 connect timeouts and 2 read timeouts on audio fetches.
+- **Reading:** at 30 listeners the single 0.5 vCPU worker saturates. It holds every SSE stream,
+  sends 2 ball samples a second to each listener, serves every audio file and encodes it, so
+  delivery queues.
+- **Speech is not the limit:** audio-ready p95 is 0.5 s. No goal fell inside the 15 minutes, so
+  never-drop latency has no live sample here.
+- **Limits:**
+  - one load generator, far from the region;
+  - the worker's and the generator's clocks are not corrected for skew;
+  - the match's first 15 minutes only.
+
+### Coverage with the measured latency (development, 2026-10-16)
+`earshot evaluate --seeds 1-380 --workers 8 --latency reports/loadtest-2026-10-16-n30.latency.json`
+(branch `feat/eval-harness-auditor`: the auditor runs in the harness). 380/380 matches, 0 failed,
+466.1 s. Not of record: no `eval-freeze` tag yet. Summary in
+`reports/eval-season-n30-latency.json`.
+
+| Profile | Coverage within 3 s | Shots p50 / p95 | Yellow cards p50 / p95 | Never-drop aired; p95 (goals) | Audit blocks |
+|---|---|---|---|---|---|
+| P1 | 0.407 | 3.5 / 16.1 s | 3.4 / 15.2 s | all; 18.0 s | 0 |
+| P2 | 0.381 | 3.5 / 16.0 s | 5.1 / 17.6 s | all; 16.0 s | 0 |
+| P3 | 0.399 | 3.5 / 16.3 s | 3.6 / 16.4 s | all; 14.1 s | 0 |
+| P4 | 0.372 | 3.6 / 16.4 s | 5.0 / 17.5 s | all; 16.4 s | 0 |
+| P5 | 0.383 | 3.5 / 16.1 s | 4.8 / 17.3 s | all; 15.3 s | 0 |
+
+- **Coverage misses its 0.95 target** in every profile when delivery is drawn from the 30-listener
+  measurement. Every goal, red card and penalty still airs, but late.
+- With the provisional model (no delivery cost) the same season gave 0.971-0.979 (section above),
+  so delivery under load is what decides Coverage on this stack.
+
 ### Load test, trial (development, not of record)
 `earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
 India to Sweden Central. Summary in `reports/loadtest-trial-2026-10-16.json`.
