@@ -71,6 +71,11 @@ export function Listen({
     announcer.current?.announce(text, onAir.never_drop);
   }, [output, onAir, t]);
 
+  // Entering the screen: the pressed button is gone, so a screen reader starts from the score (DR-15).
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+
   useEffect(() => {
     if (player.state === "blocked") {
       restore.current?.focus();

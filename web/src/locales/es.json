@@ -43,7 +43,15 @@
     "outputAppHint": "Earshot dice cada frase y sitúa el balón en el sonido.",
     "outputReaderHint": "Las frases van a tu lector de pantalla a tu ritmo. El sonido del balón sigue sonando.",
     "close": "Volver al partido",
-    "reconnecting": "Reconectando con el partido…"
+    "reconnecting": "Reconectando con el partido…",
+    "recapReady": {
+      "half_time": "Resumen del descanso listo.",
+      "full_time": "Resumen final listo."
+    },
+    "recapTitle": {
+      "half_time": "Descanso",
+      "full_time": "Final"
+    }
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}",
@@ -72,6 +80,21 @@
       "casualHint": "Qué pasa y quién lo hace. Números solo para el marcador, el minuto y los disparos más fuertes.",
       "analyst": "Analista",
       "analystHint": "Lo mismo, más los números: longitud de los pases, velocidad de los disparos y cómo cambia la táctica de cada equipo."
+    },
+    "stat": {
+      "title": "¿Seguir una estadística?",
+      "none": "No, solo Analista",
+      "noneHint": "Todas las frases de Analista, sin destacar ninguna estadística.",
+      "press_height": "Altura de presión",
+      "press_heightHint": "Te avisa cuando un equipo presiona 5 metros más arriba o más abajo.",
+      "danger": "Peligro",
+      "dangerHint": "Te avisa cuando un equipo vive uno de sus momentos más peligrosos.",
+      "pass_difficulty": "Dificultad de pase",
+      "pass_difficultyHint": "Cada pase muy difícil, y si salió o no.",
+      "shot_speed": "Velocidad de disparo",
+      "shot_speedHint": "La velocidad de cada disparo.",
+      "possession": "Posesión",
+      "possessionHint": "Te avisa cuando la posesión de un equipo sube 10 puntos."
     }
   },
   "languages": {
@@ -82,7 +105,7 @@
   },
   "agents": {
     "title": "Detrás de la voz",
-    "lede": "Seis agentes comparten un único canal de audio. Esto es lo último que decidió cada uno.",
+    "lede": "Estos agentes comparten un único canal de audio; un auditor aparte vuelve a comprobar cada frase. Esto es lo último que decidió cada uno.",
     "airtime": "En el aire {{seconds}} s del último minuto.",
     "legendCaller": "narración",
     "legendAnalyst": "análisis",

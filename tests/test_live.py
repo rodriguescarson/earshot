@@ -117,15 +117,43 @@ def test_only_groups_the_match_can_serve_are_created(match26):
             m.join(GroupKey(*base[:3], OutputMode.ONE_EAR))
 
 
+def real_lines(match26, k=2):
+    """Real Caller lines (no numbers, so no event-log context needed), retimed to the test clock."""
+    from earshot.agents.catalog import NUMERIC_SLOTS
+    from earshot.eval.planted import _caller_items
+
+    r, clubs, players = match26
+    out = []
+    for ln, *_ in _caller_items(r.events, r.info, clubs, players, Language.EN, ListeningMode.CASUAL):
+        if not set(ln.slots) & NUMERIC_SLOTS and ln.text not in {x.text for x in out}:
+            out.append(
+                ln.model_copy(update={"line_id": f"l{len(out) + 1}", "wall_ms": 0, "deadline_wall_ms": 3000})
+            )
+        if len(out) == k:
+            return out
+    raise AssertionError("not enough lines")
+
+
+def test_the_auditor_blocks_a_made_up_line_before_it_airs(match26):
+    r, _, _ = match26
+    m, _ = _match(match26, FakeAudio())
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    asyncio.run(m._offer(g, _line(1, 15, 0)))  # player "X" is not in the reviewed roster
+    assert g.director.queue == []
+    asyncio.run(m._offer(g, real_lines(match26, 1)[0]))
+    assert len(g.director.queue) == 1
+
+
 def test_cached_only_mode_makes_no_speech_calls_and_airs_text(match26):
     r, _, _ = match26
     audio = FakeAudio(cached={"l1"})
     m, sent = _match(match26, audio, cached_only=lambda: True)
     g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    lines = real_lines(match26)
 
     async def go():
-        for i in (1, 2):
-            await m._offer(g, _line(i, 15, 0))
+        for ln in lines:
+            await m._offer(g, ln)
         for act in g.director.tick(m.match_ms()):
             if isinstance(act, Start):
                 await m._publish_line(g, act)
@@ -143,10 +171,12 @@ def test_cache_hits_do_not_spend_the_speech_budget(match26):
     m, _ = _match(match26, audio)
     m.budget.limit = 0
     g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
-    asyncio.run(m._offer(g, _line(1, 15, 0)))
+    first, second = real_lines(match26)
+    asyncio.run(m._offer(g, first))
     assert m.budget.used == 0
-    asyncio.run(m._offer(g, _line(2, 15, 0)))
+    asyncio.run(m._offer(g, second))
     assert audio.synthesized == []  # over budget: text only
+    assert len(g.director.queue) == 2  # both reached the Director: the test is not vacuous
 
 
 @pytest.mark.slow
@@ -189,3 +219,71 @@ def test_groups_nobody_listens_to_are_dropped(match26):
     assert g.key.name in m.groups
     m.prune(g.last_seen + GROUP_IDLE_S + 1)
     assert g.key.name not in m.groups
+
+
+def test_stat_lines_reach_followers_and_recaps_reach_every_group(match26):
+    from earshot.contract import FocusStat, PeriodEnd
+
+    r, _, _ = match26
+    m, sent = _match(match26, FakeAudio())
+    mid = r.info.match_id
+    follow = m.join(
+        GroupKey(mid, Language.EN, ListeningMode.ANALYST, OutputMode.APP_VOICE, stat=FocusStat.SHOT_SPEED)
+    )
+    plain = m.join(GroupKey(mid, Language.EN, ListeningMode.ANALYST, OutputMode.APP_VOICE))
+    reader = m.join(GroupKey(mid, Language.AR, ListeningMode.CASUAL, OutputMode.SCREEN_READER))
+    with pytest.raises(GroupError):
+        m.join(GroupKey(mid, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE, stat=FocusStat.DANGER))
+    half = next(e for e in r.events if isinstance(e, PeriodEnd) and e.period_id == 1)
+
+    async def go():
+        for ev in r.events:
+            if ev.wall_ms > half.wall_ms:
+                break
+            m.seen.append(ev)
+            for c in m.watcher.push(ev):
+                m._stat_lines(c)
+        m._recaps("half_time", half)
+        await asyncio.gather(*list(m._tasks))
+
+    asyncio.run(go())
+    queued = {g.key.name: [ln.source.value for ln, _ in g.director.queue] for g in (follow, plain, reader)}
+    assert "statwatcher" in queued[follow.key.name]
+    assert "statwatcher" not in queued[plain.key.name]
+    assert "recap" in queued[plain.key.name]
+    assert "recap" not in queued[reader.key.name]  # screen-reader mode: the Recaps section only
+    recaps = {g: msg for g, msg in sent if msg["kind"] == "recap"}
+    assert set(recaps) == {follow.key.name, plain.key.name, reader.key.name}
+    assert recaps[reader.key.name]["text"].startswith("ملخص الاستراحة")
+
+
+def test_a_slow_web_pubsub_never_stalls_the_match_loop():
+    import time
+
+    from earshot.live.app import Hub
+
+    class SlowWps:
+        def __init__(self):
+            self.sent: list[str] = []
+
+        def send_to_group(self, group, message, content_type):
+            time.sleep(0.5)
+            self.sent.append(message["kind"])
+
+    wps = SlowWps()
+    hub = Hub(wps=wps)
+    q: asyncio.Queue[str] = asyncio.Queue()
+    hub.subscribers["g"].add(q)
+
+    async def go():
+        t = time.perf_counter()
+        for kind in ("ball", "line", "ball", "state"):
+            await hub.send("g", {"kind": kind})
+        took = time.perf_counter() - t
+        await asyncio.sleep(1.2)
+        return took
+
+    took = asyncio.run(go())
+    assert took < 0.05
+    assert q.qsize() == 4  # SSE gets everything, at once
+    assert wps.sent == ["line", "state"]  # ball samples never go to Web PubSub

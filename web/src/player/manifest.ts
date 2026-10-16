@@ -17,7 +17,15 @@ export interface ClipLine {
   pan: number;
 }
 
-export type AgentName = "Spotter" | "Caller" | "Checker" | "Analyst" | "Director" | "Voice";
+export type AgentName =
+  | "Spotter"
+  | "Caller"
+  | "StatWatcher"
+  | "Checker"
+  | "Auditor"
+  | "Analyst"
+  | "Director"
+  | "Voice";
 
 export interface AgentEntry {
   t_ms: number;

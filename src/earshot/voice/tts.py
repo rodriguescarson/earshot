@@ -64,12 +64,17 @@ class Synthesizer:
     def __init__(self, cache_dir: Path, endpoint: str | None = None) -> None:
         self.cache_dir = cache_dir
         cache_dir.mkdir(parents=True, exist_ok=True)
-        self.endpoint = (endpoint or os.environ["EARSHOT_AI_ENDPOINT"]).rstrip("/")
+        self._endpoint = endpoint
         self._cred = DefaultAzureCredential(exclude_interactive_browser_credential=True)
         self._token: tuple[str, float] | None = None
         self._http = httpx.Client(timeout=30)
         self.characters = 0
         """Characters sent to the service this session (cache hits cost nothing)."""
+
+    @property
+    def endpoint(self) -> str:
+        """Resolved on the first synthesis, so a cache-only Synthesizer needs no endpoint at all."""
+        return (self._endpoint or os.environ["EARSHOT_AI_ENDPOINT"]).rstrip("/")
 
     def _bearer(self) -> str:
         if self._token is None or self._token[1] - time.time() < 120:

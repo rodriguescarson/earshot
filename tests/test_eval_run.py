@@ -70,7 +70,8 @@ def test_one_match_through_the_live_broadcaster():
     lat = R.LatencyModel.provisional_default()
     inline = R.evaluate_match(26, lat)
     assert set(inline["profiles"]) == {"P1", "P2", "P3", "P4", "P5"}
-    assert any("P4" in n for n in inline["notes"])  # focus stats are not live: stated, not hidden
+    assert not any("P4" in n for n in inline["notes"])  # the focus stat is live: P4 follows shot speed
+    assert inline["profiles"]["P4"]["group"].endswith(".shot_speed")
     for p in inline["profiles"].values():
         assert p["aired"] > 500
         never = [h for h in p["targets"] if h["kind"] in ("goal", "red_card", "penalty")]

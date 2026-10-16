@@ -23,8 +23,8 @@ from earshot.contract import (
     VoiceRole,
 )
 from earshot.contract.line import SlotValue
-from earshot.stats.claims import verify_claim
-from earshot.tools.match_tools import THRESHOLD, metric_change
+from earshot.stats.claims import verify_claim, window_values
+from earshot.tools.match_tools import THRESHOLD
 from earshot.tools.snapshots import MatchView
 
 SHARE_METRICS = frozenset({Metric.DIRECTNESS, Metric.POSSESSION_SHARE})
@@ -284,10 +284,22 @@ def window_summary_line(
 ) -> Line | None:
     """The code fallback when the Analyst times out or nothing verifies: who has had the ball."""
     best = None
+    now = view.as_of_wall_ms
+    past = [e for e in view.events if e.wall_ms < now]
     for team in teams_of(view):
-        mc = metric_change(view, team, Metric.POSSESSION_SHARE, 5)
-        if mc["after"] is not None and mc["after"] >= 0.5 and (best is None or mc["after"] > best[1]):
-            best = (team, mc["after"])
+        # The unrounded share: the tool output is rounded to 3 places, and rounding that again for
+        # speech said 52 for 52.55% (found by the auditor).
+        _, after = window_values(
+            Metric.POSSESSION_SHARE,
+            past,
+            team,
+            now - 5 * 60_000,
+            now,
+            view.info.home.team_id,
+            positions_of(view),
+        )
+        if after is not None and after >= 0.5 and (best is None or after > best[1]):
+            best = (team, after)
     if best is None:
         return None
     slots: dict[str, SlotValue] = {

@@ -19,7 +19,7 @@ TypeScript with Vite and React for the web client, served from Azure Static Web 
 
 ## Product Purpose
 
-Earshot turns a match's event stream into live audio-described commentary on the fan's phone. It speaks in the listener's language, follows their club and player, and places the ball in stereo sound. It exists because live description today only reaches fans where a human describer or stadium hardware happens to be. In the UK, one broadcaster announced description for about 109 of 380 league games, in English only.
+Earshot turns a match's event stream into live audio-described commentary on the fan's phone. It speaks in the listener's language, follows their club and player, and places the ball in stereo sound. It exists because live description today only reaches fans where a human describer or stadium hardware happens to be. In the UK, one broadcaster announced description for about 109 of the 380 league games this season (Broadband TV News, 2026-10-08).
 
 Success means a blind fan can close their eyes and follow a whole match: they always know where the ball is, never sit in unexplained silence, and are never told a fact that is wrong.
 

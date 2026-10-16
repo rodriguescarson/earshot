@@ -110,6 +110,44 @@
       "title": "LineMsg",
       "type": "object"
     },
+    "RecapMsg": {
+      "additionalProperties": false,
+      "description": "Half-time or full-time recap for the screen's Recaps section (its lines also air as LineMsgs).",
+      "properties": {
+        "kind": {
+          "const": "recap",
+          "default": "recap",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "period": {
+          "enum": [
+            "half_time",
+            "full_time"
+          ],
+          "title": "Period",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "period",
+        "text",
+        "lines"
+      ],
+      "title": "RecapMsg",
+      "type": "object"
+    },
     "StateMsg": {
       "additionalProperties": false,
       "properties": {
@@ -173,6 +211,7 @@
     "mapping": {
       "ball": "#/$defs/BallMsg",
       "line": "#/$defs/LineMsg",
+      "recap": "#/$defs/RecapMsg",
       "state": "#/$defs/StateMsg"
     },
     "propertyName": "kind"
@@ -186,6 +225,9 @@
     },
     {
       "$ref": "#/$defs/StateMsg"
+    },
+    {
+      "$ref": "#/$defs/RecapMsg"
     }
   ]
 }
