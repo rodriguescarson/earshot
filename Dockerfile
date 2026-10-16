@@ -3,7 +3,10 @@
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1
-RUN pip install --no-cache-dir uv==0.12.5
+# ffmpeg: every live line is served as AAC (earshot.voice.encode); without it no line airs.
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/* \
+ && pip install --no-cache-dir uv==0.12.5
 
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
