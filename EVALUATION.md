@@ -241,6 +241,73 @@ theirs (2.66 against a 2022-25 EPL span of 2.85-3.28). Shot and pass speeds rema
 seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11, y-band 7), which
 had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 
+### Runs of record after `eval-freeze`
+**The tag:** `eval-freeze` is at `f69549b`, tagged 2026-10-17.
+- Stream 1 confirmed the Analyst prompt, claim, cause, Caller, recap and stat templates, the
+  Checker and the auditor final.
+- The held-out seeds 9001-9040 were generated after the tag. Their manifest, with SHA-256s for
+  events, headers and the hidden truth files, is `reports/heldout-manifest-9001-9040.json`.
+- Re-simulating each seed reproduces its events byte for byte (40/40).
+- **The harness commit:** the runs use `14580ab`. Between the tag and `14580ab`, nothing changed
+  in any frozen path (agents, stats and models, sim and dead times, tools/MCP, live, pipeline,
+  contract, world, voice, baseline, grading): `git diff --stat eval-freeze 14580ab` on those
+  paths is empty. Only the harness gained the auditor and its clock fix, and the load generator
+  its parallel audio fetch.
+
+**Coverage (run of record, full season, as pre-registered):**
+- **Command:** `earshot evaluate --seeds 1-380 --workers 6 --latency reports/latency-of-record-2026-10-17.json`.
+  The latency is the deployed stack at 30 listeners (section below).
+- **Run:** 380/380 matches, 0 failed. Summary in `reports/eval-season-coverage-of-record.json`.
+
+| Profile | Coverage within 3 s (target 0.95) | Shots within 3 s (of 9,324) | Yellow cards within 3 s (of 1,505) | Shot p50 / p95 | Never-drop aired; goal p50 / p95 | Audit blocks |
+|---|---|---|---|---|---|---|
+| P1 Casual, app voice | **0.780** | 7,312 | 1,137 | 1.83 / 3.87 s | all; 0.56 / 2.62 s | 0 |
+| P2 Analyst, app voice, club + player | **0.730** | 7,251 | 649 | 1.82 / 3.87 s | all; 0.58 / 2.56 s | 0 |
+| P3 Casual, screen reader | **0.774** | 7,247 | 1,137 | 1.83 / 3.87 s | all; 0.61 / 2.70 s | 0 |
+| P4 Analyst, one ear, shot speed | **0.707** | 6,979 | 678 | 1.92 / 3.97 s | all; 0.62 / 2.69 s | 0 |
+| P5 Analyst, app voice | **0.729** | 7,225 | 672 | 1.83 / 3.87 s | all; 0.58 / 2.57 s | 0 |
+
+- **Coverage: miss** in every profile, at the 30-listener deployed latency.
+  - Every goal (1,011), red card (49) and penalty (105) airs in every profile.
+  - The auditor blocked nothing.
+  - Casual aired no number outside the allowed set.
+  - P5 airs 5.18 times P1's numeric slots a minute.
+- **Why it misses:** the deployed stack's delivery under 30 listeners adds about 0.5-2.3 s per line.
+  - Lines that wait behind others on the one voice channel then pass 3 s.
+  - Analyst-mode yellow cards suffer most (about 43-45% within 3 s), because they compete with the
+    Analyst's window lines at stoppages.
+- **With no delivery cost** (provisional model, development section) the same season gave
+  0.971-0.979. The difference is the cost of delivery at this load.
+
+**Facts, planted-defect harness (run of record, held-out):**
+- **Command:** `earshot planted --seeds 9001-9040 --languages en,es,ar,hi` at `14580ab`.
+- **Setup:** 25% injection rate, against Stream 1's frozen Caller, Checker and auditor.
+- **Result:** 41 rows. Every row's false-block rate is 0. Summary in
+  `reports/planted-heldout-9001-9040.json`.
+
+| Injection point | Defects (all languages and modes) | Recall |
+|---|---|---|
+| Analyst JSON | 2,514 | 1.0 |
+| Slot values | 34,556 | 1.0 |
+| Roster entries, Checker alone | 4,896 | 0.0 (by design: it reads the same roster) |
+| Roster entries, auditor (reviewed roster) | 4,896 | **1.0** |
+| Template strings, Checker alone | 21,464 | 0.850 (Casual) / 0.920 (Analyst); names in fixed text 0.0, by design |
+| Template strings, auditor (reviewed templates) | 21,464 | **1.0** |
+
+**Pass difficulty and the engine gates on the held-out seeds (run of record for G7):**
+- **Command:** `earshot gate --seeds 9001-9040 --model-seeds 9001-9040`.
+- **Report:** `reports/gate-heldout-9001-9040.json`.
+- **G7, pass difficulty: PASS.** 32,692 passes. Log loss 0.3837 against a base-rate 0.4396, a
+  ratio of 0.873 (criterion at most 0.90). Calibration error 0.0069 (at most 0.03).
+- **The other gates on these 40 matches** (their runs of record are the season):
+  - G1, G2, G4, G6, G9 and G10 pass.
+  - G6: the baseline recalls 67 of 184 changes against the shuffled control.
+  - **G5 press height misses on the held-out seeds**: AUC 0.749 on 55 planted changes, against
+    0.75 needed. The other four settings pass at 0.827-0.908. On the full season (the gated run)
+    press height is 0.803.
+  - G3 is informational on 40 matches. Yellow cards, 3.40 a match, fall outside their band
+    (3.78-4.62).
+
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
 branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
@@ -377,6 +444,53 @@ runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst -
   - Under the kill-switch alerts (500K tokens an hour, 3M a day) that is about 3.5 days of paced
     running (`--tokens-per-hour`, `--resume`).
   - Raising those alerts for the run is Carson's decision.
+
+### Load test, 30 listeners: the deployed stack (2026-10-17), run of record for Latency
+`earshot loadtest --url <worker> --listeners 30 --minutes 15` against the worker at image
+`f69549b` (the `eval-freeze` commit; one replica), from one machine in India to Sweden Central. The listeners were spread
+over the five profiles' groups. Each listener fetches every line's audio on its own task, as a
+browser does.
+
+**Two corrections, before the numbers:**
+- **Superseded run:** a first run at 0.5 vCPU on 2026-10-16 fetched audio inline, before reading
+  the next message. That turned slow fetches into fake SSE "transit" (p95 10.9 s). Its result, and
+  a Coverage run built from its samples (0.37-0.41), are superseded and withdrawn; the files are kept in `reports/withdrawn/`.
+- **Network floor:** from this machine, fresh connections time out even to an idle worker (4 of
+  10, 2 of 20, 3 of 40 parallel connections), and GitHub connections timed out several times the
+  same day. So the audio-fetch connect timeouts below are mostly the load generator's network.
+  The percentiles cover only fetches that connected.
+
+**Results:** the deployed size is 0.5 vCPU; 1.0 vCPU was a temporary test. Each run had at least
+5 minutes of warm-up beforehand. Summaries: `reports/loadtest-2026-10-17-n30-0.5vcpu.json` and
+`reports/loadtest-2026-10-17-n30-1vcpu.json`.
+
+| 30 listeners, 15 minutes | 0.5 vCPU (deployed) | 1.0 vCPU (test) |
+|---|---|---|
+| Event to first audio byte, Caller lines: p50 / p95 / max | 1,305 / **3,594** / 6,652 ms (1,274 lines) | 968 / **2,891** / 5,444 ms (2,760 lines) |
+| Audio ready (cache or speech): p50 / p95 | 1 / 148 ms | 2 / 199 ms |
+| Event to the Director starting the line: p50 / p95 | 198 / 1,690 ms | 205 / 1,894 ms |
+| Start to sent (serve and encode): p50 / p95 | 4 / 2,311 ms | 3 / 1,031 ms |
+| SSE transit: p50 / p95 | 71 / 75 ms | 68 / 76 ms |
+| Audio first byte: p50 / p95 | 505 / 714 ms | 514 / 782 ms |
+| Audio fetches that did not connect in 10 s | 165 (11.0%) | 292 (9.0%) |
+
+- **Latency criterion** (p95 under 2.0 s on the deployed stack): **miss**, at 3.6 s with 30
+  listeners. Doubling the CPU brings p95 to 2.9 s, still a miss.
+- **Where the time goes:**
+  - the single voice channel's queue: event to the Director's start, p95 1.7-1.9 s;
+  - encoding when a line is not cached: p95 2.3 s at 0.5 vCPU;
+  - the distance to the region: first audio byte p50 about 0.5 s.
+- **Not comparable on traffic:** the 0.5 vCPU run's 15 minutes included the match's half-time
+  break (it restarted with the size change), so it carried fewer lines. Per-line timings are
+  comparable.
+- **No never-drop sample:** no goal fell in either window.
+- **The 1.0 vCPU size** costs $0.0432 an hour more (Sweden Central, active vCPU $0.000024/s).
+  Keeping it is Carson's decision; the worker is back at 0.5.
+
+**The latency model for the runs of record** is in `reports/latency-of-record-2026-10-17.json`:
+- audio-ready and delivery samples from the deployed 0.5 vCPU run;
+- the 18 real Analyst calls the day's load tests recorded (p50 2,318 ms). The deployed run's own 4
+  were response-cache hits of a replayed match, at 0 ms.
 
 ### Template quality: Foundry evaluators (development, 2026-10-16)
 `earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip

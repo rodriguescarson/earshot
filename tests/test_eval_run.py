@@ -77,6 +77,11 @@ def test_one_match_through_the_live_broadcaster():
         never = [h for h in p["targets"] if h["kind"] in ("goal", "red_card", "penalty")]
         assert never
         assert all(h["latency_ms"] is not None for h in never)
+    # The independent auditor runs on every offered line, as live; on seed 26 it blocks nothing, so
+    # the half-time and full-time recaps air (they need the clock in step: recaps carry now_ms).
+    assert all(p["audit_blocked"] == [] for p in inline["profiles"].values())
+    assert set(inline["facts"]) == {"en", "es", "ar", "hi"}  # Facts is "in any language"
+    assert all(f["aired"] > 0 and f["audit_blocked"] == [] for f in inline["facts"].values())
     p1, p5 = inline["profiles"]["P1"], inline["profiles"]["P5"]
     assert p5["numeric_slots_per_min"] > p1["numeric_slots_per_min"]
     assert inline["profiles"]["P2"]["group"].endswith(".spa.spa-09.-")  # follows the home club and a forward
@@ -104,10 +109,13 @@ def test_pacing_keeps_an_hour_under_the_token_budget():
 
     inner = SimpleNamespace(run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=900))
     a = R.TimedAnalyst(inner, tokens_per_hour=10_000, clock=lambda: now[0], sleep=sleep)
+    a.pace()
     a.run(None, "w1", 20_000)
     assert slept == []
-    a.run(None, "w2", 20_000)  # 6,000 used + about 6,000 more would pass 10,000: wait out the hour
-    assert sum(slept) >= 3_540
+    a.run(None, "w2", 20_000)  # run never waits: a wait there would trip the window's real-time guard
+    assert slept == []
+    a.pace()  # 12,000 used, about 6,000 more would pass 10,000: wait out the hour
+    assert sum(slept) >= 3_540  # until the first call is an hour old
     assert a.paused_s == pytest.approx(sum(slept), abs=60)
     capped = R.TimedAnalyst(inner, max_calls=1)
     capped.run(None, "w1", 20_000)
@@ -171,3 +179,19 @@ def test_a_long_run_resumes_from_its_rows(tmp_path, monkeypatch):
     assert s2["resumed_from_rows"] == 2
     assert [m["seed"] for m in m2] == [1, 2, 3]
     assert len(rows.read_text().splitlines()) == 3
+
+
+def test_cached_answers_do_not_count_against_the_pace():
+    from types import SimpleNamespace
+
+    now = [0.0]
+    slept: list[float] = []
+    cached = SimpleNamespace(
+        run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=0, cached=True)
+    )
+    a = R.TimedAnalyst(cached, tokens_per_hour=10_000, clock=lambda: now[0], sleep=lambda s: slept.append(s))
+    for i in range(5):
+        a.pace()
+        a.run(None, f"w{i}", 20_000)
+    assert slept == []  # 30,000 tokens of cached answers, nothing spent, no wait
+    assert all(c["cached"] for c in a.calls)

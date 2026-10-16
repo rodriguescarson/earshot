@@ -2781,7 +2781,7 @@ None from this review.
    | `kill-tokens-hourly` | more than 500K tokens per hour |
    | `kill-tokens-daily` | more than 3M tokens per day |
 
-4. **Budget `earshot-monthly` at $50:** emails at 50% and 80% actual and at 100% forecast; at 100% actual it fires the kill switch. Budget data lags by up to a day, which is why layers 2 and 3 exist.
+4. **Budget `earshot-monthly` at $50** (created as 50 in the billing currency, INR, so about $0.60; corrected to ₹4,800 = $50 at Azure's ₹95.99 per dollar on 2026-10-17, Carson approved, after it fired the kill switch at 18:18 UTC on 2026-10-16): emails at 50% and 80% actual and at 100% forecast; at 100% actual it fires the kill switch. Budget data lags by up to a day, which is why layers 2 and 3 exist.
 
 **Kill switch:**
 - **What runs:** action group `ag-earshot-killswitch` (email plus a webhook) calls runbook `disable-ai` in `aa-earshot-killswitch`.
@@ -2912,6 +2912,15 @@ The fix is the `permissions` block on that job, already in #2.
 - **Recovery:** the alert had resolved. At 14:24 I ran `restore-ai.sh` and turned cached-only
   off; live lines with audio were back at 14:28.
 - **Change:** background evaluator and Analyst runs now default to 200K tokens an hour.
+
+**Incident, 2026-10-16 18:18 UTC:**
+- **What happened:** the kill switch fired again, from the subscription budget rather than a usage
+  alert.
+- **Cause:** `earshot-monthly` had been created with amount 50 in INR (the billing currency), so
+  about $0.60. Month-to-date spend of ₹180 (about $2) was over 100%.
+- **Fix:** with Carson's approval, the amount is now ₹4,800 (= $50 at Azure's retail rate). The
+  thresholds and the kill-switch action are unchanged. I then restored AI access and turned
+  cached-only off; live lines with audio were back.
 
 **Not done, and why:**
 - `eval-freeze`, held-out seeds 9001-9040, and the runs of record: they wait on Stream 1 finalising
