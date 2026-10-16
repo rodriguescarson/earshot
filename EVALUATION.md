@@ -492,6 +492,45 @@ browser does.
 - the 18 real Analyst calls the day's load tests recorded (p50 2,318 ms). The deployed run's own 4
   were response-cache hits of a replayed match, at 0 ms.
 
+### After the freeze: the audio queue and yellow-card preemption (2026-10-17, not of record)
+Changes after `eval-freeze` (PR #26, `1343b41`), measured the same way as the runs of record. The
+runs of record above stay as measured at the tag.
+
+**What changed:**
+- **One priority audio queue** for speech and encoding: never-drop first, then preempting lines,
+  then by priority. Two threads of its own; identical jobs share one run.
+- **Encode while waiting:** each line's M4A is encoded while it waits in the Director's queue.
+- **Yellow cards may preempt.** On the virtual clock (seeds 1-40) a card had waited behind fouls,
+  stoppages and, in Analyst mode, window summaries (73 of P5's 149). With preemption, yellows within
+  3 s went from 52-113/149 to 133-142/149 per profile.
+
+**Load test, 30 listeners, worker at the smallest size (0.25 vCPU / 0.5 GiB, Carson's choice).**
+Both runs had 5 minutes of warm-up after a restart and 15 minutes in active play. The baseline fell
+in the second half, the change in the first.
+
+| | Before (`633f2ff`) | Audio queue (`1343b41`) |
+|---|---|---|
+| Event to first audio byte: p50 / p95 / max | 3,800 / **11,838** / 18,863 ms | 2,046 / **3,687** / 10,375 ms |
+| Audio ready: p50 / p95 | 118 / 1,299 ms | 95 / 802 ms |
+| Event to the Director's start: p50 / p95 | 594 / 2,151 ms | 228 / 1,911 ms |
+| Start to sent (encode): p50 / p95 | 2,790 / 8,504 ms | 898 / 2,405 ms |
+| Audio first byte: p50 / p95 | 804 / 3,956 ms | 568 / 979 ms |
+
+- **Gain:** at 0.25 vCPU the queue cuts the p95 from 11.8 s to 3.7 s.
+- **Still a miss:** the target is 2.0 s. Lines that air the moment they arrive have not finished
+  encoding (start-to-sent p95 2.4 s).
+- **Memory:** the worker reached 519 MiB under this load, above its 0.5 GiB limit. No restart was
+  recorded, but there is no headroom.
+
+**Coverage with this latency** (full season, `1343b41`, delivery from the 0.25 vCPU run):
+- **Coverage within 3 s:** 0.673-0.706 in P1-P5. The run of record was 0.707-0.780, with delivery
+  measured at 0.5 vCPU without the queue.
+- **Yellow cards within 3 s:** 1,285-1,320 of 1,505 (record: 649-1,137).
+- **Shots within 3 s:** 5,970-6,324 of 9,324 (record: 6,979-7,312).
+- **Never-drop:** all aired; 0 audit blocks.
+- **Reading:** the yellow-card change works. The smaller worker's slower delivery costs more on
+  shots than the queue wins back. The 0.5 vCPU point with the queue is measured next.
+
 ### Template quality: Foundry evaluators (development, 2026-10-16)
 `earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip
 cut off (the commands, and why there were two runs, are in the Stream 2 status). Summary and every
