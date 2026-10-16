@@ -31,6 +31,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from earshot.api.ratelimit import JudgeCodes, SlidingLimit, client_ip
+from earshot.api.worker import BodyLimit
 from earshot.contract.match import MatchInfo, Roster
 from earshot.tools import match_tools as t
 from earshot.tools.snapshots import MatchSource, ScheduledReplay, SnapshotDir, load_dir_events
@@ -173,7 +174,7 @@ class RateLimited:
 def build_app(source: MatchSource | None = None, codes: JudgeCodes | None = None):
     server = build_server(source or source_from_env())
     inner = server.streamable_http_app(stateless_http=True, json_response=True, host="0.0.0.0")
-    return RateLimited(inner, codes or codes_from_env())
+    return BodyLimit(RateLimited(inner, codes or codes_from_env()), limit=64 * 1024)
 
 
 def codes_from_env() -> JudgeCodes:

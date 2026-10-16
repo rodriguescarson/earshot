@@ -42,6 +42,9 @@ MAX_STREAMS = 150
 TICKET_S = TOKEN_MINUTES * 60
 TICKET_TRIES_PER_MINUTE = 10
 """Per IP: enough for a panel that mistypes, too few to guess a code."""
+ONDEMAND_PER_MINUTE = 20
+"""Per IP. 'Where's the ball?' and 'Catch me up' may synthesize speech, and group names are easy to
+guess, so without a per-IP limit one caller could spend the day's speech budget in a minute."""
 BUSY = "Earshot is busy. Try again in a few minutes, or play a recorded clip."
 
 
@@ -183,3 +186,21 @@ def ticket_endpoint(codes: JudgeCodes, tickets: Tickets) -> Callable[[Request], 
         return JSONResponse({"ticket": tickets.issue(), "expires_in_s": TICKET_S})
 
     return ticket
+
+
+def limit_per_ip(
+    endpoint: Callable[[Request], Awaitable[Response]], per_minute: int
+) -> Callable[[Request], Awaitable[Response]]:
+    hits = SlidingLimit(per_minute)
+
+    async def limited(request: Request) -> Response:
+        ip = client_ip(dict(request.headers), request.client.host if request.client else None)
+        if not hits.allow(ip):
+            return JSONResponse(
+                {"error": "too many requests"},
+                status_code=429,
+                headers={"retry-after": str(hits.retry_after_s(ip))},
+            )
+        return await endpoint(request)
+
+    return limited

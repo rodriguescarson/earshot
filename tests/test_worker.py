@@ -271,3 +271,26 @@ def test_spoofed_forwarded_for_does_not_buy_more_sessions(tmp_path):
         for i in range(3):  # what the deployed limiter let through before: a new made-up hop per request
             spoof = {"x-forwarded-for": f"198.51.100.{i}, 203.0.113.9"}
             assert c.post("/api/negotiate", json=BODY, headers=spoof).status_code == 429
+
+
+def test_request_bodies_are_capped_before_an_endpoint_reads_them():
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+
+    from earshot.api.worker import MAX_BODY_BYTES, BodyLimit
+
+    async def echo(request: Request):
+        return JSONResponse({"n": len(await request.body())})
+
+    app = BodyLimit(Starlette(routes=[Route("/x", echo, methods=["POST"])]))
+    with TestClient(app) as c:
+        assert c.post("/x", content=b"{}").json() == {"n": 2}
+        assert c.post("/x", content=b"a" * (MAX_BODY_BYTES + 1)).status_code == 413
+
+        def chunks():  # no content-length: counted as it streams
+            for _ in range(MAX_BODY_BYTES // 1024 + 2):
+                yield b"a" * 1024
+
+        assert c.post("/x", content=chunks()).status_code == 413

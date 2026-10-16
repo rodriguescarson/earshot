@@ -1,0 +1,352 @@
+{
+ "matches": 1,
+ "ok": 1,
+ "failed": [],
+ "workers": 1,
+ "wall_s": 93.9,
+ "median_match_s": 93.4,
+ "latency_model": {
+  "ready_ms": [
+   350
+  ],
+  "analyst_ms": [],
+  "delivery_ms": [
+   0
+  ],
+  "source": "provisional: ready = READY_DELAY_MS, Analyst = full budget, delivery = 0",
+  "provisional": true
+ },
+ "windows": "background",
+ "notes": [],
+ "profiles": {
+  "P1": {
+   "never_drop": {
+    "goal": {
+     "n": 2,
+     "aired": 2,
+     "share": 1.0,
+     "p50_ms": 109,
+     "p95_ms": 297,
+     "max_ms": 297
+    },
+    "red_card": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    },
+    "penalty": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 17,
+     "within_3s": 16,
+     "share_within_3s": 0.9412,
+     "aired_at_all": 16,
+     "p50_ms": 1091,
+     "p95_ms": 1966
+    },
+    "yellow_card": {
+     "n": 5,
+     "within_3s": 5,
+     "share_within_3s": 1.0,
+     "aired_at_all": 5,
+     "p50_ms": 1588,
+     "p95_ms": 2553
+    }
+   },
+   "coverage_share_within_3s": 0.9545,
+   "numeric_slots_per_min": 0.188,
+   "casual_violations": {},
+   "aired_lines": 1010,
+   "dropped": {
+    "stale": 77
+   }
+  },
+  "P2": {
+   "never_drop": {
+    "goal": {
+     "n": 2,
+     "aired": 2,
+     "share": 1.0,
+     "p50_ms": 109,
+     "p95_ms": 297,
+     "max_ms": 297
+    },
+    "red_card": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    },
+    "penalty": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 17,
+     "within_3s": 16,
+     "share_within_3s": 0.9412,
+     "aired_at_all": 16,
+     "p50_ms": 1091,
+     "p95_ms": 1966
+    },
+    "yellow_card": {
+     "n": 5,
+     "within_3s": 3,
+     "share_within_3s": 0.6,
+     "aired_at_all": 5,
+     "p50_ms": 1588,
+     "p95_ms": 5853
+    }
+   },
+   "coverage_share_within_3s": 0.8636,
+   "numeric_slots_per_min": 1.868,
+   "casual_violations": {},
+   "aired_lines": 1029,
+   "dropped": {
+    "stale": 103
+   }
+  },
+  "P3": {
+   "never_drop": {
+    "goal": {
+     "n": 2,
+     "aired": 2,
+     "share": 1.0,
+     "p50_ms": 109,
+     "p95_ms": 297,
+     "max_ms": 297
+    },
+    "red_card": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    },
+    "penalty": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 17,
+     "within_3s": 16,
+     "share_within_3s": 0.9412,
+     "aired_at_all": 16,
+     "p50_ms": 1091,
+     "p95_ms": 1966
+    },
+    "yellow_card": {
+     "n": 5,
+     "within_3s": 5,
+     "share_within_3s": 1.0,
+     "aired_at_all": 5,
+     "p50_ms": 1588,
+     "p95_ms": 2553
+    }
+   },
+   "coverage_share_within_3s": 0.9545,
+   "numeric_slots_per_min": 0.188,
+   "casual_violations": {},
+   "aired_lines": 1010,
+   "dropped": {
+    "stale": 69
+   }
+  },
+  "P4": {
+   "never_drop": {
+    "goal": {
+     "n": 2,
+     "aired": 2,
+     "share": 1.0,
+     "p50_ms": 109,
+     "p95_ms": 297,
+     "max_ms": 297
+    },
+    "red_card": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    },
+    "penalty": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 17,
+     "within_3s": 16,
+     "share_within_3s": 0.9412,
+     "aired_at_all": 16,
+     "p50_ms": 1369,
+     "p95_ms": 2030
+    },
+    "yellow_card": {
+     "n": 5,
+     "within_3s": 2,
+     "share_within_3s": 0.4,
+     "aired_at_all": 5,
+     "p50_ms": 3406,
+     "p95_ms": 5288
+    }
+   },
+   "coverage_share_within_3s": 0.8182,
+   "numeric_slots_per_min": 1.952,
+   "casual_violations": {},
+   "aired_lines": 1036,
+   "dropped": {
+    "stale": 113
+   }
+  },
+  "P5": {
+   "never_drop": {
+    "goal": {
+     "n": 2,
+     "aired": 2,
+     "share": 1.0,
+     "p50_ms": 109,
+     "p95_ms": 297,
+     "max_ms": 297
+    },
+    "red_card": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    },
+    "penalty": {
+     "n": 0,
+     "aired": 0,
+     "share": null,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null
+    }
+   },
+   "never_drop_all_aired": true,
+   "coverage": {
+    "shot": {
+     "n": 17,
+     "within_3s": 16,
+     "share_within_3s": 0.9412,
+     "aired_at_all": 16,
+     "p50_ms": 1091,
+     "p95_ms": 1966
+    },
+    "yellow_card": {
+     "n": 5,
+     "within_3s": 2,
+     "share_within_3s": 0.4,
+     "aired_at_all": 5,
+     "p50_ms": 3406,
+     "p95_ms": 5288
+    }
+   },
+   "coverage_share_within_3s": 0.8182,
+   "numeric_slots_per_min": 1.858,
+   "casual_violations": {},
+   "aired_lines": 1027,
+   "dropped": {
+    "stale": 105
+   }
+  }
+ },
+ "analyst_vs_casual_numeric_ratio": 9.88,
+ "explanations": {
+  "windows": 49,
+  "baseline": {
+   "labels": 7,
+   "correct": 4,
+   "truth_changes": 6,
+   "recalled": 1,
+   "matches": 1,
+   "accuracy": 0.5714,
+   "recall": 0.1667,
+   "false_alarms_per_match": 3.0
+  },
+  "analyst_aired": {
+   "labels": 28,
+   "correct": 2,
+   "truth_changes": 6,
+   "recalled": 2,
+   "matches": 1,
+   "accuracy": 0.0714,
+   "recall": 0.3333,
+   "false_alarms_per_match": 26.0
+  },
+  "analyst_proposed": {
+   "labels": 28,
+   "correct": 2,
+   "truth_changes": 6,
+   "recalled": 2,
+   "matches": 1,
+   "accuracy": 0.0714,
+   "recall": 0.3333,
+   "false_alarms_per_match": 26.0
+  },
+  "window_outcomes": {
+   "empty": 3,
+   "timeout": 2,
+   "claims": 15,
+   "error: skipped: call cap": 29
+  },
+  "analyst_calls": {
+   "n": 20,
+   "tokens_total": 70543,
+   "tokens_per_call": {
+    "p50": 3802,
+    "p95": 4083,
+    "max": 4085
+   },
+   "latency_ms": {
+    "p50": 3891,
+    "p95": 5490,
+    "max": 5490
+   },
+   "failures": {
+    "timeout": 2
+   },
+   "paused_s": 0.0
+  }
+ },
+ "command": "uv run earshot evaluate --seeds 26 --workers 1 --real-analyst --max-calls 20 --tokens-per-hour 300000 --out /private/tmp/claude-501/-Users-carson-Projects-inside-the-game--claude-worktrees-stream2-engine-dc91a9/07ef6734-4bea-4d28-b74f-31cfd81f3611/scratchpad/eval-analyst-trial.json"
+}
