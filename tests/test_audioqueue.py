@@ -92,3 +92,18 @@ def test_errors_reach_every_waiter_and_free_the_slot():
     results, after = asyncio.run(go())
     assert all(isinstance(r, RuntimeError) for r in results)
     assert after == "ok"
+
+
+def test_the_broadcaster_keeps_speech_and_encoding_in_separate_queues():
+    import importlib.util
+
+    if importlib.util.find_spec("earshot.live") is None:
+        pytest.skip("needs the live app")
+    from earshot.live import broadcast
+    from earshot.live.audioqueue import ENCODE_WORKERS, SPEECH_WORKERS
+
+    src = __import__("inspect").getsource(broadcast.LiveMatch)
+    assert "self.speechq.run(" in src
+    assert "self.encodeq.run(" in src
+    assert ENCODE_WORKERS == 1  # one encode at a time gets the whole (small) core
+    assert SPEECH_WORKERS > ENCODE_WORKERS  # network waits overlap at almost no CPU

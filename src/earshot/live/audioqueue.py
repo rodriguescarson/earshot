@@ -7,7 +7,8 @@ a goal's encode could wait behind lower lines'. Here:
 
 - jobs run in rank order: never-drop lines first, then lines that may preempt, then by priority,
   then first come;
-- at most ``AUDIO_WORKERS`` jobs run at once, on threads of their own;
+- speech (network-bound, ``SPEECH_WORKERS``) and encoding (CPU-bound, ``ENCODE_WORKERS``) run in
+  two queues, each with threads of its own;
 - identical jobs (same key) share one result, so two groups never encode the same file at once
   (they used to share one temporary WAV path);
 - a queued job can be skipped if its line has gone stale by the time a slot is free, so a small
@@ -29,7 +30,11 @@ from typing import Any
 from earshot.contract import Line
 
 AUDIO_WORKERS = 2
-"""One job can wait on the speech service while the other encodes."""
+SPEECH_WORKERS = 4
+"""Speech synthesis waits on the network: several can wait at once at almost no CPU."""
+ENCODE_WORKERS = 1
+"""Encoding is CPU-bound. On a quarter-core worker two encodes at once each run at half speed, so the
+top-ranked line's encode gets the whole core alone."""
 
 Rank = tuple[int, int, int]
 
