@@ -522,6 +522,22 @@ in the second half, the change in the first.
 - **Memory:** the worker reached 519 MiB under this load, above its 0.5 GiB limit. No restart was
   recorded, but there is no headroom.
 
+**The same change at 0.5 vCPU** (temporary, back to 0.25 after). 30 listeners, 15 minutes in the
+second half after a 5-minute warm-up. Summary in `reports/loadtest-2026-10-17-n30-0.5vcpu-queue.json`.
+
+| 30 listeners | 0.5 vCPU, before | 0.25 vCPU, queue | 0.5 vCPU, queue |
+|---|---|---|---|
+| Event to first audio byte: p50 / p95 | 1,305 / 3,594 ms | 2,046 / 3,687 ms | **1,270 / 2,666 ms** |
+| Event to the Director's start: p95 | 1,690 ms | 1,911 ms | 1,651 ms |
+| Start to sent (encode): p95 | 2,311 ms | 2,405 ms | 1,080 ms |
+| Audio first byte: p95 | 714 ms | 979 ms | 795 ms |
+
+- **At 0.5 vCPU** the queue brings p95 from 3.6 s to 2.7 s. That is still above the 2.0 s target.
+- **What remains:**
+  - the single voice channel's queue (p95 about 1.65 s);
+  - the encode for lines that air the moment they arrive;
+  - the distance from the load generator to the region (first byte p50 about 0.5 s).
+
 **Coverage with this latency** (full season, `1343b41`, delivery from the 0.25 vCPU run):
 - **Coverage within 3 s:** 0.673-0.706 in P1-P5. The run of record was 0.707-0.780, with delivery
   measured at 0.5 vCPU without the queue.
