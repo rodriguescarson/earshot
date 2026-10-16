@@ -269,3 +269,93 @@ recounts every number from the event log; it shares no code with the Checker's s
 - The 16 rendered demo clips: 557 lines audited, 0 findings, including the Analyst's claim lines.
 The auditor was changed after seeing these development results, so they are not evidence of its
 recall; the run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.
+
+### Accelerated evaluation run, ET11 (development, not of record)
+2026-10-16. The run of record waits for `eval-freeze`, the held-out seeds and the latency model from
+the deployed load test. Everything here uses the development seasons and a **provisional** latency
+model (ready = `READY_DELAY_MS` 350 ms, Analyst = its whole budget, delivery 0), so none of it is a
+result. It records what the harness measures and what it found.
+
+- **Harness:** `src/earshot/eval/run.py`.
+  - Whole matches run through Stream 1's live broadcaster (`LiveMatch`: the Agent Framework
+    pipeline, window lines, claim gating, StatWatcher, recaps) on a virtual clock, with a
+    `LiveDirector` per profile P1-P5 in English.
+  - Targets come from the event log, not the Spotter: goals, red cards and penalties for
+    never-drop; shots and yellow cards for coverage.
+- **Runtime (ET11 check: 380 matches inside 15 min on 8 workers, failed ids reported):**
+  - `uv run earshot evaluate --seeds 1-380 --workers 8`, at commit `6deb846`, run from a detached
+    worktree: 380/380 matches, 0 failed, **402.5 s**.
+  - The same run at `eaecd2a`: 396.6 s, 0 failed. **PASS.**
+- **The finding it made (fixed by Stream 1 in `24f4efb`):**
+  - Before the fix, the broadcaster's event feeder waited for each Analyst window run, so the card
+    that follows a foul waited for the Analyst.
+  - Seeds 1-40, P1, at `eaecd2a`: yellow cards within 3 s **28/149** (p50 4,367 ms); red-card p95
+    5,756 ms; coverage 0.878.
+  - With window runs on their own task (`--windows background`, now the broadcaster as built):
+    **149/149** (p50 855 ms); red-card p95 709 ms; coverage 0.977.
+  - `--windows inline` still reproduces the old behaviour.
+- **The full season as built**, at `6deb846` with provisional latency; summary in
+  `reports/eval-season-dev-provisional.json`:
+
+| Profile | Never-drop aired (1,011 goals, 49 reds, 105 penalties) | Coverage within 3 s | Shots within 3 s (of 9,324) | Yellow cards within 3 s (of 1,505) | Numeric slots a minute |
+|---|---|---|---|---|---|
+| P1 Casual, app voice | all; p95 447 / 697 / 693 ms | 0.979 | 9,092 | 1,505 | 0.253 |
+| P2 Analyst, app voice, club + player | all | 0.974 | 9,042 | 1,504 | 1.573 |
+| P3 Casual, screen reader | all | 0.979 | 9,092 | 1,505 | 0.253 |
+| P4 Analyst, one ear, shot speed | all | 0.971 | 9,009 | 1,504 | 1.700 |
+| P5 Analyst, app voice | all | 0.976 | 9,062 | 1,504 | 1.573 |
+
+  - P5 airs 6.22 times P1's numeric slots a minute (criterion: at least 3).
+  - Casual numbers outside the allowed set: 0. The first run found `red_card.1` saying "down to N
+    players" 49 times; Stream 1 fixed it in `24f4efb`.
+  - P1 and P3 are identical offline by construction: `est_ms` uses the same airtime formula as the
+    screen-reader estimate.
+- **Baseline cause labels** on the same analysis windows (development season, graded against the
+  truth log; not the held-out Explanations result): 7,186 labels, 1,916 correct (accuracy 0.267),
+  recall 695/1,702 (0.408), 13.9 false alarms a match.
+
+### Real Analyst, trial (development, not of record)
+`uv run earshot evaluate --seeds 26 --workers 1 --real-analyst --max-calls 20 --tokens-per-hour 300000`
+at `bd75a29`, 2026-10-16. Summary in `reports/eval-analyst-trial-seed26.json`.
+
+- **Scope:** seed 26, 49 analysis windows; the first 20 got calls and the rest were skipped by the
+  cap.
+- **Cost and latency:**
+  - Tokens a call: p50 3,802, p95 4,083 (70,543 in all).
+  - Latency: p50 3,891 ms, p95 5,490 ms; 2 of 20 timed out.
+- **Cause labels:**
+
+  | | Labels | Correct | Truth changes recalled |
+  |---|---|---|---|
+  | Analyst | 28 | 2 | 2 of 6 |
+  | Baseline, same match | 7 | 4 | 1 of 6 |
+
+  Every proposed claim passed the metric check, so all 28 labels would have aired. Recall is
+  understated, because only 20 of 49 windows got calls.
+- **What this means for the run of record:** about 2,000-2,800 calls on the 40 held-out matches is
+  about 8-11M tokens. Under the kill-switch alerts (500K tokens an hour, 3M a day) that is about 3.5
+  days of paced running (`--tokens-per-hour`, `--resume`).
+
+### Load test, trial (development, not of record)
+`earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
+India to Sweden Central. Summary in `reports/loadtest-trial-2026-10-16.json`.
+
+- **Setup:** 10 SSE listeners spread over the five profiles' groups, each fetching every line's
+  audio. The run makes its own temporary judge code and removes it.
+- **Event to first audio byte (Caller lines):** p50 2,826 ms, **p95 5,866 ms** (target 2.0 s:
+  **miss**).
+
+  | Component | p50 | p95 |
+  |---|---|---|
+  | Audio ready | 123 ms | 688 ms |
+  | Event to the Director starting the line (the single channel's queue) | 302 ms | 2,765 ms |
+  | Start to message sent (`_publish_line`, mostly ffmpeg on 0.5 vCPU) | 716 ms | 2,799 ms |
+  | SSE transit | 52 ms | 59 ms |
+  | Audio first byte | 502 ms | 804 ms |
+
+- **Errors:** 6 connect timeouts.
+- **Limits:**
+  - one load-generator machine, far from the region;
+  - two clocks (the worker's and this machine's), skew not corrected;
+  - 3 minutes.
+- **Proposed to Stream 1:** encode the M4A while the line waits in the queue.
