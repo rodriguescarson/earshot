@@ -14,14 +14,18 @@ Who flips it:
 switches to cached-only when either passes its cap. The defaults sit below the usage alerts that
 fire the kill switch (500K characters and 3M tokens a day): 400K characters and 2.5M tokens.
 Counters are written back to the flag blob at most once a minute, so a restart does not reset them.
+
+**Every write is a conditional read-modify-write** (``FlagSource.update``, an ETag match on the
+blob). The worker, the kill-switch runbook and the CLI all write the same blob, and a plain
+overwrite could undo a ``cached_only`` that the runbook set a moment earlier.
 """
 
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -37,26 +41,39 @@ POLL_S = 30.0
 CHAR_CAP = 400_000
 TOKEN_CAP = 2_500_000
 PERSIST_S = 60.0
+UPDATE_TRIES = 5
 CACHED_ONLY_NOTICE = "Live commentary is paused. Recorded clips still work."
+
+
+Mutate = Callable[[dict[str, Any]], dict[str, Any]]
 
 
 class FlagSource(Protocol):
     def read(self) -> dict[str, Any]: ...
-    def write(self, flags: dict[str, Any]) -> None: ...
+    def update(self, mutate: Mutate) -> dict[str, Any]:
+        """Apply ``mutate`` to the current flags and write the result unless someone wrote in between
+        (then re-read and apply again). Returns what was written."""
+        ...
 
 
 class FileFlags:
+    """Local development: one process, so a plain read-modify-write is enough."""
+
     def __init__(self, path: Path) -> None:
         self.path = path
+        self._lock = threading.Lock()
 
     def read(self) -> dict[str, Any]:
         return json.loads(self.path.read_text()) if self.path.exists() else {}
 
-    def write(self, flags: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(flags, indent=1, sort_keys=True))
-        tmp.replace(self.path)
+    def update(self, mutate: Mutate) -> dict[str, Any]:
+        with self._lock:
+            new = mutate(self.read())
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(new, indent=1, sort_keys=True))
+            tmp.replace(self.path)
+            return new
 
 
 class BlobFlags:
@@ -68,16 +85,37 @@ class BlobFlags:
 
         self.client = BlobClient(account_url, container, blob, credential=DefaultAzureCredential())
 
-    def read(self) -> dict[str, Any]:
+    def _get(self) -> tuple[dict[str, Any], str | None]:
         from azure.core.exceptions import ResourceNotFoundError
 
         try:
-            return json.loads(self.client.download_blob().readall())
+            d = self.client.download_blob()
+            return json.loads(d.readall()), d.properties.etag
         except ResourceNotFoundError:
-            return {}
+            return {}, None
 
-    def write(self, flags: dict[str, Any]) -> None:
-        self.client.upload_blob(json.dumps(flags, indent=1, sort_keys=True), overwrite=True)
+    def read(self) -> dict[str, Any]:
+        return self._get()[0]
+
+    def update(self, mutate: Mutate) -> dict[str, Any]:
+        from azure.core import MatchConditions
+        from azure.core.exceptions import ResourceExistsError, ResourceModifiedError
+
+        for _ in range(UPDATE_TRIES):
+            current, etag = self._get()
+            new = mutate(current)
+            body = json.dumps(new, indent=1, sort_keys=True)
+            try:
+                if etag is None:
+                    self.client.upload_blob(body, overwrite=False)
+                else:
+                    self.client.upload_blob(
+                        body, overwrite=True, etag=etag, match_condition=MatchConditions.IfNotModified
+                    )
+                return new
+            except (ResourceModifiedError, ResourceExistsError):
+                continue  # someone else wrote first: apply the change to their version
+        raise RuntimeError(f"flags blob changed {UPDATE_TRIES} times during one update")
 
 
 def utc_day(now: float | None = None) -> str:
@@ -108,9 +146,9 @@ class Flags:
 
     def set_cached_only(self, on: bool, reason: str) -> None:
         """Flip the mode for every replica (they pick it up within one poll) and for this one now."""
-        fresh = {**self.source.read(), "cached_only": on, "reason": reason, "set_at": utc_day(self.clock())}
-        self.source.write(fresh)
-        self.values = fresh
+        self.values = self.source.update(
+            lambda cur: {**cur, "cached_only": on, "reason": reason, "set_at": utc_day(self.clock())}
+        )
         log.warning("cached_only=%s (%s)", on, reason)
 
     async def poll(self, interval_s: float = POLL_S) -> None:
@@ -162,16 +200,17 @@ class SpendMeter:
         if over and not self.flags.cached_only:
             self.flags.set_cached_only(True, "daily spend cap: " + ", ".join(over))
         if self.clock() - self._persisted_at >= PERSIST_S:
-            self.persist()
+            # Off the caller's thread: add() is called from the live app's event loop.
+            self._persisted_at = self.clock()
+            threading.Thread(target=self.persist, name="spend-persist", daemon=True).start()
 
     def persist(self) -> None:
-        with contextlib.suppress(Exception):  # counting must never break a live line; retried next minute
-            fresh = {
-                **self.flags.source.read(),
-                "spend": {"day": self.day, "chars": self.chars, "tokens": self.tokens},
-            }
-            self.flags.source.write(fresh)
-            self.flags.values = {**self.flags.values, "spend": fresh["spend"]}
+        spend = {"day": self.day, "chars": self.chars, "tokens": self.tokens}
+        try:  # counting must never break a live line; retried next minute
+            written = self.flags.source.update(lambda cur: {**cur, "spend": spend})
+            self.flags.values = {**self.flags.values, "spend": written["spend"]}
+        except Exception:
+            log.warning("spend persist failed", exc_info=True)
         self._persisted_at = self.clock()
 
     def snapshot(self) -> dict[str, Any]:

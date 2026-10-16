@@ -1,8 +1,10 @@
 """Worker guards: negotiate limits and token scope, the judge code, the daily spend cap, and the
 cached-only drill (ET10: the flip lands without a restart)."""
 
+import json
 import os
 import time
+from collections.abc import Callable
 
 import pytest
 from starlette.testclient import TestClient
@@ -26,7 +28,7 @@ class FakeIssuer:
 
 def app_with(tmp_path, judge_code: str | None = None, poll_s: float = 30.0):
     src = FileFlags(tmp_path / "flags.json")
-    src.write({"judge_code_sha256": [code_hash(judge_code)] if judge_code else []})
+    src.update(lambda _: {"judge_code_sha256": [code_hash(judge_code)] if judge_code else []})
     flags = Flags(src)
     flags.refresh()
     issuer = FakeIssuer()
@@ -119,7 +121,7 @@ def test_drill_cached_only_flip_lands_without_a_restart(tmp_path):
         pid = os.getpid()
         assert c.post("/api/negotiate", json=BODY).status_code == 200
         assert c.get("/api/status").json()["cached_only"] is False
-        src.write({**src.read(), "cached_only": True, "reason": "drill"})
+        src.update(lambda cur: {**cur, "cached_only": True, "reason": "drill"})
         deadline = time.time() + 2
         while not c.get("/api/status").json()["cached_only"] and time.time() < deadline:
             time.sleep(0.05)
@@ -129,7 +131,7 @@ def test_drill_cached_only_flip_lands_without_a_restart(tmp_path):
         r = c.post("/api/negotiate", json=BODY)
         assert r.status_code == 503
         assert r.json()["cached_only"] is True
-        src.write({**src.read(), "cached_only": False, "reason": "restored by hand"})
+        src.update(lambda cur: {**cur, "cached_only": False, "reason": "restored by hand"})
         deadline = time.time() + 2
         while c.get("/api/status").json()["cached_only"] and time.time() < deadline:
             time.sleep(0.05)
@@ -162,11 +164,88 @@ def test_a_code_added_after_start_works_within_30_s_without_a_poller(tmp_path):
 
     now = [1_000_000.0]
     src = FileFlags(tmp_path / "flags.json")
-    src.write({})
+    src.update(lambda _: {})
     flags = Flags(src, clock=lambda: now[0])
     flags.refresh()
     codes = JudgeCodesFromFlags(flags, refresh=True)
     assert not codes.valid("late-code")
-    src.write({"judge_code_sha256": [code_hash("late-code")]})
+    src.update(lambda _: {"judge_code_sha256": [code_hash("late-code")]})
     now[0] += 31
     assert codes.valid("late-code")
+
+
+class FakeBlob:
+    """Just enough of a BlobClient: ETags, If-Match uploads, and a hook for a concurrent writer."""
+
+    def __init__(self, data: dict | None = None):
+        self.data, self.etag, self.n = data, "e0", 0
+        self.before_upload: Callable[[FakeBlob], None] | None = None
+
+    def download_blob(self):
+        from types import SimpleNamespace
+
+        from azure.core.exceptions import ResourceNotFoundError
+
+        if self.data is None:
+            raise ResourceNotFoundError("no blob")
+        body = json.dumps(self.data).encode()
+        return SimpleNamespace(readall=lambda: body, properties=SimpleNamespace(etag=self.etag))
+
+    def upload_blob(self, body, overwrite=False, etag=None, match_condition=None):
+        from azure.core.exceptions import ResourceExistsError, ResourceModifiedError
+
+        if self.before_upload:
+            hook, self.before_upload = self.before_upload, None
+            hook(self)
+        if not overwrite and self.data is not None:
+            raise ResourceExistsError("exists")
+        if etag is not None and etag != self.etag:
+            raise ResourceModifiedError("412")
+        self.n += 1
+        self.data, self.etag = json.loads(body), f"e{self.n}"
+
+
+def blob_flags(fake: FakeBlob):
+    from earshot.api.flags import BlobFlags
+
+    b = BlobFlags.__new__(BlobFlags)
+    b.client = fake  # type: ignore[assignment]
+    return b
+
+
+def test_spend_persist_never_undoes_a_concurrent_kill_switch():
+    fake = FakeBlob({"cached_only": False})
+    flags = Flags(blob_flags(fake))
+    flags.refresh()
+    meter = SpendMeter(flags)
+    meter.chars = 1_234
+
+    def runbook(blob: FakeBlob):  # the kill switch writes between the worker's read and its write
+        blob.data = {**(blob.data or {}), "cached_only": True, "reason": "budget alert"}
+        blob.n += 1
+        blob.etag = f"e{blob.n}"
+
+    fake.before_upload = runbook
+    meter.persist()
+    assert fake.data is not None
+    assert fake.data["cached_only"] is True
+    assert fake.data["spend"]["chars"] == 1_234
+
+
+def test_first_write_creates_the_blob_once():
+    fake = FakeBlob(None)
+    out = blob_flags(fake).update(lambda cur: {**cur, "cached_only": True})
+    assert out == {"cached_only": True} == fake.data
+
+
+def test_add_persists_off_the_callers_thread(tmp_path):
+    import threading
+
+    flags = Flags(FileFlags(tmp_path / "flags.json"))
+    flags.refresh()
+    meter = SpendMeter(flags)
+    meter.add(chars=10)  # the first add is due a persist
+    for t in threading.enumerate():
+        if t.name == "spend-persist":
+            t.join(5)
+    assert json.loads((tmp_path / "flags.json").read_text())["spend"]["chars"] == 10

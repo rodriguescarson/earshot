@@ -186,10 +186,13 @@ def main(argv: list[str] | None = None) -> None:
         flags = Flags(BlobFlags(url))
         flags.refresh()
         if args.rotate_judge_codes or args.add_judge_code:
-            hashes = [] if args.rotate_judge_codes else list(flags.values.get("judge_code_sha256", []))
-            if args.add_judge_code:
-                hashes.append(code_hash(args.add_judge_code))
-            flags.source.write({**flags.source.read(), "judge_code_sha256": sorted(set(hashes))})
+            added = [code_hash(args.add_judge_code)] if args.add_judge_code else []
+
+            def codes(cur: dict) -> dict:
+                kept = [] if args.rotate_judge_codes else list(cur.get("judge_code_sha256", []))
+                return {**cur, "judge_code_sha256": sorted(set(kept + added))}
+
+            flags.source.update(codes)
             flags.refresh()
         if args.cached_only:
             flags.set_cached_only(args.cached_only == "on", args.reason)
