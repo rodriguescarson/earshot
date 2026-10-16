@@ -20,3 +20,4 @@ node_modules/
 # Generated data and audio
 data/
 p0/evidence/*.wav
+.impeccable/questions/
