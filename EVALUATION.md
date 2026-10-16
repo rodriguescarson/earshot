@@ -126,6 +126,20 @@ Measured on the held-out seeds 9001-9040 unless stated.
 | Template quality | Foundry fluency and coherence evaluators over every rendered template per language, reported as a limit-aware check, not proof of fluency | Foundry evaluators (S2) |
 | Listening test, blind testers, device | as in the design; reported whichever way they go | Carson / S1 |
 
+**Amendment, 2026-10-16, before `eval-freeze` and before any held-out seed exists.** On the
+development trial (seed 26) the Analyst's gated causes were right 1 time in 22, against 4 in 7 for
+the baseline. Carson decided that causes are **not spoken**: `AIR_CAUSES = False` in
+`earshot.agents.claims`. Analyst lines say only the verified metric change, and the cause stays on
+the claim.
+
+The Explanations criterion is reported the same way otherwise, with two Analyst rows next to the
+baseline, and the run states that no cause airs:
+- **proposed:** every cause the model gave;
+- **gated:** the cause left by `gate_cause` on claims that pass `verify`.
+
+The held-out Analyst run is paced under the existing kill-switch alerts (500K tokens an hour, 3M a
+day). They are not raised for it.
+
 Evaluation profiles: P1 Casual, App voice, nothing followed; P2 Analyst, App voice, followed club
 and player; P3 Casual, screen-reader mode; P4 Analyst, one-ear mode, following shot speed; P5
 Analyst, App voice, nothing followed.
@@ -347,7 +361,7 @@ runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst -
 
 **Cause labels against the truth log:**
 
-| Run | Model's raw causes (proposed) | Gated causes on verified claims (what would air) | Baseline, same windows |
+| Run | Model's raw causes (proposed) | Gated causes on verified claims (would have aired; causes are no longer spoken) | Baseline, same windows |
 |---|---|---|---|
 | 1 | 2 of 28 correct | not graded | 4 of 7 |
 | 2 | 1 of 28 correct | 1 of 22 correct; the gate dropped 6 | 4 of 7 |
