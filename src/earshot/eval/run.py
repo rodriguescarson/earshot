@@ -474,6 +474,7 @@ def evaluate_match(
     real_analyst: TimedAnalyst | None = None,
     profiles: Sequence[EvalProfile] = PROFILES,
     windows: str = "background",
+    facts_languages: Sequence[Language] = (Language.ES, Language.AR, Language.HI),
 ) -> dict[str, Any]:
     """One match. ``real_analyst`` (a ``TimedAnalyst`` around Stream 1's Analyst) makes real model
     calls in every analysis window and grades their cause labels; without it the Analyst is a
@@ -493,6 +494,17 @@ def evaluate_match(
         r.info, list(r.events), clubs, players, latency=latency, rng=rng, analyst=analyst, windows=windows
     )
     names = {p.name: vm.join_profile(p) for p in profiles}
+    # Facts is pre-registered "in any language": one group per other language and mode, so the
+    # auditor sees every line, the Analyst's claims included, rendered in each language. Claims are
+    # language-neutral, so these add no model calls.
+    from earshot.live.broadcast import GroupKey
+
+    facts_groups = {}
+    for lang in facts_languages:
+        for mode in ListeningMode:
+            key = GroupKey(r.info.match_id, lang, mode, OutputMode.APP_VOICE)
+            vm.join(key)
+            facts_groups[key.name] = lang.value
     asyncio.run(vm.play())
     goals = targets(r.events)
     minutes = playing_minutes(r.events)
@@ -541,6 +553,12 @@ def evaluate_match(
             "by_source": dict(Counter(a.line.source.value for a in log.aired)),
         }
     out["explanations"] = explanations(r, clubs, players, vm.windows, real_analyst)
+    facts: dict[str, dict[str, Any]] = defaultdict(lambda: {"aired": 0, "audit_blocked": []})
+    for name, log in vm.logs.items():
+        lang = facts_groups.get(name, "en")
+        facts[lang]["aired"] += len(log.aired)
+        facts[lang]["audit_blocked"] += log.audit_blocked
+    out["facts"] = dict(facts)
     out["wall_s"] = round(time.perf_counter() - t0, 2)
     return out
 
@@ -708,6 +726,13 @@ def summarize(
             "dropped": dict(sum((Counter(r["dropped"]) for r in rows), Counter())),
         }
     expl = summarize_explanations(ok)
+    facts: dict[str, dict[str, Any]] = {}
+    for m in ok:
+        for lang, f in m.get("facts", {}).items():
+            agg = facts.setdefault(lang, {"aired": 0, "audit_blocked": 0, "examples": []})
+            agg["aired"] += f["aired"]
+            agg["audit_blocked"] += len(f["audit_blocked"])
+            agg["examples"] = (agg["examples"] + f["audit_blocked"])[:10]
     p1, p5 = profiles.get("P1", {}), profiles.get("P5", {})
     ratio = None
     if p1.get("numeric_slots_per_min") and p5.get("numeric_slots_per_min") is not None:
@@ -725,6 +750,7 @@ def summarize(
         "profiles": profiles,
         "analyst_vs_casual_numeric_ratio": ratio,
         "explanations": expl,
+        "facts": facts,
     }
 
 

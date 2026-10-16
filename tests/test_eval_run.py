@@ -80,6 +80,8 @@ def test_one_match_through_the_live_broadcaster():
     # The independent auditor runs on every offered line, as live; on seed 26 it blocks nothing, so
     # the half-time and full-time recaps air (they need the clock in step: recaps carry now_ms).
     assert all(p["audit_blocked"] == [] for p in inline["profiles"].values())
+    assert set(inline["facts"]) == {"en", "es", "ar", "hi"}  # Facts is "in any language"
+    assert all(f["aired"] > 0 and f["audit_blocked"] == [] for f in inline["facts"].values())
     p1, p5 = inline["profiles"]["P1"], inline["profiles"]["P5"]
     assert p5["numeric_slots_per_min"] > p1["numeric_slots_per_min"]
     assert inline["profiles"]["P2"]["group"].endswith(".spa.spa-09.-")  # follows the home club and a forward
