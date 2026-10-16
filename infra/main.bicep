@@ -67,7 +67,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logs.id
-    DisableLocalAuth: false
+    DisableLocalAuth: true // Entra-only ingestion (SEC2): the connection string alone cannot write telemetry
     RetentionInDays: 30
   }
 }

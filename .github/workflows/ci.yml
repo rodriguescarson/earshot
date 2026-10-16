@@ -23,6 +23,9 @@ jobs:
       - run: uv run ruff check .
       - run: uv run pyright
       - run: uv run pytest -m "not slow"
+      # SEC3: fail on known vulnerabilities in the locked runtime dependencies.
+      - run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
+      - run: uvx pip-audit==2.9.0 -r requirements.txt --strict --progress-spinner off
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 5
