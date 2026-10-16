@@ -597,8 +597,9 @@ def real_analyst(config: dict[str, Any]) -> TimedAnalyst:
     """Stream 1's Analyst in patient mode (it waits out rate limits; the wait is not latency)."""
     from earshot.agents.analyst import Analyst
 
+    cache = config.get("cache_dir")
     return TimedAnalyst(
-        Analyst(patient=True),
+        Analyst(cache_dir=Path(cache) if cache else None, patient=True),
         tokens_per_hour=config.get("tokens_per_hour"),
         max_calls=config.get("max_calls"),
     )

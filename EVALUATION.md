@@ -315,26 +315,37 @@ result. It records what the harness measures and what it found.
   recall 695/1,702 (0.408), 13.9 false alarms a match.
 
 ### Real Analyst, trial (development, not of record)
-`uv run earshot evaluate --seeds 26 --workers 1 --real-analyst --max-calls 20 --tokens-per-hour 300000`
-at `bd75a29`, 2026-10-16. Summary in `reports/eval-analyst-trial-seed26.json`.
+Seed 26 only: 49 analysis windows, the first 20 called, the rest skipped by `--max-calls 20`. Two
+runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst --max-calls 20
+--tokens-per-hour 300000`.
 
-- **Scope:** seed 26, 49 analysis windows; the first 20 got calls and the rest were skipped by the
-  cap.
-- **Cost and latency:**
-  - Tokens a call: p50 3,802, p95 4,083 (70,543 in all).
-  - Latency: p50 3,891 ms, p95 5,490 ms; 2 of 20 timed out.
-- **Cause labels:**
+**The runs:**
 
-  | | Labels | Correct | Truth changes recalled |
-  |---|---|---|---|
-  | Analyst | 28 | 2 | 2 of 6 |
-  | Baseline, same match | 7 | 4 | 1 of 6 |
+| | Run 1 (`bd75a29`) | Run 2 (`50f53ae`, `--analyst-cache`) |
+|---|---|---|
+| Summary | `reports/eval-analyst-trial-seed26.json` | `reports/eval-analyst-trial-seed26-gated.json` |
+| Tokens a call (p50) | 3,802 | 3,796 |
+| Latency p50 / p95 | 3,891 / 5,490 ms | 3,711 / 5,186 ms |
+| Timeouts | 2 of 20 | 1 of 20 |
 
-  Every proposed claim passed the metric check, so all 28 labels would have aired. Recall is
-  understated, because only 20 of 49 windows got calls.
-- **What this means for the run of record:** about 2,000-2,800 calls on the 40 held-out matches is
-  about 8-11M tokens. Under the kill-switch alerts (500K tokens an hour, 3M a day) that is about 3.5
-  days of paced running (`--tokens-per-hour`, `--resume`).
+**Cause labels against the truth log:**
+
+| Run | Model's raw causes (proposed) | Gated causes on verified claims (what would air) | Baseline, same windows |
+|---|---|---|---|
+| 1 | 2 of 28 correct | not graded | 4 of 7 |
+| 2 | 1 of 28 correct | 1 of 22 correct; the gate dropped 6 | 4 of 7 |
+
+- **Grading change:** run 1 graded the raw cause on accepted claims. Run 2 grades what airs: the
+  cause `gate_cause` leaves on a claim the live `verify` accepts, as `LiveMatch._window_lines`
+  does. That is the definition for the run of record. Run 1's note that "all 28 labels would have
+  aired" was wrong, because it did not apply the gate.
+- **Signal for the Analyst prompt:** the model gives a cause in most windows, and almost none are
+  right. It is one match, so a signal, not a result.
+- **What this means for the run of record:**
+  - About 2,000-2,800 calls on the 40 held-out matches, about 8-11M tokens.
+  - Under the kill-switch alerts (500K tokens an hour, 3M a day) that is about 3.5 days of paced
+    running (`--tokens-per-hour`, `--resume`).
+  - Raising those alerts for the run is Carson's decision.
 
 ### Load test, trial (development, not of record)
 `earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from

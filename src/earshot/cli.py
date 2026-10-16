@@ -98,6 +98,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     s.add_argument("--max-calls", type=int, default=None, help="cap Analyst calls per match (trial runs)")
     s.add_argument("--resume", action="store_true", help="keep finished rows next to --out and run the rest")
+    s.add_argument(
+        "--analyst-cache", type=Path, default=None, help="cache Analyst responses (re-grading is free)"
+    )
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
 
     s = sub.add_parser(
@@ -261,7 +264,11 @@ def main(argv: list[str] | None = None) -> None:
 
         latency = LatencyModel.load(args.latency) if args.latency else LatencyModel.provisional_default()
         analyst = (
-            {"tokens_per_hour": args.tokens_per_hour, "max_calls": args.max_calls}
+            {
+                "tokens_per_hour": args.tokens_per_hour,
+                "max_calls": args.max_calls,
+                "cache_dir": str(args.analyst_cache) if args.analyst_cache else None,
+            }
             if args.real_analyst
             else None
         )
