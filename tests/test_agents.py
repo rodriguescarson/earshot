@@ -57,7 +57,7 @@ def test_every_caller_line_passes_the_checker(run):
 
 def test_goal_is_never_drop_and_preempts(run):
     _, out = run
-    goals = [ln for m, _, _, ln in out if m.kind is MomentKind.GOAL]
+    goals = [ln for m, _, _, ln in out if m.kind in GOALS]
     assert goals
     assert all(ln.never_drop and ln.preempt and ln.priority == 100 for ln in goals)
 
@@ -69,9 +69,12 @@ def test_shot_and_save_become_one_line(run):
     assert all(len(ln.player_ids) == 2 for ln in saves)
 
 
-def _first(run, kind):
+GOALS = frozenset({MomentKind.GOAL, MomentKind.OWN_GOAL})
+
+
+def _first_goal(run):
     _, out = run
-    return next((m, ev, st, ln) for m, ev, st, ln in out if m.kind is kind)
+    return next((m, ev, st, ln) for m, ev, st, ln in out if m.kind in GOALS)
 
 
 @pytest.mark.parametrize(
@@ -85,13 +88,14 @@ def _first(run, kind):
 )
 def test_planted_defects_are_blocked(run, field, value, reason):
     roster, _ = run
-    m, ev, st, ln = _first(run, MomentKind.GOAL)
+    m, ev, st, ln = _first_goal(run)
     if value == "wrong_score":
         bad = ln.model_copy(update={"slots": {**ln.slots, "home_score": ln.slots["home_score"] + 1}})
     elif value == "digit_in_name":
         bad = ln.model_copy(update={"slots": {**ln.slots, "player": ln.slots["player"] + " 9"}})
     elif value == "edited":
         bad = ln.model_copy(update={"text": ln.text.replace("!", ", the third!", 1)})
+        assert bad.text != ln.text
     else:
         bad = ln.model_copy(update={"template_id": "goal.99"})
     v = check_caller_line(bad, m, ev, st, roster)
