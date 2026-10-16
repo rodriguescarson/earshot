@@ -2850,6 +2850,59 @@ Branch `feat/agents-core` (PR #3). Checks at a628a25 and after: ruff, pyright (0
 - The iPhone + VoiceOver lock test (Carson).
 - The listening test (Carson, Oct 18-19).
 
+## Stream 2 status (2026-10-16)
+
+Engine, evaluation and infrastructure. PR stack, each green in CI:
+- #2 engine slice
+- #4 truth store and baseline
+- #5 Agent Framework workflow
+- #6 MCP tools
+- #7 season gate and deploy
+- #8 the integrated worker
+- #9 ET11 harness and load test
+
+Nothing is on `main` yet: the stack waits on #1 (foundation), whose only failing check is `secrets`.
+The fix is the `permissions` block on that job, already in #2.
+
+**Built and verified:**
+- **Engine and gate:**
+  - Events-first engine 1.1.0 (fictional clubs, stoppages, cards, penalties, `flight_ms`,
+    `nearest_opp_m`, a 10 Hz ball path) and its truth log behind the `hidden` import guard.
+  - The P1 gate on the full 380-match season: every applicable gate passes, and the G3 misses are
+    reported (EVALUATION.md section 5).
+  - Frames and G8 for the render match.
+- **Deployed:**
+  - Worker: `https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io`,
+    image `4c0103f`. It serves Stream 1's live broadcaster and the guards in one app.
+  - MCP app: `/mcp` on `ca-earshot-mcp`.
+  - Everything keyless and on managed identity, through Bicep.
+  - Verified live: negotiate, the stream and ticket limits, judge bypass, cached-only flip without
+    a restart (ET10 drill), kill-switch flag drill, body caps.
+- **Security (SEC4):** a manual review, `docs/security/sec4-review-2026-10-16.md`.
+  - 2 High and 3 Medium were found today; all are fixed and checked live.
+  - `/gstack-cso` was **not assessed**: its launcher is not installed.
+- **ET11:** `earshot evaluate` runs 380 matches through the live broadcaster on a virtual clock in
+  about 400 s on 8 workers.
+  - It found the feeder waiting on the Analyst, which delayed yellow-card lines (fixed in `24f4efb`).
+  - Development results (provisional latency): never-drop 100% and coverage 0.971-0.979 in every
+    profile.
+
+**Measured and missed (development):**
+- Load-test trial, 10 listeners: p95 event-to-first-audio-byte 5.9 s against the 2.0 s target.
+  Encoding after the Director's start is the biggest part.
+- Real-Analyst trial: 2 of 28 cause labels correct.
+
+**Not done, and why:**
+- `eval-freeze`, held-out seeds 9001-9040, and the runs of record: they wait on Stream 1 finalising
+  the Analyst prompt and claim templates. The held-out Analyst run needs about 3.5 days of pacing
+  under the kill-switch alerts.
+- The full load test: after the encode-ahead change.
+- Web PubSub Standard: not on. Carson's decision ($1.61 a day); the client uses SSE.
+- `/gstack-cso`: needs gstack setup with its CSO build (Docker). Carson's call.
+- GeoNames name check: the download was not approved. Wikidata is the only name filter, stated as
+  a limit.
+- `DEPLOY_ENABLED=false` at submission (T5).
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
