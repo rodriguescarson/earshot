@@ -153,3 +153,19 @@ def test_judge_ticket_flow_and_its_rate_limit():
         assert tickets.judge(ticket)
         codes = [c.post("/api/ticket", headers=ip).status_code for _ in range(TICKET_TRIES_PER_MINUTE)]
         assert codes[-1] == 429
+
+
+def test_ondemand_is_limited_per_ip():
+    from earshot.api.streams import ONDEMAND_PER_MINUTE, limit_per_ip
+
+    async def answer(request: Request):
+        return JSONResponse({"ok": True})
+
+    app = Starlette(
+        routes=[Route("/api/ondemand", limit_per_ip(answer, ONDEMAND_PER_MINUTE), methods=["POST"])]
+    )
+    with TestClient(app) as c:
+        a = {"x-forwarded-for": "203.0.113.9"}
+        codes = [c.post("/api/ondemand", headers=a).status_code for _ in range(ONDEMAND_PER_MINUTE + 1)]
+        assert codes == [200] * ONDEMAND_PER_MINUTE + [429]
+        assert c.post("/api/ondemand", headers={"x-forwarded-for": "198.51.100.4"}).status_code == 200

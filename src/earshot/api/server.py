@@ -10,7 +10,8 @@ Entrypoint: ``uvicorn earshot.api.server:app``.
 
 The SSE stream gets the negotiate endpoint's limits (``earshot.api.streams``): the browser's
 EventSource connects to it directly, so limits that only negotiate applied would bind nobody.
-Judges trade their code for a signed ticket at ``POST /api/ticket``.
+Judges trade their code for a signed ticket at ``POST /api/ticket``. ``/api/ondemand`` gets a
+per-IP limit too, because each answer may synthesize speech.
 
 ``GET /api/metrics`` (judge code) serves the broadcaster's latency samples for the load test
 (``earshot.api.livemetrics``).
@@ -32,7 +33,14 @@ from starlette.routing import Route
 
 from earshot.api.flags import JudgeCodesFromFlags, SpendMeter
 from earshot.api.livemetrics import LiveMetrics, instrumented, metrics_endpoint
-from earshot.api.streams import StreamGuard, Tickets, guard_stream, ticket_endpoint
+from earshot.api.streams import (
+    ONDEMAND_PER_MINUTE,
+    StreamGuard,
+    Tickets,
+    guard_stream,
+    limit_per_ip,
+    ticket_endpoint,
+)
 from earshot.api.worker import build_app as build_worker
 
 ANALYST_CALL_TOKENS = 6_000
@@ -76,12 +84,15 @@ def build_app():
     from earshot.live import broadcast
 
     guard, tickets = StreamGuard(), Tickets()
-    routes = [
-        Route(r.path, guard_stream(r.endpoint, guard, tickets), methods=["GET"])
-        if isinstance(r, Route) and r.path == "/api/stream"
-        else r
-        for r in live.ROUTES
-    ]
+
+    def guarded(r):
+        if isinstance(r, Route) and r.path == "/api/stream":
+            return Route(r.path, guard_stream(r.endpoint, guard, tickets), methods=["GET"])
+        if isinstance(r, Route) and r.path == "/api/ondemand":
+            return Route(r.path, limit_per_ip(r.endpoint, ONDEMAND_PER_MINUTE), methods=["POST"])
+        return r
+
+    routes = [guarded(r) for r in live.ROUTES]
     assert any(isinstance(r, Route) and r.path == "/api/stream" for r in live.ROUTES), (
         "live stream route moved"
     )
