@@ -86,6 +86,10 @@ def test_one_app_serves_both_surfaces(tmp_path, monkeypatch):
         # The SSE stream is behind the per-IP guard, and judges have a ticket endpoint.
         assert c.post("/api/ticket").status_code == 403
         assert c.get("/api/metrics").status_code == 403
+        from earshot.api.streams import ONDEMAND_PER_MINUTE
+
+        codes = [c.post("/api/ondemand", json={}).status_code for _ in range(ONDEMAND_PER_MINUTE + 1)]
+        assert codes[-1] == 429  # limited per IP before the live app sees the request
         from earshot.live import app as live_app
 
         assert live_app.LiveMatch.__name__ == "TimedLiveMatch"  # the load test's timings, nothing else
