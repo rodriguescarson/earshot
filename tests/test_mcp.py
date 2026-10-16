@@ -7,6 +7,7 @@ from functools import cache
 
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.types import CallToolResult
 from starlette.testclient import TestClient
 
 from earshot.api.mcp import ANON_PER_MINUTE, JUDGE_PER_MINUTE, build_app, build_server
@@ -111,6 +112,7 @@ def test_mcp_server_lists_and_calls_the_tools():
         names = {x.name for x in await server.list_tools()}
         assert names == {"list_matches", "key_moments", "team_window", "player_report", "catch_up", "recap"}
         ok = await server.call_tool("catch_up", {"match_id": f"m{SEED:05d}"})
+        assert isinstance(ok, CallToolResult)
         assert not ok.is_error
         with pytest.raises(ToolError, match="not playing"):
             await server.call_tool("team_window", {"match_id": f"m{SEED:05d}", "team_id": "zzz"})
