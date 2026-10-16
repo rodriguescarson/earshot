@@ -265,6 +265,14 @@
   color: var(--ink-soft);
 }
 
+.busy {
+  margin: 0;
+}
+
+.busy__link {
+  font-weight: 700;
+}
+
 .recap {
   padding: calc(var(--cell) * 1.5) 0;
   border-top: 2px solid var(--seam);

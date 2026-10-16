@@ -17,7 +17,8 @@
       "dead": "Balón parado",
       "recorded": "Clip grabado",
       "paused": "En pausa",
-      "ended": "Fin del clip"
+      "ended": "Fin del clip",
+      "busy": "Ocupado"
     },
     "onAir": "En el aire",
     "waiting": "Esperando la siguiente frase",
@@ -51,7 +52,9 @@
     "recapTitle": {
       "half_time": "Descanso",
       "full_time": "Final"
-    }
+    },
+    "busy": "Earshot está ocupado. Vuelve a intentarlo en unos minutos o escucha el clip grabado.",
+    "playRecorded": "Escuchar el clip grabado"
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}",

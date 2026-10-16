@@ -60,17 +60,89 @@ export function audioUrl(path: string | null): string | null {
   return path ? `${LIVE_BASE}${path}` : null;
 }
 
-export function connect(group: string, onMessage: (m: LiveMessage) => void, onDown: () => void): () => void {
-  const es = new EventSource(`${LIVE_BASE}/api/stream?group=${encodeURIComponent(group)}`);
-  es.onmessage = (e) => {
+const CODE_KEY = "earshot.judgeCode";
+
+/**
+ * A judge's access code arrives in the URL fragment (#code=..., DR-6) and is never put in a URL
+ * again: it is kept for this tab only and sent as a header when trading it for a stream ticket.
+ */
+export function judgeCode(): string | null {
+  const m = /(?:^#|&)code=([^&]+)/.exec(window.location.hash);
+  if (m?.[1]) {
+    const code = decodeURIComponent(m[1]);
     try {
-      onMessage(JSON.parse(e.data as string) as LiveMessage);
+      sessionStorage.setItem(CODE_KEY, code);
     } catch {
-      /* ignore a malformed message rather than stop the match */
+      /* private mode: the code lasts for this page only */
     }
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    return code;
+  }
+  try {
+    return sessionStorage.getItem(CODE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+async function streamTicket(code: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${LIVE_BASE}/api/ticket`, { method: "POST", headers: { "x-earshot-code": code } });
+    if (!r.ok) return null;
+    return ((await r.json()) as { ticket?: string }).ticket ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type LinkState = "open" | "reconnecting" | "refused";
+
+/**
+ * Listen to one group over Server-Sent Events. A dropped connection retries by itself
+ * ("reconnecting"); a stream the server turns away (limits, or a judge ticket that a restart made
+ * stale) ends closed: judges get one fresh ticket, everyone else is told Earshot is busy.
+ */
+export function connect(
+  group: string,
+  onMessage: (m: LiveMessage) => void,
+  onState: (s: LinkState) => void,
+): () => void {
+  let es: EventSource | null = null;
+  let stopped = false;
+  let retried = false;
+  const code = judgeCode();
+
+  const open = async () => {
+    const ticket = code ? await streamTicket(code) : null;
+    if (stopped) return;
+    const q = `group=${encodeURIComponent(group)}${ticket ? `&ticket=${encodeURIComponent(ticket)}` : ""}`;
+    es = new EventSource(`${LIVE_BASE}/api/stream?${q}`);
+    es.onopen = () => onState("open");
+    es.onmessage = (e) => {
+      try {
+        onMessage(JSON.parse(e.data as string) as LiveMessage);
+      } catch {
+        /* ignore a malformed message rather than stop the match */
+      }
+    };
+    es.onerror = () => {
+      if (es?.readyState !== EventSource.CLOSED) {
+        onState("reconnecting");
+        return;
+      }
+      if (code && !retried) {
+        retried = true;
+        void open();
+        return;
+      }
+      onState("refused");
+    };
   };
-  es.onerror = () => onDown();
-  return () => es.close();
+  void open();
+  return () => {
+    stopped = true;
+    es?.close();
+  };
 }
 
 export async function onDemand(

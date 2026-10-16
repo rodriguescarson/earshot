@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Build the static site and deploy it to the earshot-web Static Web App (Free tier, 250 MB cap).
 # The deployment token is fetched at run time and never written to disk or printed.
-# Needs: az login, EARSHOT_SUBSCRIPTION (repo .env). Optional: VITE_LIVE_BASE for the live link.
+# Needs: az login, EARSHOT_SUBSCRIPTION (repo .env).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${EARSHOT_SUBSCRIPTION:?set EARSHOT_SUBSCRIPTION (see .env)}"
+# The live worker (Stream 2's Container App). The CSP in public/staticwebapp.config.json names the
+# same origin; change both together. Set VITE_LIVE_BASE= (empty) to build without live mode.
+export VITE_LIVE_BASE="${VITE_LIVE_BASE-https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io}"
 
 corepack pnpm build
 # The player only loads full/bed/mono; speech and pan are listening-test arms (clips/listen-test).
