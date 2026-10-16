@@ -8,14 +8,14 @@ from dataclasses import dataclass
 
 import pytest
 
-from earshot.contract.claim import AnalystResponse, Claim, Direction, Metric
+from earshot.contract.claim import Claim, Direction, Metric
 from earshot.contract.events import Action, Event, StoppageKind, StoppageStart
 from earshot.contract.line import Language, Line, LineSource, ListeningMode
 from earshot.contract.moment import Moment, MomentKind
 from earshot.contract.spadl import SHOT_TYPES, ActionType
 from earshot.pipeline import workflow as wf
 from earshot.sim.match import simulate
-from earshot.stats.claims import THRESHOLD
+from earshot.stats.metrics import Window, metric
 from earshot.world.clubs import world
 
 TARGETS = [(Language.EN, ListeningMode.CASUAL), (Language.EN, ListeningMode.ANALYST)]
@@ -67,11 +67,39 @@ def fake_check(line, moment, ev, state):
     return (False, "digit outside a slot") if any(ch.isdigit() for ch in line.text) else (True, "")
 
 
-def pipeline(seed: int, analyst=wf.no_analyst, timeout_scale: float = 1.0):
+THRESHOLD = {Metric.PRESS_HEIGHT: 5.0, Metric.TEMPO: 2.0, Metric.DIRECTNESS: 0.08, Metric.WIDTH: 2.0,
+             Metric.LINE_HEIGHT: 4.0, Metric.POSSESSION_SHARE: 0.08}  # fmt: skip
+SPAN = 10 * 60_000
+
+
+def values(step: wf.WindowStep, team: str, m: Metric, start: int, end: int):
+    ev, pos = step.events.value, step.positions.value
+    span = end - start
+    before = metric(m, ev, Window(team, start - span, start), step.home_id, pos)
+    after = metric(m, ev, Window(team, start, end), step.home_id, pos)
+    return before, after
+
+
+def fake_verify(claim: Claim, step: wf.WindowStep) -> tuple[bool, str]:
+    """A stand-in for agents.claims.verify with the same rules."""
+    if claim.window_end_ms > step.stoppage.wall_ms + 1:
+        return False, "window ends in the future"
+    before, after = values(step, claim.team_id, claim.metric, claim.window_start_ms, claim.window_end_ms)
+    if before is None or after is None:
+        return False, "not enough evidence"
+    if (after > before) != (claim.direction is Direction.UP) or abs(after - before) < THRESHOLD[claim.metric]:
+        return False, "direction wrong or below threshold"
+    seen = {e.event_id for e in step.events.value}
+    if any(i not in seen for i in claim.cited_event_ids):
+        return False, "cited event does not exist"
+    return True, ""
+
+
+def pipeline(seed: int, analyst=wf.no_analyst, timeout_scale: float = 1.0, verify=fake_verify):
     r = simulate(seed)
     pos = {p.player_id: p.position for p in world().players.values()}
     p = wf.MatchPipeline(fake_step, FakeState(), r.info.home.team_id, r.info.away.team_id, pos, FakeSpotter(),
-                         FakeCaller(), fake_check, TARGETS, analyst, timeout_scale)  # fmt: skip
+                         FakeCaller(), fake_check, TARGETS, analyst, verify, timeout_scale)  # fmt: skip
     return r, p
 
 
@@ -95,14 +123,15 @@ def test_window_runs_only_on_qualifying_stoppages_and_see_only_the_past():
     r, p = pipeline(3)
     seen_lengths: list[tuple[int, int]] = []
 
-    async def spy(stats: wf.WindowStats):
-        idx = next(i for i, e in enumerate(r.events) if e.event_id == stats.step.stoppage.event_id)
-        seen_lengths.append((len(stats.step.events.value), idx + 1))
-        return None
+    async def spy(step: wf.WindowStep, budget_ms: int):
+        idx = next(i for i, e in enumerate(r.events) if e.event_id == step.stoppage.event_id)
+        seen_lengths.append((len(step.events.value), idx + 1))
+        assert 3_000 <= budget_ms <= 8_000
+        return wf.AnalystOutcome((), None)
 
     p = wf.MatchPipeline(
         fake_step, FakeState(), p.home_id, p.away_id, p.positions, FakeSpotter(), FakeCaller(), fake_check,
-        TARGETS, spy,
+        TARGETS, spy, fake_verify,
     )  # fmt: skip
     results = asyncio.run(p.replay(r.events))
     windows = [w for _, w in results if w is not None]
@@ -120,33 +149,38 @@ def test_replay_is_deterministic():
     assert [w and w.accepted for _, w in ra] == [w and w.accepted for _, w in rb]
 
 
-def honest_claim(stats: wf.WindowStats) -> AnalystResponse | None:
-    """An Analyst that only states what the window stats show (the strongest change per club)."""
+def honest_claim(step: wf.WindowStep) -> wf.AnalystOutcome:
+    """An Analyst that only states what the numbers show (the strongest change per club)."""
+    end = step.stoppage.wall_ms
     claims = []
-    for t in stats.teams:
+    for team in (step.home_id, step.away_id):
         best = None
-        for m, (before, after) in t.values.items():
-            if before is None or after is None or m is Metric.SHOT_COUNT:
+        for m in THRESHOLD:
+            before, after = values(step, team, m, end - SPAN, end)
+            if before is None or after is None:
                 continue
-            s = abs(after - before) / THRESHOLD[m]
-            if s >= 1 and (best is None or s > best[0]):
-                best = (s, m, before, after)
-        if best and t.event_ids:
+            size = abs(after - before) / THRESHOLD[m]
+            if size >= 1 and (best is None or size > best[0]):
+                best = (size, m, before, after)
+        cited = [
+            e.event_id for e in step.events.value if e.team_id == team and end - SPAN <= e.wall_ms < end
+        ][-3:]
+        if best and cited:
             _, m, before, after = best
             direction = Direction.UP if after > before else Direction.DOWN
             claims.append(
                 Claim(
-                    team_id=t.team_id, metric=m, direction=direction, window_start_ms=t.start_wall_ms,
-                    window_end_ms=t.end_wall_ms, value_before=round(before, 3), value_after=round(after, 3),
-                    cited_event_ids=list(t.event_ids[-3:]),
+                    team_id=team, metric=m, direction=direction, window_start_ms=end - SPAN,
+                    window_end_ms=end, value_before=round(before, 3), value_after=round(after, 3),
+                    cited_event_ids=cited,
                 )
             )  # fmt: skip
-    return AnalystResponse(window_id=stats.window_id, claims=claims)
+    return wf.AnalystOutcome(tuple(claims), None)
 
 
-def liar(stats: wf.WindowStats) -> AnalystResponse | None:
-    good = honest_claim(stats)
-    if good is None or not good.claims:
+def liar(step: wf.WindowStep) -> wf.AnalystOutcome:
+    good = honest_claim(step)
+    if not good.claims:
         return good
     c = good.claims[0]
     flipped = c.model_copy(
@@ -156,12 +190,12 @@ def liar(stats: wf.WindowStats) -> AnalystResponse | None:
     future = c.model_copy(
         update={"window_end_ms": c.window_end_ms + 600_000, "window_start_ms": c.window_start_ms + 600_000}
     )
-    return AnalystResponse(window_id=stats.window_id, claims=[flipped, ghost, future])
+    return wf.AnalystOutcome((flipped, ghost, future), None)
 
 
 def run_windows(seed, analyst):
-    async def wrapped(stats):
-        return analyst(stats)
+    async def wrapped(step, budget_ms):
+        return analyst(step)
 
     r, p = pipeline(seed, wrapped)
     return [w for _, w in asyncio.run(p.replay(r.events)) if w is not None]
@@ -181,11 +215,11 @@ def test_true_claims_are_accepted_and_false_ones_rejected():
 
 
 def test_analyst_timeout_and_errors_fall_back_to_the_window_summary():
-    async def slow(stats):
-        await asyncio.sleep(stats.timeout_ms / 1000 + 0.05)
-        return None
+    async def slow(step, budget_ms):
+        await asyncio.sleep(budget_ms / 1000 + 1.6)  # past the outer guard (budget + 1.5 s)
+        return wf.AnalystOutcome((), None)
 
-    async def broken(stats):
+    async def broken(step, budget_ms):
         raise RuntimeError("model unavailable")
 
     r, p = pipeline(2, slow, timeout_scale=0.01)
@@ -204,10 +238,22 @@ def test_analyst_timeout_and_errors_fall_back_to_the_window_summary():
     assert failure.startswith("error: RuntimeError")
 
 
-def test_analyst_timeout_follows_the_design_rule():
-    assert wf.analyst_timeout_ms(StoppageKind.THROW_IN) == 8_000  # 14.7 s - 4 s, capped at 8 s
-    assert wf.analyst_timeout_ms(StoppageKind.FREE_KICK) == 8_000
-    assert 3_000 <= wf.analyst_timeout_ms(StoppageKind.OFFSIDE) <= 8_000
+def test_analyst_budget_follows_the_design_rule():
+    r = simulate(3)
+    starts = [e for e in r.events if isinstance(e, StoppageStart) and wf.opens_window(e)]
+    for e in starts:
+        assert wf.analyst_budget_ms(e) == max(3_000, min(8_000, e.expected_dead_ms - 4_000))
+    assert {wf.analyst_budget_ms(e) for e in starts} <= set(range(3_000, 8_001))
+
+
+def test_without_a_verifier_nothing_airs():
+    async def wrapped(step, budget_ms):
+        return honest_claim(step)
+
+    r, p = pipeline(7, wrapped, verify=wf.reject_all)
+    windows = [w for _, w in asyncio.run(p.replay(r.events)) if w is not None]
+    assert sum(len(w.accepted) for w in windows) == 0
+    assert all(w.fallback == "window_summary" for w in windows)
 
 
 def agents_present() -> bool:
@@ -230,6 +276,28 @@ def test_replay_with_the_real_agents():
     assert lines[0] == lines[1]
     assert len(lines[0]) > 50
     assert not [b for res, _ in runs[0] for b in res.blocked]
+
+    class StandInAnalyst:
+        """Has Analyst.run's shape; states only true changes, so Stream 1's verify should accept them."""
+
+        def run(self, view, window_id, expected_dead_ms):
+            from types import SimpleNamespace
+
+            idx = max(i for i, e in enumerate(r.events) if e.wall_ms < view.now_wall_ms)
+            past = wf.Shared(tuple(r.events[: idx + 1]))
+            pos = wf.Shared({p.player_id: p.position for p in players})
+            step = wf.WindowStep(r.events[idx], None, past, r.info.home.team_id, r.info.away.team_id, pos)
+            claims = list(honest_claim(step).claims)
+            return SimpleNamespace(
+                claims=claims, timed_out=False, error=None, invalid=[], latency_ms=5, tokens=0
+            )
+
+    p = wf.MatchPipeline.from_agents(
+        r.info, clubs, players, [(Language.EN, ListeningMode.CASUAL)], StandInAnalyst()
+    )
+    windows = [w for _, w in asyncio.run(p.replay(r.events)) if w is not None]
+    accepted = sum(len(w.accepted) for w in windows)
+    assert accepted > 0, [w.rejected[:2] for w in windows[:5]]
 
 
 def test_stoppage_without_window():

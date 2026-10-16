@@ -8,12 +8,12 @@ claims. The Director, which applies per-listener rules, sits outside the workflo
     moment run, per event:  EventStep -> [Spotter] -> MomentBatch -> [Caller] -> LineBatch
                                        -> [Checker] -> MomentResult
     window run, per stoppage expected to last 15 s or more:
-                            WindowStep -> [WindowStats] -> WindowStats -> [Analyst] -> ClaimsProposed
-                                       -> [ClaimCheck] -> WindowResult
+                            WindowStep -> [Analyst] -> ClaimsProposed -> [ClaimCheck] -> WindowResult
 
-The executors wrap Stream 1's plain classes (``earshot.agents``): ``Spotter.observe``,
-``Caller.lines`` and ``check_caller_line``. They are typed here as protocols, so the wiring has no
-import-time dependency on them; ``MatchPipeline.from_agents`` builds the real ones.
+The executors wrap Stream 1's code (``earshot.agents``): ``Spotter.observe``, ``Caller.lines``,
+``check_caller_line``, the Foundry ``Analyst`` and the claim verifier ``agents.claims.verify``.
+They are typed here as protocols and callables, so the wiring has no import-time dependency on
+them; ``MatchPipeline.from_agents`` builds the real ones.
 
 API checked against the installed agent-framework-core 1.22.0 source: ``Executor`` subclasses with
 ``@handler`` methods taking ``(message, ctx: WorkflowContext[Out, WorkflowOut])``,
@@ -31,18 +31,13 @@ from typing import Any, Never, Protocol
 
 from agent_framework import Executor, WorkflowBuilder, WorkflowContext, handler
 
-from earshot.contract.claim import AnalystResponse, Claim, Metric
-from earshot.contract.events import Action, Event, StoppageKind, StoppageStart
+from earshot.contract.claim import Claim
+from earshot.contract.events import Event, StoppageKind, StoppageStart
 from earshot.contract.line import Language, Line, ListeningMode
 from earshot.contract.moment import Moment
-from earshot.sim.stoppages import median_dead_ms
-from earshot.stats.claims import verify_claim, window_values
-from earshot.stats.metrics import Window
 
 ANALYSIS_MIN_EXPECTED_MS = 15_000
-LOOKBACK_MS = 10 * 60_000
 MAX_CLAIMS_PER_CLUB = 3
-MAX_CITED = 12
 
 
 # ----- executor protocols (implemented by earshot.agents) ---------------------------------------
@@ -62,7 +57,11 @@ class CallerLike(Protocol):
 CheckFn = Callable[[Line, Moment, Event, Any], tuple[bool, str]]
 """(line, moment, trigger event, state) -> (ok, reason)."""
 
-AnalystFn = Callable[["WindowStats"], Awaitable[AnalystResponse | None]]
+AnalystFn = Callable[["WindowStep", int], Awaitable["AnalystOutcome"]]
+"""(window step, budget in ms) -> claims; Stream 1's Foundry Analyst behind ``analyst_from_agents``."""
+
+VerifyFn = Callable[[Claim, "WindowStep"], tuple[bool, str]]
+"""(claim, window step) -> (ok, reason); Stream 1's ``agents.claims.verify`` behind ``from_agents``."""
 StateStep = Callable[[Any, Event], Any]
 """(state, event) -> new state; the worker's fold over the event stream."""
 
@@ -135,29 +134,19 @@ class WindowStep:
 
 
 @dataclass(frozen=True)
-class TeamWindow:
-    team_id: str
-    start_wall_ms: int
-    end_wall_ms: int
-    values: Mapping[Metric, tuple[float | None, float | None]]
-    """(previous 10 minutes, last 10 minutes) for every metric."""
-    event_ids: tuple[str, ...]
-    """The team's most recent on-ball events in the window (for citing)."""
-
-
-@dataclass(frozen=True)
-class WindowStats:
-    window_id: str
-    step: WindowStep
-    timeout_ms: int
-    teams: tuple[TeamWindow, ...]
+class AnalystOutcome:
+    claims: tuple[Claim, ...]
+    failure: str | None
+    """None, or why no claims came back: "timeout", "error: ...", "invalid: ..."."""
+    latency_ms: int = 0
+    tokens: int = 0
 
 
 @dataclass(frozen=True)
 class ClaimsProposed:
-    stats: WindowStats
-    response: AnalystResponse | None
-    failure: str | None
+    step: WindowStep
+    budget_ms: int
+    outcome: AnalystOutcome
 
 
 @dataclass(frozen=True)
@@ -169,12 +158,8 @@ class WindowResult:
     fallback: str | None
     """"window_summary" when no claim survives (timeout, error, empty, all rejected); else None."""
     analyst_failure: str | None
-    stats: WindowStats = field(repr=False)
-
-
-def analyst_timeout_ms(kind: StoppageKind) -> int:
-    """Design: the median dead time for the stoppage type minus 4 s, kept between 3 s and 8 s."""
-    return max(3_000, min(8_000, median_dead_ms(kind) - 4_000))
+    budget_ms: int = 0
+    latency_ms: int = 0
 
 
 def opens_window(ev: Event) -> bool:
@@ -247,104 +232,97 @@ def moment_workflow(spotter: SpotterLike, caller: CallerLike, check: CheckFn,
 # ----- window workflow ----------------------------------------------------------------------------
 
 
-def team_window(step: WindowStep, team_id: str) -> TeamWindow:
-    """What the Analyst gets for one club: every claim metric over the last 10 minutes and the 10 before.
+def analyst_budget_ms(stoppage: StoppageStart) -> int:
+    """The design rule: aim to finish 4 s before the expected restart, kept between 3 s and 8 s.
 
-    The same numbers the MCP ``team_window`` tool returns and the claim check recomputes.
+    ``expected_dead_ms`` is the frozen median for the stoppage type (plus announced extras), so
+    this is "the median dead time for that stoppage type minus 4 s".
     """
-    end = step.stoppage.wall_ms
-    start = end - LOOKBACK_MS
-    events, positions = step.events.value, step.positions.value
-    values = {m: window_values(m, events, team_id, start, end, step.home_id, positions) for m in Metric}
-    w = Window(team_id, start, end)
-    recent = [e.event_id for e in events if isinstance(e, Action) and e.team_id == team_id and e in w]
-    return TeamWindow(team_id, start, end, values, tuple(recent[-MAX_CITED:]))
-
-
-class WindowStatsExecutor(Executor):
-    def __init__(self, timeout_scale: float = 1.0) -> None:
-        super().__init__(id="window_stats")
-        self.timeout_scale = timeout_scale
-
-    @handler
-    async def stats(self, step: WindowStep, ctx: WorkflowContext[WindowStats]) -> None:
-        teams = (team_window(step, step.home_id), team_window(step, step.away_id))
-        wid = f"{step.stoppage.event_id}-w"
-        timeout = int(analyst_timeout_ms(step.stoppage.kind) * self.timeout_scale)
-        await ctx.send_message(WindowStats(wid, step, timeout, teams))
+    return max(3_000, min(8_000, stoppage.expected_dead_ms - 4_000))
 
 
 class AnalystExecutor(Executor):
-    """Calls the Analyst (a Foundry model, Stream 1) inside the window's time budget."""
+    """Calls the Analyst (Stream 1's Foundry model with in-process match tools) inside the budget.
 
-    def __init__(self, analyst: AnalystFn) -> None:
+    The Analyst enforces its own budget; this executor adds an outer guard (budget + 1.5 s) so a
+    hung call can never hold the window run.
+    """
+
+    def __init__(self, analyst: AnalystFn, timeout_scale: float = 1.0) -> None:
         super().__init__(id="analyst")
         self.analyst = analyst
+        self.timeout_scale = timeout_scale
 
     @handler
-    async def analyse(self, stats: WindowStats, ctx: WorkflowContext[ClaimsProposed]) -> None:
+    async def analyse(self, step: WindowStep, ctx: WorkflowContext[ClaimsProposed]) -> None:
+        budget_ms = int(analyst_budget_ms(step.stoppage) * self.timeout_scale)
         try:
-            response = await asyncio.wait_for(self.analyst(stats), timeout=stats.timeout_ms / 1000)
-            failure = None if response is not None else "empty"
+            outcome = await asyncio.wait_for(self.analyst(step, budget_ms), timeout=budget_ms / 1000 + 1.5)
         except TimeoutError:
-            response, failure = None, "timeout"
+            outcome = AnalystOutcome((), "timeout")
         except Exception as exc:  # every Analyst failure falls back to the window summary, logged
-            response, failure = None, f"error: {type(exc).__name__}: {exc}"
-        await ctx.send_message(ClaimsProposed(stats, response, failure))
+            outcome = AnalystOutcome((), f"error: {type(exc).__name__}: {exc}"[:300])
+        await ctx.send_message(ClaimsProposed(step, budget_ms, outcome))
 
 
 class ClaimCheckExecutor(Executor):
-    """Recomputes every metric claim from the events (``earshot.stats.claims``); cause labels pass
-    through unchecked, to be graded offline."""
+    """Recomputes every metric claim from the events with the shared verifier; cause labels pass
+    through unchecked, to be graded offline against the truth log."""
 
-    def __init__(self) -> None:
+    def __init__(self, verify: VerifyFn) -> None:
         super().__init__(id="claim_check")
+        self.verify = verify
 
     @handler
     async def check_claims(self, proposed: ClaimsProposed, ctx: WorkflowContext[Never, WindowResult]) -> None:
-        step = proposed.stats.step
+        step = proposed.step
         accepted: list[Claim] = []
         rejected: list[tuple[Claim, str]] = []
         per_club: dict[str, int] = {}
-        claims = proposed.response.claims if proposed.response else []
-        for c in sorted(claims, key=lambda c: (c.team_id, c.rank)):
+        for c in sorted(proposed.outcome.claims, key=lambda c: (c.team_id, c.rank)):
             if c.team_id not in (step.home_id, step.away_id):
                 rejected.append((c, "unknown team"))
                 continue
             if per_club.get(c.team_id, 0) >= MAX_CLAIMS_PER_CLUB:
                 rejected.append((c, "more than 3 claims for one club"))
                 continue
-            v = verify_claim(
-                c, step.events.value, step.home_id, step.positions.value, step.stoppage.wall_ms + 1
-            )
-            if v.ok:
+            ok, reason = self.verify(c, step)
+            if ok:
                 accepted.append(c)
                 per_club[c.team_id] = per_club.get(c.team_id, 0) + 1
             else:
-                rejected.append((c, v.reason))
-        fallback = None if accepted else "window_summary"
+                rejected.append((c, reason))
+        failure = proposed.outcome.failure
+        if failure is None and not proposed.outcome.claims:
+            failure = "empty"
         await ctx.yield_output(
             WindowResult(
-                proposed.stats.window_id,
-                step.stoppage.event_id,
-                tuple(accepted),
-                tuple(rejected),
-                fallback,
-                proposed.failure,
-                proposed.stats,
+                window_id=f"{step.stoppage.event_id}-w",
+                stoppage_event_id=step.stoppage.event_id,
+                accepted=tuple(accepted),
+                rejected=tuple(rejected),
+                fallback=None if accepted else "window_summary",
+                analyst_failure=failure,
+                budget_ms=proposed.budget_ms,
+                latency_ms=proposed.outcome.latency_ms,
             )
         )
 
 
-def window_workflow(analyst: AnalystFn, timeout_scale: float = 1.0):
+def window_workflow(analyst: AnalystFn, verify: VerifyFn, timeout_scale: float = 1.0):
     """``timeout_scale`` shrinks the Analyst's budget for an accelerated clock (1.0 = real time)."""
-    s, a, k = WindowStatsExecutor(timeout_scale), AnalystExecutor(analyst), ClaimCheckExecutor()
-    return WorkflowBuilder(start_executor=s, name="earshot-window").add_edge(s, a).add_edge(a, k).build()
+    a, k = AnalystExecutor(analyst, timeout_scale), ClaimCheckExecutor(verify)
+    return WorkflowBuilder(start_executor=a, name="earshot-window").add_edge(a, k).build()
 
 
-async def no_analyst(stats: WindowStats) -> AnalystResponse | None:
-    """The default until the Foundry Analyst is wired: no claims, so the window summary airs."""
-    return None
+async def no_analyst(step: WindowStep, budget_ms: int) -> AnalystOutcome:
+    """The default when no Analyst is configured: no claims, so the window summary airs."""
+    return AnalystOutcome((), None)
+
+
+def reject_all(claim: Claim, step: WindowStep) -> tuple[bool, str]:
+    """The default verifier: nothing unverified ever airs."""
+    return False, "no verifier configured"
 
 
 # ----- the per-match pipeline the worker owns -----------------------------------------------------
@@ -362,13 +340,14 @@ class MatchPipeline:
     check: CheckFn
     targets: Sequence[tuple[Language, ListeningMode]]
     analyst: AnalystFn = no_analyst
+    verify: VerifyFn = reject_all
     timeout_scale: float = 1.0
     events: list[Event] = field(default_factory=list)
     _seen: dict[str, Event] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self._moments = moment_workflow(self.spotter, self.caller, self.check, self.targets)
-        self._windows = window_workflow(self.analyst, self.timeout_scale)
+        self._windows = window_workflow(self.analyst, self.verify, self.timeout_scale)
 
     async def push(self, ev: Event, *, final: bool = False) -> tuple[MomentResult, WindowResult | None]:
         """Feed one event: one moment run, plus one window run if the event opens an analysis window."""
@@ -403,18 +382,28 @@ class MatchPipeline:
         clubs: Sequence[Any],
         players: Sequence[Any],
         targets: Sequence[tuple[Language, ListeningMode]],
-        analyst: AnalystFn = no_analyst,
+        analyst: Any = None,
+        timeout_scale: float = 1.0,
     ) -> MatchPipeline:
-        """Build the pipeline from Stream 1's executors (``earshot.agents``)."""
+        """Build the pipeline from Stream 1's executors (``earshot.agents``).
+
+        ``analyst`` is an ``earshot.agents.analyst.Analyst`` (Foundry), or None for no Analyst.
+        """
         from earshot.agents.caller import Caller  # pyright: ignore[reportMissingImports]
         from earshot.agents.checker import check_caller_line  # pyright: ignore[reportMissingImports]
+        from earshot.agents.claims import verify as verify_claim  # pyright: ignore[reportMissingImports]
         from earshot.agents.spotter import Spotter  # pyright: ignore[reportMissingImports]
         from earshot.agents.state import MatchState, Roster  # pyright: ignore[reportMissingImports]
 
         roster = Roster.build(info, list(clubs), list(players))
+        names = {c.team_id: c.short_name for c in clubs}
 
         def check(line: Line, moment: Moment, ev: Event, state: Any) -> tuple[bool, str]:
             v = check_caller_line(line, moment, ev, state, roster)
+            return v.ok, v.reason
+
+        def verify(claim: Claim, step: WindowStep) -> tuple[bool, str]:
+            v = verify_claim(claim, tool_view(step, names))
             return v.ok, v.reason
 
         return cls(
@@ -427,5 +416,34 @@ class MatchPipeline:
             caller=Caller(roster),
             check=check,
             targets=targets,
-            analyst=analyst,
+            analyst=analyst_from_agents(analyst, names) if analyst is not None else no_analyst,
+            verify=verify,
+            timeout_scale=timeout_scale,
         )
+
+
+def tool_view(step: WindowStep, names: Mapping[str, str]) -> Any:
+    """The match as Stream 1's in-process tools see it (``earshot.tools.match.MatchView``)."""
+    from earshot.tools.match import MatchView, Teams  # pyright: ignore[reportMissingImports]
+
+    return MatchView(
+        events=step.events.value,
+        teams=Teams(step.home_id, step.away_id, names),
+        positions=step.positions.value,
+        now_wall_ms=step.stoppage.wall_ms + 1,
+    )
+
+
+def analyst_from_agents(analyst: Any, names: Mapping[str, str]) -> AnalystFn:
+    """Wrap ``Analyst.run`` (blocking HTTP) as an ``AnalystFn``, run off the event loop."""
+
+    async def run(step: WindowStep, budget_ms: int) -> AnalystOutcome:
+        res = await asyncio.to_thread(
+            analyst.run, tool_view(step, names), f"{step.stoppage.event_id}-w", step.stoppage.expected_dead_ms
+        )
+        failure = "timeout" if res.timed_out else (f"error: {res.error}" if res.error else None)
+        if failure is None and res.invalid:
+            failure = f"invalid: {len(res.invalid)}"
+        return AnalystOutcome(tuple(res.claims), failure, res.latency_ms, res.tokens)
+
+    return run
