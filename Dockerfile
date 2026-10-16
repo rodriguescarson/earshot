@@ -26,4 +26,5 @@ ENV PATH=/app/.venv/bin:$PATH PORT=8080 EARSHOT_MCP_REPLAY=/app/data/mcp-replay 
 RUN useradd --uid 10001 --no-create-home earshot && chown -R earshot /app/data
 USER 10001
 EXPOSE 8080
-CMD ["uvicorn", "earshot.api.server:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# No access log: it would write callers' IPs into Log Analytics (30-day retention), against SEC6.
+CMD ["uvicorn", "earshot.api.server:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]
