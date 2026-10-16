@@ -77,5 +77,19 @@
     "es": "Español",
     "ar": "العربية",
     "hi": "हिन्दी"
+  },
+  "agents": {
+    "title": "Behind the voice",
+    "lede": "Six agents share one audio channel. This is what each one last decided.",
+    "airtime": "On air {{seconds}} s of the last minute.",
+    "legendCaller": "play-by-play",
+    "legendAnalyst": "analysis",
+    "legendFallback": "code summary",
+    "agent": "Agent",
+    "decision": "Latest decision",
+    "time": "Clip time",
+    "blocked": "Blocked:",
+    "onAir": "On air:",
+    "idle": "Waiting"
   }
 }

@@ -1,10 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentPanel } from "../components/AgentPanel";
 import { Dot } from "../components/Dot";
 import { type Announcer, LiveRegions } from "../components/LiveRegions";
 import { ARM_FOR, type Output } from "../player/choices";
 import { type Manifest, onAirAt, scoreAt, spokenBy } from "../player/manifest";
 import { useClipPlayer } from "../player/useClipPlayer";
+
+/** The agent column appears at 1024 px and wider (DR-2). */
+function useWide(): boolean {
+  const query = "(min-width: 64rem)";
+  const [wide, setWide] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setWide(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
 
 export function Listen({
   base,
@@ -18,6 +32,7 @@ export function Listen({
   const { t } = useTranslation();
   const [output, setOutput] = useState<Output>(initialOutput);
   const [choosing, setChoosing] = useState(false);
+  const wide = useWide();
   const player = useClipPlayer(base, manifest, ARM_FOR[output]);
   const announcer = useRef<Announcer>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -86,110 +101,120 @@ export function Listen({
 
   const ended = player.state === "ended";
   return (
-    <main className="listen">
-      <LiveRegions ref={announcer} />
-      <section className="plate score" aria-live="off">
-        <h1 ref={heading} tabIndex={-1} className="score__line">
-          {ended
-            ? t("listen.ended", { ...names, homeScore: score.homeScore, awayScore: score.awayScore })
-            : scoreText}
-          <span className="score__status"> {statusText}</span>
-        </h1>
-      </section>
+    <div className="listen-layout">
+      <main className="listen">
+        <LiveRegions ref={announcer} />
+        <section className="plate score" aria-live="off">
+          <h1 ref={heading} tabIndex={-1} className="score__line">
+            {ended
+              ? t("listen.ended", { ...names, homeScore: score.homeScore, awayScore: score.awayScore })
+              : scoreText}
+            <span className="score__status"> {statusText}</span>
+          </h1>
+        </section>
 
-      <section className="onair" aria-label={t("listen.onAir")}>
-        <Dot
-          state={
-            onAir && player.state === "playing" ? (onAir.never_drop ? "never-drop" : "on-air") : "waiting"
-          }
-        />
-        <p className="onair__text">{onAir ? onAir.text : t("listen.waiting")}</p>
-      </section>
+        <section className="onair" aria-label={t("listen.onAir")}>
+          <Dot
+            state={
+              onAir && player.state === "playing" ? (onAir.never_drop ? "never-drop" : "on-air") : "waiting"
+            }
+          />
+          <p className="onair__text">{onAir ? onAir.text : t("listen.waiting")}</p>
+        </section>
 
-      {player.state === "blocked" && (
-        <button ref={restore} type="button" className="primary attention" onClick={() => void player.play()}>
-          {t("listen.restore")}
-        </button>
-      )}
-
-      {choosing ? (
-        <form
-          className="choose"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setChoosing(false);
-            requestAnimationFrame(() => howBtn.current?.focus());
-          }}
-        >
-          <fieldset>
-            <legend>{t("listen.howTalks")}</legend>
-            {(["app", "reader", "oneEar"] as const).map((o, i) => (
-              <label key={o} className="choice">
-                <input
-                  ref={i === 0 ? firstOption : undefined}
-                  type="radio"
-                  name="output"
-                  value={o}
-                  checked={output === o}
-                  onChange={() => setOutput(o)}
-                />
-                <span className="choice__label">
-                  {t(o === "app" ? "listen.outputApp" : "listen.outputReader")}
-                </span>
-                <span className="choice__hint">
-                  {t(o === "app" ? "listen.outputAppHint" : "listen.outputReaderHint")}
-                </span>
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className="primary">
-            {t("listen.close")}
+        {player.state === "blocked" && (
+          <button
+            ref={restore}
+            type="button"
+            className="primary attention"
+            onClick={() => void player.play()}
+          >
+            {t("listen.restore")}
           </button>
-        </form>
-      ) : (
-        <div className="controls">
-          {ended ? (
-            <button type="button" className="primary" onClick={() => void player.play()}>
-              {t("listen.again")}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="primary"
-              onClick={() => (player.state === "playing" ? player.pause() : void player.play())}
-            >
-              {player.state === "playing" ? t("listen.pause") : t("listen.resume")}
-            </button>
-          )}
-          <button ref={howBtn} type="button" className="secondary" onClick={() => setChoosing(true)}>
-            {t("listen.howTalks")}
-          </button>
-        </div>
-      )}
-
-      <section className="transcript" aria-labelledby="transcript-h">
-        <h2 id="transcript-h">{t("listen.transcript")}</h2>
-        {spoken.length === 0 ? (
-          <p className="muted">{t("listen.transcriptEmpty")}</p>
-        ) : (
-          <ol className="transcript__list">
-            {spoken.map((line, i) => (
-              <li
-                key={`${line.t_ms}-${line.template_id}`}
-                className={i === 0 && onAir === line ? "is-current" : undefined}
-              >
-                {line.never_drop && <Dot state="never-drop" />}
-                {line.voice_role === "explanation" ? `${t("listen.analysisPrefix")} ${line.text}` : line.text}
-              </li>
-            ))}
-          </ol>
         )}
-      </section>
 
-      <section className="recaps" aria-labelledby="recaps-h">
-        <h2 id="recaps-h">{t("listen.recaps")}</h2>
-        <p className="muted">{t("listen.recapsEmpty")}</p>
-      </section>
-    </main>
+        {choosing ? (
+          <form
+            className="choose"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setChoosing(false);
+              requestAnimationFrame(() => howBtn.current?.focus());
+            }}
+          >
+            <fieldset>
+              <legend>{t("listen.howTalks")}</legend>
+              {(["app", "reader", "oneEar"] as const).map((o, i) => (
+                <label key={o} className="choice">
+                  <input
+                    ref={i === 0 ? firstOption : undefined}
+                    type="radio"
+                    name="output"
+                    value={o}
+                    checked={output === o}
+                    onChange={() => setOutput(o)}
+                  />
+                  <span className="choice__label">
+                    {t(o === "app" ? "listen.outputApp" : "listen.outputReader")}
+                  </span>
+                  <span className="choice__hint">
+                    {t(o === "app" ? "listen.outputAppHint" : "listen.outputReaderHint")}
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+            <button type="submit" className="primary">
+              {t("listen.close")}
+            </button>
+          </form>
+        ) : (
+          <div className="controls">
+            {ended ? (
+              <button type="button" className="primary" onClick={() => void player.play()}>
+                {t("listen.again")}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary"
+                onClick={() => (player.state === "playing" ? player.pause() : void player.play())}
+              >
+                {player.state === "playing" ? t("listen.pause") : t("listen.resume")}
+              </button>
+            )}
+            <button ref={howBtn} type="button" className="secondary" onClick={() => setChoosing(true)}>
+              {t("listen.howTalks")}
+            </button>
+          </div>
+        )}
+
+        <section className="transcript" aria-labelledby="transcript-h">
+          <h2 id="transcript-h">{t("listen.transcript")}</h2>
+          {spoken.length === 0 ? (
+            <p className="muted">{t("listen.transcriptEmpty")}</p>
+          ) : (
+            <ol className="transcript__list">
+              {spoken.map((line, i) => (
+                <li
+                  key={`${line.t_ms}-${line.template_id}`}
+                  className={i === 0 && onAir === line ? "is-current" : undefined}
+                >
+                  {line.never_drop && <Dot state="never-drop" />}
+                  {line.voice_role === "explanation"
+                    ? `${t("listen.analysisPrefix")} ${line.text}`
+                    : line.text}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        <section className="recaps" aria-labelledby="recaps-h">
+          <h2 id="recaps-h">{t("listen.recaps")}</h2>
+          <p className="muted">{t("listen.recapsEmpty")}</p>
+        </section>
+      </main>
+      {wide && manifest.agents && <AgentPanel manifest={manifest} tMs={player.tMs} />}
+    </div>
   );
 }

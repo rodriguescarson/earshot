@@ -117,16 +117,26 @@ def render_fixture(
     by_id: dict[str, Event] = {}
     states: dict[str, MatchState] = {}
 
+    agents: list[dict] = []
+
+    def log(wall_ms: int, agent: str, text: str, kind: str = "info") -> None:
+        """One decision, for the producer view: who decided what, and when (clip time)."""
+        agents.append({"t_ms": wall_ms - t0, "agent": agent, "kind": kind, "text": text})
+
     def voice_moments(moments: list, st: MatchState) -> None:
         for m in moments:
             trigger = by_id[m.event_ids[0]]
+            log(m.wall_ms, "Spotter", f"{m.kind.value.replace('_', ' ')}, priority {m.priority}")
             for ln in caller.lines(m, trigger, st, language, mode):
+                log(ln.wall_ms, "Caller", f"{ln.template_id}: {ln.text}")
                 v = check_caller_line(ln, m, trigger, st, roster)
                 if v.ok:
                     lines.append(ln)
                     kinds[ln.line_id] = m.kind
+                    log(ln.wall_ms, "Checker", "passed: every name and number re-derived", "ok")
                 else:
                     blocked.append({"line": ln.text, "reason": v.reason})
+                    log(ln.wall_ms, "Checker", f"blocked: {v.reason}", "block")
 
     def analyse_window(ev: StoppageStart) -> list[Line]:
         assert the_analyst is not None
@@ -138,6 +148,26 @@ def render_fixture(
         deadline = ev.wall_ms + ev.expected_dead_ms
         checked = [(c, verify(c, view)) for c in res.claims]
         gated = [(gate_cause(c, view), k) for c, k in checked]
+        if res.error or res.timed_out:
+            log(
+                ready,
+                "Analyst",
+                "timed out: the window summary airs instead"
+                if res.timed_out
+                else "unavailable: the window summary airs instead",
+                "block",
+            )
+        else:
+            tools_used = ", ".join(dict.fromkeys(res.tool_calls)) or "no tools"
+            log(ready, "Analyst", f"{len(res.claims)} claims via {tools_used} ({res.tokens} tokens)")
+        for (c, why), k in gated:
+            label = f"{view.teams.names[c.team_id]} {c.metric.value.replace('_', ' ')} {c.direction.value}"
+            if k.ok:
+                log(ready, "Checker", f"claim verified: {label} ({k.before:.2f} to {k.after:.2f})", "ok")
+            else:
+                log(ready, "Checker", f"claim rejected: {label}: {k.reason}", "block")
+            if why:
+                log(ready, "Checker", f"cause dropped: {why}", "block")
         ok = fresh([(c, k) for (c, _why), k in gated if k.ok], aired_claims, ev.wall_ms)
         out: list[Line] = []
         if ok and not res.timed_out and not res.error:
@@ -231,12 +261,26 @@ def render_fixture(
         Profile(listening_mode=mode), duration_ms=lambda line: clips[line.line_id].duration_ms
     )
     aired = director.run(lines)
+    for x in director.dropped:
+        log(x.at_ms, "Director", f"dropped ({x.reason}): {x.line.text}", "block")
     # Late never-drop lines carry the "earlier" marker: re-voice those with the prefix.
     for i, a in enumerate(aired):
         if a.late:
             late_line = a.line.model_copy(update={"late": True})
             clips[a.line.line_id] = synth.synthesize(ssml_for(late_line, excited=True))
             aired[i] = replace(a, line=late_line)
+
+    for a in aired:
+        role = "explanation voice" if a.line.voice_role.value == "explanation" else "facts voice"
+        log(a.start_ms, "Director", f"on air: {a.line.text}", "air")
+        log(
+            a.start_ms,
+            "Voice",
+            f"{role}, {clips[a.line.line_id].duration_ms / 1000:.1f} s, pan {a.line.pan:+.1f}",
+        )
+        if a.cut_at_ms is not None:
+            log(a.cut_at_ms, "Director", f"cut for a more important line: {a.line.text}", "block")
+    agents.sort(key=lambda e: e["t_ms"])
 
     ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -292,6 +336,7 @@ def render_fixture(
             "tts_characters_sent": synth.characters,
         },
         "blocked": blocked,
+        "agents": agents,
         "analyst_windows": windows,
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2))

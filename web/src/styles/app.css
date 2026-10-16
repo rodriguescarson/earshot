@@ -343,3 +343,137 @@
   text-decoration-thickness: 2px;
   cursor: pointer;
 }
+
+/* Producer column (>= 1024 px) ------------------------------------------ */
+@media (min-width: 64rem) {
+  .listen-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 40rem) minmax(0, 1fr);
+    gap: calc(var(--cell) * 6);
+    width: min(100%, 88rem);
+    margin-inline: auto;
+    padding-inline: calc(var(--cell) * 4);
+    align-items: start;
+  }
+  .listen-layout .listen {
+    width: 100%;
+    padding-inline: 0;
+  }
+}
+
+.agents {
+  position: sticky;
+  top: calc(var(--cell) * 4);
+  padding-block: calc(var(--cell) * 4);
+}
+
+.agents h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.agents__lede {
+  margin: var(--cell) 0 calc(var(--cell) * 3);
+  color: var(--ink-soft);
+}
+
+.airtime {
+  margin: 0 0 calc(var(--cell) * 3);
+}
+
+.airtime svg {
+  display: block;
+  width: 100%;
+  height: 3rem;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+}
+
+.airtime__track,
+.airtime__ground {
+  fill: var(--ground);
+}
+
+.airtime__ink {
+  fill: var(--ink);
+}
+
+.airtime__cut {
+  fill: var(--spot);
+}
+
+.airtime figcaption {
+  margin-top: var(--cell);
+  font-size: 1rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cell);
+  margin-inline-start: var(--cell);
+}
+
+.legend__swatch {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--ink);
+  vertical-align: middle;
+  margin-inline-start: var(--cell);
+}
+
+.legend__swatch--caller {
+  background: var(--ink);
+}
+
+.legend__swatch--analyst {
+  background: repeating-linear-gradient(45deg, var(--ink) 0 3px, var(--ground) 3px 6px);
+}
+
+.legend__swatch--fallback {
+  background: radial-gradient(circle, var(--ink) 30%, var(--ground) 32%) 0 0 / 6px 6px;
+}
+
+.agents__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.agents__table th,
+.agents__table td {
+  text-align: start;
+  vertical-align: top;
+  padding: calc(var(--cell) * 1.5) var(--cell);
+  border-bottom: 1px solid var(--seam);
+}
+
+.agents__table thead th {
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  border-bottom: 2px solid var(--ink);
+}
+
+.agents__table tbody th {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.agents__time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.tag {
+  font-weight: 800;
+}
+
+.tag--air {
+  color: var(--spot);
+}

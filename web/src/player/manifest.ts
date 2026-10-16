@@ -11,7 +11,17 @@ export interface ClipLine {
   never_drop: boolean;
   cut: boolean;
   template_id: string;
+  source?: "caller" | "analyst" | "fallback" | "statwatcher" | "on_demand" | "recap" | "notice";
   pan: number;
+}
+
+export type AgentName = "Spotter" | "Caller" | "Checker" | "Analyst" | "Director" | "Voice";
+
+export interface AgentEntry {
+  t_ms: number;
+  agent: AgentName;
+  kind: "info" | "ok" | "block" | "air";
+  text: string;
 }
 
 export interface TimelinePoint {
@@ -34,6 +44,17 @@ export interface Manifest {
   start: { home_score: number; away_score: number; minute: string };
   lines: ClipLine[];
   timeline: TimelinePoint[];
+  agents?: AgentEntry[];
+}
+
+/** Each agent's latest decision at tMs. */
+export function latestByAgent(m: Manifest, tMs: number): Map<AgentName, AgentEntry> {
+  const out = new Map<AgentName, AgentEntry>();
+  for (const e of m.agents ?? []) {
+    if (e.t_ms > tMs) break;
+    out.set(e.agent, e);
+  }
+  return out;
 }
 
 export interface Score {

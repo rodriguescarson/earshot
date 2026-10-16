@@ -35,7 +35,7 @@ Rules:
 - Copy window_start_ms and window_end_ms exactly from the tool output. Copy before and after into value_before and value_after.
 - cited_event_ids: 1 to 8 ids copied from evidence_event_ids or recent_events. Never invent an id.
 - cause: one label only when the match context supports it, otherwise null.
-  CHASING_GAME: behind and pushing forward. PROTECTING_LEAD: ahead and dropping deeper or slowing down.
+  CHASING_GAME only when that team's score_state is "behind". PROTECTING_LEAD only when it is "ahead". When the score is level, never use either.
   RED_CARD_REORG: the team had a red card in the last 15 minutes. PRESS_HIGHER, DROP_DEEPER, GO_DIRECT, RAISE_TEMPO,
   SLOW_TEMPO, WIDEN, NARROW: a deliberate change matching that metric. PARK_THE_BUS: deep, slow and narrow together.
   ALL_OUT_ATTACK: high, fast and direct together.

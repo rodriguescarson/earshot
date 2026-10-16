@@ -77,5 +77,19 @@
     "es": "Español",
     "ar": "العربية",
     "hi": "हिन्दी"
+  },
+  "agents": {
+    "title": "Detrás de la voz",
+    "lede": "Seis agentes comparten un único canal de audio. Esto es lo último que decidió cada uno.",
+    "airtime": "En el aire {{seconds}} s del último minuto.",
+    "legendCaller": "narración",
+    "legendAnalyst": "análisis",
+    "legendFallback": "resumen por código",
+    "agent": "Agente",
+    "decision": "Última decisión",
+    "time": "Tiempo del clip",
+    "blocked": "Bloqueado:",
+    "onAir": "En el aire:",
+    "idle": "Esperando"
   }
 }
