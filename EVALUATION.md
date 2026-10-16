@@ -138,3 +138,62 @@ separately and are not results of record.
 ### Development runs (not of record)
 - 2026-10-16, engine 1.1.0, `uv run earshot gate --seeds 1-40 --workers 8`: G1, G2, G3 (slice
   means, informational), G4, G5, G6, G9 and G10 all PASS. Details in `reports/gate-slice.json`.
+
+### P1 gate on the full season (run of record for G1-G7, G9, G10)
+2026-10-16, engine 1.1.0, Python 3.12.14, NumPy 2.5.4, pydantic 2.14.1, commit `76d08e3` (branch
+`feat/season-deploy`, after EVALUATION.md was committed in `d8493a8`). Command:
+`uv run earshot gate --seeds 1-380 --workers 8 --model-seeds 301-380 --report reports/gate-season.json`
+
+| Gate | Result | Numbers |
+|---|---|---|
+| G1 determinism | PASS | 380 matches, events, headers and truth identical with 8 workers and 1 |
+| G2 completeness | PASS | 380/380 matches, 674,950 events, every invariant held |
+| G3 realism | PASS | all 7 gated means inside their bands (table below) |
+| G4 truth vocabulary | PASS | 1,702 truth changes, all in the vocabulary; 49 red cards, each followed by RED_CARD_REORG within 60 s |
+| G5 planted signal | PASS | AUC / direction right: press height 0.803 / 87.6%, tempo 0.880 / 98.0%, directness 0.813 / 94.9%, width 0.858 / 98.1%, line height 0.878 / 96.0%; none above 0.97 |
+| G6 baseline detector | PASS | recall 0.408 against 0.093 for time-shuffled truth (4.4x, needed 1.5x); accuracy 0.267; 13.9 false alarms per match |
+| G7 pass difficulty | PASS | rounds 31-38 (seeds 301-380), 65,934 passes: log loss 0.379 vs 0.435 base rate (0.872x, needed <= 0.90x); calibration error 0.0068 (needed <= 0.03; also inside the plan's 0.02) |
+| G8 physical | not run yet | applies to the render match only, once its frames exist |
+| G9 speed | PASS | 380 matches in 3.67 s on 8 workers; slowest match 0.076 s |
+| G10 dead-ball windows | PASS | median 70.5 windows of 15 s or more per match (min 43, max 99); every home goal ends at the right goal |
+
+Season means against the cited bands (G3; "calibrated-to" means tuned on seeds 1-120, which are
+part of the season, so passing is expected; "emergent" was never tuned):
+
+| Metric | Engine | Band | Gated | Tag |
+|---|---|---|---|---|
+| Goals | 2.66 | 2.57-3.61 | yes | calibrated-to |
+| Shots | 24.5 | 22.8-30.4 | yes | calibrated-to |
+| Pass completion | 83.7% | 78.3-86.7% | yes | calibrated-to |
+| Yellow cards | 3.96 | 3.78-4.62 | yes | calibrated-to |
+| Ball in play, min | 54.7 | 49.3-64.0 | yes | calibrated-to |
+| Corners | 10.66 | 9.2-11.3 | yes | calibrated-to |
+| Home win share | 44.2% | 36.0-51.4% | yes | calibrated-to |
+| Fouls | 22.6 | 19.4-24.3 | no | calibrated-to |
+| Penalties | 0.28 | 0.20-0.31 | no | calibrated-to |
+| Passes | 844 | 804-1035 | no | emergent |
+| Throw-ins | 41.6 | 35.1-42.9 | no | calibrated-to |
+| Goal kicks | 16.5 | 15.3-18.7 | no | emergent |
+| Free kicks incl. offside | 26.5 | 29.7-36.3 | no | emergent, **outside** the (Bundesliga, older) reference |
+| Interruptions | 98.2 | 97.2-118.8 | no | emergent |
+| Offsides | 4.12 | 3.46-4.22 | no | calibrated-to |
+| Shots on target | 8.33 | 8.19-10.87 | no | emergent, at the bottom of the band |
+| Red cards | 0.129 | 0.072-0.171 | no | calibrated-to |
+| Added time, min | 9.0 | 8.8-10.7 | no | emergent |
+
+Misses and weak spots, stated: free kicks (including offside restarts) are below the only source
+found, an older Bundesliga sample; shots on target sit at the bottom of their band; goals sit low in
+theirs (2.66 against a 2022-25 EPL span of 2.85-3.28). Shot and pass speeds remain unsourced.
+
+**xT refit (K2).** The danger signal ships with xT refitted on the full season (seeds 1-380,
+`src/earshot/stats/models/xt.json`), frozen at `eval-freeze`. Largest cell change against the
+seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11, y-band 7), which
+had no data on the slice; the grid maximum moved from 0.184 to 0.194.
+
+### Planted-defect harness (development run, not of record)
+`reports/planted-dev.json`: seeds 1-10, 25% injection rate, against Stream 1's Caller and Checker
+(throwaway local merge with `feat/agents-core`). Analyst JSON 660 defects, recall 1.0, false-block
+0.0 on 2,136 clean claims. Slot values (en, ar) 1,158 defects, recall 1.0, false-block 0.0 on
+7,914 clean lines. Roster entries recall 0.0 and names typed into template text recall 0.0: both
+by design (the Checker reads the same roster and templates), and the auditor's job. Template
+numerals recall 1.0. The run of record is on the held-out seeds.
