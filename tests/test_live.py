@@ -8,7 +8,7 @@ import pytest
 from earshot.agents.catalog import load
 from earshot.agents.director import Profile
 from earshot.contract import Language, Line, LineSource, ListeningMode, OutputMode
-from earshot.live.broadcast import MAX_GROUPS, GroupError, GroupKey, LiveMatch
+from earshot.live.broadcast import GROUP_IDLE_S, MAX_GROUPS, GroupError, GroupKey, LiveMatch
 from earshot.live.director import Cut, Drop, LiveDirector, Start
 
 
@@ -179,3 +179,13 @@ def test_a_live_match_publishes_lines_ball_and_state_per_group():
     ar_lines = [msg for g, msg in sent if g == ar.name and msg["kind"] == "line"]
     assert all(msg["audio_url"] is None for msg in ar_lines)  # screen-reader mode: text only
     assert any(any(0x0600 <= ord(ch) <= 0x06FF for ch in msg["text"]) for msg in ar_lines)
+
+
+def test_groups_nobody_listens_to_are_dropped(match26):
+    r, _, _ = match26
+    m, _ = _match(match26, FakeAudio())
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    m.prune(g.last_seen + GROUP_IDLE_S - 1)
+    assert g.key.name in m.groups
+    m.prune(g.last_seen + GROUP_IDLE_S + 1)
+    assert g.key.name not in m.groups

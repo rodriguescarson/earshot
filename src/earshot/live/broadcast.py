@@ -60,6 +60,8 @@ SUMMARY_GAP_MS = 10 * 60_000
 BALL_EVERY_MS = 500
 DAILY_SPEECH_CHARS = 150_000
 MAX_GROUPS = 64
+GROUP_IDLE_S = 45.0
+"""A group nobody has touched for this long is dropped, so it stops costing speech."""
 """4 languages x 2 modes x 3 outputs is 24; following a club or player adds more."""
 """App-level cap (SEC1), below the 500K-characters-a-day alert that fires the kill switch."""
 
@@ -223,6 +225,12 @@ class LiveMatch:
         if len(self.groups) >= MAX_GROUPS:
             raise GroupError("too many listening groups")
 
+    def prune(self, now: float | None = None) -> None:
+        now = time.monotonic() if now is None else now
+        for name, g in list(self.groups.items()):
+            if now - g.last_seen > GROUP_IDLE_S:
+                del self.groups[name]
+
     def summary(self) -> dict[str, Any]:
         names = {c.team_id: c.short_name for c in self.views[Language.EN][0]}
         return {
@@ -260,6 +268,7 @@ class LiveMatch:
             if self.now_ms - last_ball >= BALL_EVERY_MS:
                 last_ball = self.now_ms
                 await self._send_ball()
+            self.prune()
             for g in list(self.groups.values()):
                 for act in g.director.tick(self.now_ms):
                     if isinstance(act, Start):

@@ -73,7 +73,7 @@ class Hub:
 
 
 class GatedAnalyst:
-    """The Analyst, skipped while cached-only mode is on (the window falls back to a summary)."""
+    """The Analyst, skipped while ``off()`` holds (the window falls back to a summary)."""
 
     def __init__(self, analyst: Analyst, off: Callable[[], bool]) -> None:
         self.analyst, self.off = analyst, off
@@ -102,6 +102,10 @@ class Live:
         self.cached_only: Callable[[], bool] = lambda: False
         """The worker points this at its kill-switch flag: no new speech or model calls while set."""
 
+    def analyst_off(self) -> bool:
+        # No model calls in cached-only mode, or while nobody is listening.
+        return self.cached_only() or self.match is None or not self.match.groups
+
     def logs(self) -> list[Path]:
         return sorted(self.match_dir.glob("*.events.jsonl"))
 
@@ -122,7 +126,7 @@ class Live:
                     players,
                     audio=self.audio,
                     send=self.hub.send,
-                    analyst=GatedAnalyst(self.analyst, lambda: self.cached_only()) if self.analyst else None,
+                    analyst=GatedAnalyst(self.analyst, self.analyst_off) if self.analyst else None,
                     speed=self.speed,
                     cached_only=lambda: self.cached_only(),
                 )
@@ -163,6 +167,7 @@ async def stream(request: Request) -> Response:
     live.hub.subscribers[key.name].add(q)
 
     async def events():
+        touched = time.monotonic()
         try:
             yield ": connected\n\n"
             while True:
@@ -170,8 +175,14 @@ async def stream(request: Request) -> Response:
                     data = await asyncio.wait_for(q.get(), timeout=15)
                     yield f"data: {data}\n\n"
                 except TimeoutError:
-                    m.join(key)
                     yield ": keep-alive\n\n"
+                if time.monotonic() - touched >= 15:
+                    # Keep the group alive while someone listens, including across a match restart.
+                    touched = time.monotonic()
+                    current = live.match
+                    if current is not None and current.info.match_id == key.match_id:
+                        with contextlib.suppress(GroupError):
+                            current.join(key)
         finally:
             live.hub.subscribers[key.name].discard(q)
 
