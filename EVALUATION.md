@@ -492,6 +492,37 @@ browser does.
 - the 18 real Analyst calls the day's load tests recorded (p50 2,318 ms). The deployed run's own 4
   were response-cache hits of a replayed match, at 0 ms.
 
+### Template quality: Foundry evaluators (development, 2026-10-16)
+`earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip
+cut off (the commands, and why there were two runs, are in the Stream 2 status). Summary and every
+judged sentence with the judge's reason are in `reports/template-eval-2026-10-16.json`.
+
+**What was judged:**
+- The sentences are what the product airs: lines from three development matches through the live
+  broadcaster, one per template, mode and language.
+- Templates no match produced were rendered with slot values seen in that language.
+- The prefix "Earlier: " was judged on a real goal line.
+- Totals: 544 sentences (256 aired, 280 rendered, 8 composed). 20 template-mode pairs per language
+  were not judged, for want of slot values.
+- **Judge:** Foundry's built-in `FluencyEvaluator` and `CoherenceEvaluator` (`azure-ai-evaluation`
+  1.18) on the `fast` deployment (gpt-5.4-mini), keyless. 1,144 judge calls, 550,399 tokens.
+
+| Language | Sentences | Fluency mean (min) | Below 3 | Coherence mean (min) | Below 3 |
+|---|---|---|---|---|---|
+| English | 136 | 2.65 (1) | 42 | 3.71 (2) | 9 |
+| Spanish | 136 | 2.60 (1) | 49 | 3.61 (2) | 10 |
+| Arabic | 136 | 2.63 (2) | 52 | 3.69 (2) | 6 |
+| Hindi | 136 | 2.61 (1) | 50 | 3.57 (2) | 10 |
+
+**How to read this (a limit-aware check, as pre-registered, not proof of fluency):**
+- The four languages score within 0.05 of each other on fluency and 0.14 on coherence. The check
+  finds no language markedly worse than English.
+- The fluency judge scores the product's style, not errors. Its lowest scores go to short
+  broadcast lines ("Galuela, down the left.", "Throw-in, Sparkwheel.", "Saca Saltwings.",
+  "सॉल्टविंग्स ऑफ़साइड।"), which its reasons call fragments.
+- A few low coherence scores are worth a native reader's look rather than a rewrite, for example
+  Arabic `replay.1` "مرة أخرى، بالصوت.".
+
 ### Load test, trial (development, not of record)
 `earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
 India to Sweden Central. Summary in `reports/loadtest-trial-2026-10-16.json`.
