@@ -90,3 +90,59 @@ def test_one_match_through_the_live_broadcaster():
 
     assert max(yellow(bg)) < max(yellow(inline))
     assert all(x is not None and x <= R.COVERAGE_MS for x in yellow(bg))
+
+
+def test_pacing_keeps_an_hour_under_the_token_budget():
+    from types import SimpleNamespace
+
+    now = [0.0]
+    slept: list[float] = []
+
+    def sleep(s):
+        slept.append(s)
+        now[0] += s
+
+    inner = SimpleNamespace(run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=900))
+    a = R.TimedAnalyst(inner, tokens_per_hour=10_000, clock=lambda: now[0], sleep=sleep)
+    a.run(None, "w1", 20_000)
+    assert slept == []
+    a.run(None, "w2", 20_000)  # 6,000 used + about 6,000 more would pass 10,000: wait out the hour
+    assert sum(slept) >= 3_540
+    assert a.paused_s == pytest.approx(sum(slept), abs=60)
+    capped = R.TimedAnalyst(inner, max_calls=1)
+    capped.run(None, "w1", 20_000)
+    assert capped.run(None, "w2", 20_000).error == "skipped: call cap"
+    assert len(capped.calls) == 1
+
+
+@needs_live
+def test_real_analyst_path_grades_cause_labels_against_the_truth_log():
+    from earshot.agents.analyst import AnalystResult
+    from earshot.contract.claim import Claim, Direction, Metric
+
+    r = simulate(26)
+    at = {e.event_id: e.wall_ms for e in r.events}
+
+    class Oracle:  # peeks at the truth log: every label it gives must grade as correct
+        def run(self, view, window_id, expected_dead_ms):
+            sid = window_id.removesuffix("-w")
+            t = at[sid]
+            recent = [c for c in r.truth if 0 <= t - c.wall_ms <= 12 * 60_000]
+            claims = [
+                Claim(team_id=c.team_id, metric=Metric.PRESS_HEIGHT, direction=Direction.UP,
+                      window_start_ms=max(0, t - 600_000), window_end_ms=t, cause=c.label,
+                      cited_event_ids=[sid])
+                for c in recent[-1:]
+            ]  # fmt: skip
+            return AnalystResult(window_id, claims=claims, tokens=1_000, latency_ms=800)
+
+    m = R.evaluate_match(26, R.LatencyModel.provisional_default(), R.TimedAnalyst(Oracle()))
+    ex = m["explanations"]
+    assert ex["windows"] == len(m["explanations"]["analyst_calls"])
+    assert ex["analyst_proposed"]["labels"] > 0
+    assert ex["analyst_proposed"]["correct"] == ex["analyst_proposed"]["labels"]
+    assert ex["analyst_aired"]["labels"] <= ex["analyst_proposed"]["labels"]  # the claim check filters
+    assert set(ex["baseline"]) == set(R.GRADE_KEYS)
+    s = R.summarize([m], R.LatencyModel.provisional_default(), 1.0, 1)
+    assert s["explanations"]["analyst_proposed"]["accuracy"] == 1.0
+    assert s["explanations"]["analyst_calls"]["tokens_total"] == 1_000 * ex["windows"]

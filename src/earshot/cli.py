@@ -90,6 +90,13 @@ def main(argv: list[str] | None = None) -> None:
         default="background",
         help="background: as built (window runs on their own task); inline: the feeder waits for each",
     )
+    s.add_argument(
+        "--real-analyst", action="store_true", help="real Analyst calls (Foundry) in every analysis window"
+    )
+    s.add_argument(
+        "--tokens-per-hour", type=int, default=400_000, help="pace for --real-analyst (alert: 500K)"
+    )
+    s.add_argument("--max-calls", type=int, default=None, help="cap Analyst calls per match (trial runs)")
     s.add_argument("--out", type=Path, required=True, help="summary JSON; per-match rows go next to it")
 
     s = sub.add_parser(
@@ -245,7 +252,14 @@ def main(argv: list[str] | None = None) -> None:
         from earshot.eval.run import LatencyModel, run_season
 
         latency = LatencyModel.load(args.latency) if args.latency else LatencyModel.provisional_default()
-        summary, matches = run_season(args.seeds, latency, workers=args.workers, windows=args.windows)
+        analyst = (
+            {"tokens_per_hour": args.tokens_per_hour, "max_calls": args.max_calls}
+            if args.real_analyst
+            else None
+        )
+        summary, matches = run_season(
+            args.seeds, latency, workers=args.workers, windows=args.windows, analyst=analyst
+        )
         summary["command"] = "uv run earshot " + " ".join(argv if argv is not None else sys.argv[1:])
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(summary, indent=1) + "\n")
