@@ -301,6 +301,62 @@
     "replay.1": {
       "casual": "Otra vez, en sonido.",
       "analyst": "Otra vez, en sonido."
+    },
+    "recap.half_time.1": {
+      "casual": "Resumen del descanso. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Resumen del descanso. {home} {home_score}, {away} {away_score}."
+    },
+    "recap.full_time.1": {
+      "casual": "Resumen final. {home} {home_score}, {away} {away_score}.",
+      "analyst": "Resumen final. {home} {home_score}, {away} {away_score}."
+    },
+    "recap.goal.1": {
+      "casual": "Gol de {player} para {club}, minuto {minute}.",
+      "analyst": "Gol de {player} para {club}, minuto {minute}."
+    },
+    "recap.own_goal.1": {
+      "casual": "Gol en propia puerta de {player}, a favor de {club}, minuto {minute}.",
+      "analyst": "Gol en propia puerta de {player}, a favor de {club}, minuto {minute}."
+    },
+    "recap.no_goals.1": {
+      "casual": "No ha habido goles.",
+      "analyst": "No ha habido goles."
+    },
+    "recap.red_card.1": {
+      "casual": "{player}, de {club}, fue expulsado en el minuto {minute}.",
+      "analyst": "{player}, de {club}, fue expulsado en el minuto {minute}."
+    },
+    "recap.shots.1": {
+      "casual": "{club} tiró más.",
+      "analyst": "Tiros: {home} {home_shots}, {away} {away_shots}."
+    },
+    "recap.shots_level.1": {
+      "casual": "Los equipos igualaron en tiros."
+    },
+    "recap.possession.1": {
+      "casual": "{club} tuvo más el balón.",
+      "analyst": "{club} tuvo el {percent} % del balón."
+    },
+    "stat.shot_speed.1": {
+      "analyst": "Velocidad de disparo: {player}, {speed} kilómetros por hora."
+    },
+    "stat.pass_difficulty.made.1": {
+      "analyst": "Pase muy difícil de {player}, dificultad {value}, y le sale."
+    },
+    "stat.pass_difficulty.missed.1": {
+      "analyst": "Pase muy difícil de {player}, dificultad {value}, y no le sale."
+    },
+    "stat.press_height.up.1": {
+      "analyst": "Altura de presión: {club} sube de {before} a {after} metros en los últimos {window_min} minutos."
+    },
+    "stat.press_height.down.1": {
+      "analyst": "Altura de presión: {club} baja de {before} a {after} metros en los últimos {window_min} minutos."
+    },
+    "stat.possession.up.1": {
+      "analyst": "Posesión: {club} sube del {before} al {after} % en los últimos {window_min} minutos."
+    },
+    "stat.danger.1": {
+      "analyst": "Peligro: {club} está generando mucho peligro en los últimos {window_min} minutos."
     }
   }
 }

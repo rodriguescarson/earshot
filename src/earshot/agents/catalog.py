@@ -31,6 +31,8 @@ NUMERIC_SLOTS = frozenset(
     {
         "home_score",
         "away_score",
+        "home_shots",
+        "away_shots",
         "speed",
         "distance",
         "count",

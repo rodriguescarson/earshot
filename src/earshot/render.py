@@ -31,8 +31,10 @@ from earshot.agents.claims import (
 from earshot.agents.director import Director, Profile
 from earshot.agents.spotter import Spotter
 from earshot.agents.state import MatchState, Roster, is_goal, spoken_minute
+from earshot.agents.statwatcher import StatWatcher, check_stat_line, stat_line
 from earshot.contract import (
     Event,
+    FocusStat,
     Language,
     Line,
     LineSource,
@@ -124,6 +126,7 @@ def render_fixture(
     cache: Path,
     analyst: bool = True,
     replay: bool = True,
+    stat: FocusStat | None = None,
 ) -> dict:
     d = json.loads(fixture.read_text())
     match = MatchInfo(**d["match"])
@@ -323,6 +326,25 @@ def render_fixture(
             pending.clear()
     voice_moments(spotter.flush(), state)
     lines.extend(pending)
+    if stat is not None and mode is ListeningMode.ANALYST:
+        clubs, players = localized(d, language)
+        watcher = StatWatcher(match.home.team_id, match.away.team_id)
+        for ev in all_events:
+            if ev.wall_ms > clip["end_wall_ms"]:
+                break
+            for c in watcher.push(ev):
+                if c.stat is not stat or c.wall_ms < t0:
+                    continue
+                view = MatchView.of(match, clubs, players, all_events, c.wall_ms + 1)
+                ln = stat_line(c, view, language)
+                log(ln.wall_ms, "StatWatcher", f"{c.stat.value} crossing: {ln.text}")
+                v = check_stat_line(ln, view)
+                if v.ok:
+                    lines.append(ln)
+                    log(ln.wall_ms, "Checker", "passed: recomputed from the events", "ok")
+                else:
+                    blocked.append({"line": ln.text, "reason": v.reason})
+                    log(ln.wall_ms, "Checker", f"blocked: {v.reason}", "block")
 
     ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     synth = Synthesizer(cache)
@@ -336,7 +358,7 @@ def render_fixture(
             goal_id = ln.line_id.split("-replay-")[0]
             clips[ln.line_id] = replay_clip(synth, ln, by_id[goal_id].wall_ms, ball, cache)
     director = Director(
-        Profile(listening_mode=mode), duration_ms=lambda line: clips[line.line_id].duration_ms
+        Profile(listening_mode=mode, stat=stat), duration_ms=lambda line: clips[line.line_id].duration_ms
     )
     aired = director.run(lines)
     for x in director.dropped:
@@ -432,6 +454,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--arms", default="speech,pan,full,bed,mono")
     p.add_argument("--cache", type=Path, default=Path("data/tts-cache"))
     p.add_argument("--no-analyst", action="store_true", help="Caller only (no model calls)")
+    p.add_argument("--stat", type=FocusStat, default=None, help="follow one stat (Analyst mode)")
     a = p.parse_args(argv)
     m = render_fixture(
         a.fixture,
@@ -440,6 +463,8 @@ def main(argv: list[str] | None = None) -> None:
         mode=a.mode,
         arms=[Arm(x) for x in a.arms.split(",")],
         cache=a.cache,
+        analyst=not a.no_analyst,
+        stat=a.stat,
     )
     print(json.dumps(m["stats"]), json.dumps(m["audio"]))
 

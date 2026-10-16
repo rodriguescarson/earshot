@@ -301,6 +301,62 @@
     "replay.1": {
       "casual": "फिर से सुनिए, आवाज़ में।",
       "analyst": "फिर से सुनिए, आवाज़ में।"
+    },
+    "recap.half_time.1": {
+      "casual": "हाफ़-टाइम सार। {home} {home_score}, {away} {away_score}।",
+      "analyst": "हाफ़-टाइम सार। {home} {home_score}, {away} {away_score}।"
+    },
+    "recap.full_time.1": {
+      "casual": "फ़ुल-टाइम सार। {home} {home_score}, {away} {away_score}।",
+      "analyst": "फ़ुल-टाइम सार। {home} {home_score}, {away} {away_score}।"
+    },
+    "recap.goal.1": {
+      "casual": "{player} ने {club} के लिए गोल किया, मिनट {minute}।",
+      "analyst": "{player} ने {club} के लिए गोल किया, मिनट {minute}।"
+    },
+    "recap.own_goal.1": {
+      "casual": "{player} का आत्मघाती गोल {club} के खाते में गया, मिनट {minute}।",
+      "analyst": "{player} का आत्मघाती गोल {club} के खाते में गया, मिनट {minute}।"
+    },
+    "recap.no_goals.1": {
+      "casual": "कोई गोल नहीं हुआ।",
+      "analyst": "कोई गोल नहीं हुआ।"
+    },
+    "recap.red_card.1": {
+      "casual": "{club} के {player} को बाहर भेजा गया, मिनट {minute}।",
+      "analyst": "{club} के {player} को बाहर भेजा गया, मिनट {minute}।"
+    },
+    "recap.shots.1": {
+      "casual": "{club} ने ज़्यादा शॉट लगाए।",
+      "analyst": "शॉट: {home} {home_shots}, {away} {away_shots}।"
+    },
+    "recap.shots_level.1": {
+      "casual": "शॉट बराबर रहे।"
+    },
+    "recap.possession.1": {
+      "casual": "गेंद ज़्यादातर {club} के पास रही।",
+      "analyst": "{club} के पास {percent} प्रतिशत गेंद रही।"
+    },
+    "stat.shot_speed.1": {
+      "analyst": "शॉट की रफ़्तार: {player}, {speed} किलोमीटर प्रति घंटा।"
+    },
+    "stat.pass_difficulty.made.1": {
+      "analyst": "{player} का बहुत मुश्किल पास, कठिनाई {value}, और पास सफल।"
+    },
+    "stat.pass_difficulty.missed.1": {
+      "analyst": "{player} का बहुत मुश्किल पास, कठिनाई {value}, पर पास नाकाम।"
+    },
+    "stat.press_height.up.1": {
+      "analyst": "प्रेस की ऊँचाई: पिछले {window_min} मिनट में {club} {before} से बढ़कर {after} मीटर।"
+    },
+    "stat.press_height.down.1": {
+      "analyst": "प्रेस की ऊँचाई: पिछले {window_min} मिनट में {club} {before} से घटकर {after} मीटर।"
+    },
+    "stat.possession.up.1": {
+      "analyst": "कब्ज़ा: पिछले {window_min} मिनट में {club} {before} से बढ़कर {after} प्रतिशत।"
+    },
+    "stat.danger.1": {
+      "analyst": "ख़तरा: पिछले {window_min} मिनट में {club} बहुत ख़तरनाक रहे हैं।"
     }
   }
 }

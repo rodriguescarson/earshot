@@ -2,10 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dot } from "../components/Dot";
 import { type Announcer, LiveRegions } from "../components/LiveRegions";
-import { audioUrl, connect, type LineMessage, type LiveSummary, onDemand } from "../live/client";
+import {
+  audioUrl,
+  connect,
+  type LineMessage,
+  type LiveSummary,
+  onDemand,
+  type RecapMessage,
+} from "../live/client";
 import { Continuous } from "../live/continuous";
 import { sharedAudio } from "../player/audioElement";
-import type { Choices } from "../player/choices";
+import { type Choices, followed } from "../player/choices";
 
 const WIRE_OUTPUT = { app: "app_voice", reader: "screen_reader", oneEar: "one_ear" } as const;
 const STALE_MS = 4000;
@@ -19,7 +26,8 @@ interface Queued {
 export function LiveListen({ choices, summary }: { choices: Choices; summary: LiveSummary }) {
   const { t } = useTranslation();
   const group = useMemo(
-    () => `${summary.match_id}.${choices.lang}.${choices.mode}.${WIRE_OUTPUT[choices.output]}.-.-.-`,
+    () =>
+      `${summary.match_id}.${choices.lang}.${choices.mode}.${WIRE_OUTPUT[choices.output]}.-.-.${followed(choices) ?? "-"}`,
     [summary.match_id, choices],
   );
   const [score, setScore] = useState({
@@ -31,6 +39,7 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
   const [spoken, setSpoken] = useState<{ seq: number; line: LineMessage }[]>([]);
   const seq = useRef(0);
   const [paused, setPaused] = useState(false);
+  const [recaps, setRecaps] = useState<RecapMessage[]>([]);
   const [down, setDown] = useState(false);
   const announcer = useRef<Announcer>(null);
   const current = useRef<LineMessage | null>(null);
@@ -89,6 +98,8 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
 
   const playRef = useRef(play);
   playRef.current = play;
+  const tRef = useRef(t);
+  tRef.current = t;
   const oneEar = choices.output === "oneEar";
 
   useEffect(() => {
@@ -103,6 +114,11 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
         else if (m.kind === "state")
           setScore((s) => ({ home: m.home_score, away: m.away_score, minute: m.minute ?? s.minute }));
         else if (m.kind === "ball") layer.current?.ball(m.x, m.danger, m.in_play ?? true);
+        else if (m.kind === "recap") {
+          // Recaps go to their own section, never through the live region line by line (design: Recaps).
+          setRecaps((rs) => [...rs.filter((r) => r.period !== m.period), m]);
+          announcer.current?.announce(tRef.current(`listen.recapReady.${m.period}`));
+        }
       },
       () => setDown(true),
     );
@@ -203,7 +219,16 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
       </section>
       <section className="recaps" aria-labelledby="live-recaps-h">
         <h2 id="live-recaps-h">{t("listen.recaps")}</h2>
-        <p className="muted">{t("listen.recapsEmpty")}</p>
+        {recaps.length === 0 ? (
+          <p className="muted">{t("listen.recapsEmpty")}</p>
+        ) : (
+          recaps.map((r) => (
+            <article key={r.period} className="recap">
+              <h3>{t(`listen.recapTitle.${r.period}`)}</h3>
+              <p>{r.text}</p>
+            </article>
+          ))
+        )}
       </section>
     </main>
   );

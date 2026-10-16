@@ -37,7 +37,14 @@ export interface StateMessage {
   minute?: string;
   status: string;
 }
-export type LiveMessage = LineMessage | BallMessage | StateMessage;
+export interface RecapMessage {
+  kind: "recap";
+  period: "half_time" | "full_time";
+  text: string;
+  lines: string[];
+}
+
+export type LiveMessage = LineMessage | BallMessage | StateMessage | RecapMessage;
 
 export function liveAvailable(): boolean {
   return LIVE_BASE !== "";

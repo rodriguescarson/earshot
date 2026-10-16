@@ -301,6 +301,62 @@
     "replay.1": {
       "casual": "مرة أخرى، بالصوت.",
       "analyst": "مرة أخرى، بالصوت."
+    },
+    "recap.half_time.1": {
+      "casual": "ملخص الاستراحة. {home} {home_score}، {away} {away_score}.",
+      "analyst": "ملخص الاستراحة. {home} {home_score}، {away} {away_score}."
+    },
+    "recap.full_time.1": {
+      "casual": "ملخص المباراة. {home} {home_score}، {away} {away_score}.",
+      "analyst": "ملخص المباراة. {home} {home_score}، {away} {away_score}."
+    },
+    "recap.goal.1": {
+      "casual": "سجل {player} لفريق {club} في الدقيقة {minute}.",
+      "analyst": "سجل {player} لفريق {club} في الدقيقة {minute}."
+    },
+    "recap.own_goal.1": {
+      "casual": "هدف عكسي من {player} احتسب لفريق {club} في الدقيقة {minute}.",
+      "analyst": "هدف عكسي من {player} احتسب لفريق {club} في الدقيقة {minute}."
+    },
+    "recap.no_goals.1": {
+      "casual": "لم تسجل أهداف.",
+      "analyst": "لم تسجل أهداف."
+    },
+    "recap.red_card.1": {
+      "casual": "طرد {player} من فريق {club} في الدقيقة {minute}.",
+      "analyst": "طرد {player} من فريق {club} في الدقيقة {minute}."
+    },
+    "recap.shots.1": {
+      "casual": "سدد فريق {club} أكثر.",
+      "analyst": "التسديدات: {home} {home_shots}، {away} {away_shots}."
+    },
+    "recap.shots_level.1": {
+      "casual": "تعادل عدد التسديدات."
+    },
+    "recap.possession.1": {
+      "casual": "استحوذ فريق {club} على الكرة أكثر.",
+      "analyst": "استحوذ فريق {club} على {percent}٪ من الكرة."
+    },
+    "stat.shot_speed.1": {
+      "analyst": "سرعة التسديدة: {player}، {speed} كيلومترًا في الساعة."
+    },
+    "stat.pass_difficulty.made.1": {
+      "analyst": "تمريرة صعبة جدًا من {player}، صعوبتها {value}، وتنجح."
+    },
+    "stat.pass_difficulty.missed.1": {
+      "analyst": "تمريرة صعبة جدًا من {player}، صعوبتها {value}، ولا تنجح."
+    },
+    "stat.press_height.up.1": {
+      "analyst": "ارتفاع الضغط: فريق {club} يرتفع من {before} إلى {after} مترًا خلال آخر {window_min} دقائق."
+    },
+    "stat.press_height.down.1": {
+      "analyst": "ارتفاع الضغط: فريق {club} ينخفض من {before} إلى {after} مترًا خلال آخر {window_min} دقائق."
+    },
+    "stat.possession.up.1": {
+      "analyst": "الاستحواذ: فريق {club} يرتفع من {before}٪ إلى {after}٪ خلال آخر {window_min} دقائق."
+    },
+    "stat.danger.1": {
+      "analyst": "الخطورة: فريق {club} يشكل خطرًا كبيرًا خلال آخر {window_min} دقائق."
     }
   }
 }

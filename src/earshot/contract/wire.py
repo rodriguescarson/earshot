@@ -44,4 +44,13 @@ class StateMsg(_Msg):
     status: Literal["before_kickoff", "live", "half_time", "full_time"]
 
 
-WireMsg = Annotated[LineMsg | BallMsg | StateMsg, Field(discriminator="kind")]
+class RecapMsg(_Msg):
+    """Half-time or full-time recap for the screen's Recaps section (its lines also air as LineMsgs)."""
+
+    kind: Literal["recap"] = "recap"
+    period: Literal["half_time", "full_time"]
+    text: str
+    lines: list[str]
+
+
+WireMsg = Annotated[LineMsg | BallMsg | StateMsg | RecapMsg, Field(discriminator="kind")]

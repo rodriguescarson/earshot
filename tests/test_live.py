@@ -189,3 +189,39 @@ def test_groups_nobody_listens_to_are_dropped(match26):
     assert g.key.name in m.groups
     m.prune(g.last_seen + GROUP_IDLE_S + 1)
     assert g.key.name not in m.groups
+
+
+def test_stat_lines_reach_followers_and_recaps_reach_every_group(match26):
+    from earshot.contract import FocusStat, PeriodEnd
+
+    r, _, _ = match26
+    m, sent = _match(match26, FakeAudio())
+    mid = r.info.match_id
+    follow = m.join(
+        GroupKey(mid, Language.EN, ListeningMode.ANALYST, OutputMode.APP_VOICE, stat=FocusStat.SHOT_SPEED)
+    )
+    plain = m.join(GroupKey(mid, Language.EN, ListeningMode.ANALYST, OutputMode.APP_VOICE))
+    reader = m.join(GroupKey(mid, Language.AR, ListeningMode.CASUAL, OutputMode.SCREEN_READER))
+    with pytest.raises(GroupError):
+        m.join(GroupKey(mid, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE, stat=FocusStat.DANGER))
+    half = next(e for e in r.events if isinstance(e, PeriodEnd) and e.period_id == 1)
+
+    async def go():
+        for ev in r.events:
+            if ev.wall_ms > half.wall_ms:
+                break
+            m.seen.append(ev)
+            for c in m.watcher.push(ev):
+                m._stat_lines(c)
+        m._recaps("half_time", half)
+        await asyncio.gather(*list(m._tasks))
+
+    asyncio.run(go())
+    queued = {g.key.name: [ln.source.value for ln, _ in g.director.queue] for g in (follow, plain, reader)}
+    assert "statwatcher" in queued[follow.key.name]
+    assert "statwatcher" not in queued[plain.key.name]
+    assert "recap" in queued[plain.key.name]
+    assert "recap" not in queued[reader.key.name]  # screen-reader mode: the Recaps section only
+    recaps = {g: msg for g, msg in sent if msg["kind"] == "recap"}
+    assert set(recaps) == {follow.key.name, plain.key.name, reader.key.name}
+    assert recaps[reader.key.name]["text"].startswith("ملخص الاستراحة")
