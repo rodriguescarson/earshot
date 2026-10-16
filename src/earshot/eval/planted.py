@@ -253,7 +253,12 @@ def roster_point(matches, clubs_of, players_of, language, mode, seed: int = 3,
         for ln, m, trig, st, roster in _caller_items(
             events, info, clubs_of(info), swapped, language, mode, wrong
         ):
-            cls = "wrong_name_for_id" if target in m.player_ids[:1] else None
+            # Defective when the line names the swapped player in any role (actor, keeper, on, off),
+            # not only as the actor: "X comes on for <wrong name>" is as wrong as the actor case.
+            names_target = target in m.player_ids and other["short_name"] in {
+                str(v) for v in ln.slots.values()
+            }
+            cls = "wrong_name_for_id" if names_target else None
             if auditor is not None:
                 res.add(cls, auditor(ln, reference), "auditor")
             else:

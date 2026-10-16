@@ -33,6 +33,8 @@ from earshot.stats.claims import window_values
 
 REVIEWED_TEMPLATES = Path(__file__).parent.parent / "agents" / "templates"
 NAME_SLOTS = frozenset({"player", "keeper", "club", "home", "away", "on", "off"})
+ID_SLOTS = {"player": 0, "keeper": 1, "on": 0, "off": 1}
+"""Which of a line's ``player_ids`` each name slot must be: [actor, keeper], or [on, off] for a sub."""
 LEXICON_SLOTS = frozenset({"zone", "side", "stoppage", "var_subject", "cause"})
 DIGITS = re.compile(r"[0-9٠-٩۰-۹०-९]")
 SAY_AS = re.compile(r"<say-as\b[^>]*>(.*?)</say-as>", re.S)
@@ -306,14 +308,14 @@ class Auditor:
             if value not in {self.club_names.get(t) for t in teams}:
                 found("name", f"club={value!r} is not the reviewed name of {sorted(teams)}")
             return
-        if slot in ("player", "keeper") and line.player_ids:
-            i = 0 if slot == "player" else 1
+        if slot in ID_SLOTS and line.player_ids:
+            i = ID_SLOTS[slot]
             if i < len(line.player_ids):
                 want = self.player_names.get(line.player_ids[i])
                 if value != want:
                     found("name", f"{slot}={value!r}, reviewed name for {line.player_ids[i]} is {want!r}")
                 return
-        # on/off and recap scorers: the name must belong to this match's reviewed roster
+        # recap scorers and anything without ids: the name must belong to this match's reviewed roster
         teams = set(line.club_tags) or {self.home, self.away}
         names = {n for pid, n in self.player_names.items() if self.player_team.get(pid) in teams}
         if value not in names:
@@ -353,7 +355,7 @@ def reference_blocked(line: Line, reference) -> bool:
     values = parse(line)
     if values is None:
         return True
-    for slot, i in (("player", 0), ("keeper", 1)):
+    for slot, i in ID_SLOTS.items():
         if (
             slot in values
             and i < len(line.player_ids)
