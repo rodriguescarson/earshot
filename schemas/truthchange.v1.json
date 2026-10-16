@@ -1,0 +1,74 @@
+{
+  "$defs": {
+    "CauseLabel": {
+      "description": "Closed vocabulary. The first nine are scripted changes; the last three follow match events.",
+      "enum": [
+        "PRESS_HIGHER",
+        "DROP_DEEPER",
+        "GO_DIRECT",
+        "RAISE_TEMPO",
+        "SLOW_TEMPO",
+        "WIDEN",
+        "NARROW",
+        "PARK_THE_BUS",
+        "ALL_OUT_ATTACK",
+        "RED_CARD_REORG",
+        "CHASING_GAME",
+        "PROTECTING_LEAD"
+      ],
+      "title": "CauseLabel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "delta": {
+      "title": "Delta",
+      "type": "number"
+    },
+    "deltas": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "default": {},
+      "title": "Deltas",
+      "type": "object"
+    },
+    "label": {
+      "$ref": "#/$defs/CauseLabel"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "ramp_ms": {
+      "minimum": 0,
+      "title": "Ramp Ms",
+      "type": "integer"
+    },
+    "setting": {
+      "title": "Setting",
+      "type": "string"
+    },
+    "team_id": {
+      "title": "Team Id",
+      "type": "string"
+    },
+    "wall_ms": {
+      "minimum": 0,
+      "title": "Wall Ms",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "match_id",
+    "team_id",
+    "label",
+    "wall_ms",
+    "ramp_ms",
+    "setting",
+    "delta"
+  ],
+  "title": "TruthChange",
+  "type": "object"
+}

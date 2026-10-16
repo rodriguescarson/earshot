@@ -1,0 +1,61 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "clock_ms": {
+      "minimum": 0,
+      "title": "Clock Ms",
+      "type": "integer"
+    },
+    "in_play": {
+      "title": "In Play",
+      "type": "boolean"
+    },
+    "period_id": {
+      "enum": [
+        1,
+        2
+      ],
+      "title": "Period Id",
+      "type": "integer"
+    },
+    "team_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Team Id"
+    },
+    "wall_ms": {
+      "minimum": 0,
+      "title": "Wall Ms",
+      "type": "integer"
+    },
+    "x": {
+      "maximum": 105.0,
+      "minimum": 0.0,
+      "title": "X",
+      "type": "number"
+    },
+    "y": {
+      "maximum": 68.0,
+      "minimum": 0.0,
+      "title": "Y",
+      "type": "number"
+    }
+  },
+  "required": [
+    "wall_ms",
+    "period_id",
+    "clock_ms",
+    "x",
+    "y",
+    "in_play",
+    "team_id"
+  ],
+  "title": "BallSample",
+  "type": "object"
+}
