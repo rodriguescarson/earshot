@@ -7,21 +7,14 @@ from dataclasses import dataclass
 
 from earshot.contract import Action, Card, Event, Metric
 from earshot.contract.events import CardColor
+from earshot.stats.claims import THRESHOLD as CLAIM_THRESHOLD
 from earshot.stats.football import is_goal, scoring_team_id, spoken_minute
 from earshot.stats.metrics import Window, metric
 
 WINDOW_MINUTES = (5, 10)
 
-THRESHOLD: dict[Metric, float] = {
-    Metric.PRESS_HEIGHT: 4.0,
-    Metric.TEMPO: 3.0,
-    Metric.DIRECTNESS: 0.08,
-    Metric.WIDTH: 3.0,
-    Metric.LINE_HEIGHT: 4.0,
-    Metric.POSSESSION_SHARE: 0.10,
-    Metric.SHOT_COUNT: 2.0,
-}
-"""Smallest change worth a claim. The Checker rejects claims about anything smaller."""
+THRESHOLD = CLAIM_THRESHOLD
+"""One definition, shared with the Checker and the evaluation (``earshot.stats.claims``)."""
 
 UNIT: dict[Metric, str] = {
     Metric.PRESS_HEIGHT: "metres from own goal",

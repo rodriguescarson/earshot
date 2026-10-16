@@ -23,12 +23,10 @@ from earshot.contract import (
     VoiceRole,
 )
 from earshot.contract.line import SlotValue
-from earshot.stats.metrics import Window, metric
-from earshot.tools.match import THRESHOLD, WINDOW_MINUTES, MatchView
+from earshot.stats.claims import verify_claim
+from earshot.tools.match import THRESHOLD, MatchView
 
 SHARE_METRICS = frozenset({Metric.DIRECTNESS, Metric.POSSESSION_SHARE})
-VALUE_TOLERANCE = {Metric.DIRECTNESS: 0.02, Metric.POSSESSION_SHARE: 0.02}
-DEFAULT_TOLERANCE = 0.75
 MAX_CLAIM_AGE_MS = 15 * 60_000
 
 
@@ -46,57 +44,14 @@ class ClaimCheck:
 
 
 def verify(claim: Claim, view: MatchView) -> ClaimCheck:
-    teams = (view.teams.home_id, view.teams.away_id)
-    if claim.team_id not in teams:
+    """Recompute a claim with the single shared verifier (``earshot.stats.claims``), plus two
+    checks that only make sense at airtime: the team is in this match, and the window is recent."""
+    if claim.team_id not in (view.teams.home_id, view.teams.away_id):
         return ClaimCheck(False, f"unknown team {claim.team_id}")
-    if claim.window_end_ms > view.now_wall_ms:
-        return ClaimCheck(False, "window ends in the future")
     if claim.window_start_ms < view.now_wall_ms - MAX_CLAIM_AGE_MS:
-        return ClaimCheck(False, "window too old")
-    span = claim.window_end_ms - claim.window_start_ms
-    if not any(abs(span - m * 60_000) <= 1_000 for m in WINDOW_MINUTES):
-        return ClaimCheck(False, f"window length {span} ms is not one of {WINDOW_MINUTES} minutes")
-    past = view.past()
-    before = metric(
-        claim.metric,
-        past,
-        Window(claim.team_id, claim.window_start_ms - span, claim.window_start_ms),
-        view.teams.home_id,
-        view.positions,
-    )
-    after = metric(
-        claim.metric,
-        past,
-        Window(claim.team_id, claim.window_start_ms, claim.window_end_ms),
-        view.teams.home_id,
-        view.positions,
-    )
-    if before is None or after is None:
-        return ClaimCheck(False, "not enough evidence to verify")
-    change = after - before
-    if (change > 0) != (claim.direction is Direction.UP) or change == 0:
-        return ClaimCheck(
-            False, f"direction {claim.direction.value} contradicts change {change:+.3f}", before, after
-        )
-    if abs(change) < THRESHOLD[claim.metric]:
-        return ClaimCheck(
-            False, f"change {change:+.3f} below threshold {THRESHOLD[claim.metric]}", before, after
-        )
-    tol = VALUE_TOLERANCE.get(claim.metric, DEFAULT_TOLERANCE)
-    for name, given, actual in (
-        ("value_before", claim.value_before, before),
-        ("value_after", claim.value_after, after),
-    ):
-        if given is not None and abs(given - actual) > tol:
-            return ClaimCheck(False, f"{name} {given} != recomputed {actual:.3f}", before, after)
-    ids = {e.event_id: e for e in past}
-    for eid in claim.cited_event_ids:
-        ev = ids.get(eid)
-        if ev is None:
-            return ClaimCheck(False, f"cited event {eid} does not exist", before, after)
-        if not (claim.window_start_ms - span <= ev.wall_ms < claim.window_end_ms):
-            return ClaimCheck(False, f"cited event {eid} is outside the windows", before, after)
-    return ClaimCheck(True, "", before, after)
+        return ClaimCheck(False, "window too old to air")
+    v = verify_claim(claim, view.events, view.teams.home_id, view.positions, view.now_wall_ms)
+    return ClaimCheck(v.ok, "" if v.ok else v.reason, v.before, v.after)
 
 
 _UP, _DOWN = Direction.UP, Direction.DOWN

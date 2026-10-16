@@ -112,11 +112,11 @@ def test_a_true_claim_verifies_with_the_recomputed_numbers(world):
 @pytest.mark.parametrize(
     ("defect", "reason"),
     [
-        ("wrong_direction", "contradicts"),
-        ("fabricated_value", "recomputed"),
+        ("wrong_direction", "direction wrong"),
+        ("fabricated_value", "computed"),
         ("missing_event", "does not exist"),
         ("future_window", "future"),
-        ("odd_window", "window length"),
+        ("odd_window", "outside 2-20 min"),
         ("unknown_team", "unknown team"),
     ],
 )
@@ -139,7 +139,7 @@ def test_planted_claim_defects_are_rejected(world, defect, reason):
             }
         )
     elif defect == "odd_window":
-        c = c.model_copy(update={"window_start_ms": c.window_start_ms + 90_000})
+        c = c.model_copy(update={"window_start_ms": c.window_end_ms - 60_000})
     else:
         c = c.model_copy(update={"team_id": "nobody"})
     chk = verify(c, world)
