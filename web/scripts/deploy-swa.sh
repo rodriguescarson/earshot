@@ -24,16 +24,21 @@ SWA_CLI_DEPLOYMENT_TOKEN=$(az staticwebapp secrets list --name earshot-web -g rg
   npx -y @azure/static-web-apps-cli@latest deploy ./dist --env production --no-use-keychain 2>&1 |
   grep -v -i "token" || true
 
-# The CLI can report an upload failure and still exit 0, so check the live site serves this build.
+# The CLI can report an upload failure and still exit 0, so check the live site serves this build:
+# the code bundle, and a clip manifest (a deploy that only changes clips keeps the same bundle).
 site="https://kind-island-0f3823d0f.5.azurestaticapps.net"
-want=$(grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1)
+want_js=$(grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1)
+probe=clips/demo-en-analyst/manifest.json
+want_clip=$(shasum -a 256 "dist/$probe" | cut -d' ' -f1)
+ok=""
 for _ in 1 2 3 4 5 6; do
-  got=$(curl -s -m 20 "$site/" | grep -o 'assets/index-[^"]*\.js' | head -1 || true)
-  [ "$got" = "$want" ] && break
+  got_js=$(curl -s -m 20 "$site/" | grep -o 'assets/index-[^"]*\.js' | head -1 || true)
+  got_clip=$(curl -s -m 30 "$site/$probe" | shasum -a 256 | cut -d' ' -f1)
+  if [ "$got_js" = "$want_js" ] && [ "$got_clip" = "$want_clip" ]; then ok=1; break; fi
   sleep 10
 done
-if [ "$got" != "$want" ]; then
-  echo "deploy NOT live: site serves ${got:-nothing}, this build is $want" >&2
+if [ -z "$ok" ]; then
+  echo "deploy NOT live: bundle ${got_js:-none} (want $want_js), $probe matches: $([ "$got_clip" = "$want_clip" ] && echo yes || echo no)" >&2
   exit 1
 fi
-echo "live: $site serves $want"
+echo "live: $site serves $want_js and the new $probe"
