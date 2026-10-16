@@ -4,6 +4,7 @@ Stream 1 executors run in ``test_replay_with_the_real_agents`` once ``earshot.ag
 
 import asyncio
 import importlib.util
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import pytest
@@ -283,10 +284,16 @@ def test_replay_with_the_real_agents():
         def run(self, view, window_id, expected_dead_ms):
             from types import SimpleNamespace
 
-            idx = max(i for i, e in enumerate(r.events) if e.wall_ms < view.now_wall_ms)
+            idx = max(
+                i
+                for i, e in enumerate(r.events)
+                if isinstance(e, StoppageStart) and e.wall_ms < view.now_wall_ms
+            )
+            stoppage = r.events[idx]
+            assert isinstance(stoppage, StoppageStart)
             past = wf.Shared(tuple(r.events[: idx + 1]))
-            pos = wf.Shared({p.player_id: p.position for p in players})
-            step = wf.WindowStep(r.events[idx], None, past, r.info.home.team_id, r.info.away.team_id, pos)
+            pos: wf.Shared[Mapping[str, str]] = wf.Shared({p.player_id: p.position for p in players})
+            step = wf.WindowStep(stoppage, None, past, r.info.home.team_id, r.info.away.team_id, pos)
             claims = list(honest_claim(step).claims)
             return SimpleNamespace(
                 claims=claims, timed_out=False, error=None, invalid=[], latency_ms=5, tokens=0
