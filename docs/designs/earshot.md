@@ -2817,6 +2817,38 @@ None from this review.
 
 Model-facing attack surface is small by design. No listener free text reaches a model: the controls are buttons. The Analyst sees only structured match data, and the MCP app is read-only and bounded by match time. That surface still gets reviewed in SEC4.
 
+## Stream 1 status (2026-10-16)
+
+Branch `feat/agents-core` (PR #3). Checks at a628a25 and after: ruff, pyright (0 errors), pytest (all pass), Biome, tsc, Vitest.
+
+**Built and verified locally:**
+- **Live mode** (`earshot.live`): one pipeline per script, a Director per listener group, SSE per group, `Where's the ball?` and `Catch me up`. A 70 s SSE run at 3x gave 35 lines, all with audio.
+- **Live screen** (`web/src/screens/LiveListen.tsx`). Checked in a browser in English app voice and in Arabic screen-reader mode (RTL, live region): no console errors.
+- **Live spend guards:**
+  - cached-only mode makes no speech or Analyst calls;
+  - the speech budget is charged only on cache misses (150K characters a day);
+  - groups are validated and capped at 64, and dropped after 45 s idle;
+  - the Analyst does not run while nobody listens;
+  - Web PubSub is off the match loop and never carries ball samples.
+- **StatWatcher (CEO-7):**
+  - all five stats, each line recomputed by `check_stat_line`;
+  - the danger reference is fitted on dev seeds 1-40 (`stats/models/statwatch.json`, cut 0.194 xT over 7,150 windows);
+  - "Follow one stat?" is setup step 3b (after Analyst).
+- **Recaps (CEO-2):** half-time and full-time, from the `recap` tool and possession only, in four languages. `check_recap_line` rebuilds them from the events. Live groups get a `recap` message; screen-reader groups get one announcement.
+- **Static site** redeployed with `web/scripts/deploy-swa.sh`: 220 MB of the 250 MB Free-tier cap.
+
+**Limits found, stated rather than hidden:**
+- The 3.5-minute demo clip (minutes 81-84) has crossings only for shot speed (3, of which 1 airs; 2 are stale behind the Caller's shot and save lines) and press height (1).
+- Pass difficulty, possession and danger therefore fall back to the plain Analyst clip, which is what those renders would produce anyway. The live match has the full set.
+- Danger is rare by construction: 1, 5 and 7 crossings in seeds 26, 3 and 11.
+- Pass difficulty is frequent: 61-123 a match.
+
+**Not verified yet:**
+- Live mode on Azure: Stream 2's worker integration is in progress on `feat/integration`.
+- End-to-end latency at 1x.
+- The iPhone + VoiceOver lock test (Carson).
+- The listening test (Carson, Oct 18-19).
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
