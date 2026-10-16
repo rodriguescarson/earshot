@@ -100,7 +100,23 @@ def items(seeds: Sequence[int]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
                              "text": text, "how": "rendered"})  # fmt: skip
                 rendered += 1
         coverage[lang.value] = {"aired": aired, "rendered": rendered, "not_judged": missing}
+    compose_prefixes(rows)
     return rows, coverage
+
+
+def compose_prefixes(rows: list[dict[str, Any]]) -> None:
+    """A prefix template (``late.1``, "Earlier: ") never airs alone: judge it on a real line."""
+    for row in rows:
+        if not row["text"].rstrip().endswith(":"):
+            continue
+        host = next(
+            (r for r in rows if r["language"] == row["language"] and r["how"] == "aired"
+             and r["template_id"].startswith("goal")),
+            None,
+        )  # fmt: skip
+        if host is not None:
+            row["text"] = row["text"].rstrip() + " " + host["text"]
+            row["how"] = "composed"
 
 
 class Judge:
@@ -147,17 +163,30 @@ class Judge:
         return out
 
 
-def run(seeds: Sequence[int], tokens_per_hour: int = 400_000) -> dict[str, Any]:
+def failed(row: dict[str, Any]) -> bool:
+    return any(not isinstance(row.get(k), dict) or "error" in row[k] for k in ("fluency", "coherence"))
+
+
+def run(
+    seeds: Sequence[int], tokens_per_hour: int = 200_000, previous: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Judge every sentence; with ``previous`` (an earlier result), keep its scores and judge only
+    the rows that errored or are new (for example after the kill switch cut a run short)."""
     rows, coverage = items(seeds)
+    kept: dict[tuple[str, str], dict[str, Any]] = {}
+    for old in (previous or {}).get("rows", []):
+        if not failed(old):
+            kept[(old["language"], old["text"])] = {"fluency": old["fluency"], "coherence": old["coherence"]}
     judge = Judge(tokens_per_hour)
-    cache: dict[tuple[str, str], dict[str, Any]] = {}
+    cache: dict[tuple[str, str], dict[str, Any]] = dict(kept)
     for row in rows:
         key = (row["language"], row["text"])
         if key not in cache:
             cache[key] = judge.score(row["text"], LANGUAGE_NAMES[Language(row["language"])])
         row |= cache[key]
     return {"seeds": list(seeds), "coverage": coverage, "summary": summarize(rows), "rows": rows,
-            "judge_calls": 2 * len(cache), "tokens": sum(n for _, n in judge.spent)}  # fmt: skip
+            "judge_calls": 2 * (len(cache) - len(kept)), "kept_from_previous": len(kept),
+            "tokens": sum(n for _, n in judge.spent)}  # fmt: skip
 
 
 def summarize(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
