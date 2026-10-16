@@ -241,6 +241,44 @@ theirs (2.66 against a 2022-25 EPL span of 2.85-3.28). Shot and pass speeds rema
 seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11, y-band 7), which
 had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 
+### Runs of record after `eval-freeze`
+**The tag:** `eval-freeze` is at `f69549b`, tagged 2026-10-17.
+- Stream 1 confirmed the Analyst prompt, claim, cause, Caller, recap and stat templates, the
+  Checker and the auditor final.
+- The held-out seeds 9001-9040 were generated after the tag. Their manifest, with SHA-256s for
+  events, headers and the hidden truth files, is `reports/heldout-manifest-9001-9040.json`.
+- Re-simulating each seed reproduces its events byte for byte (40/40).
+- **The harness commit:** the runs use `14580ab`. Between the tag and `14580ab`, nothing changed
+  in any frozen path (agents, stats and models, sim and dead times, tools/MCP, live, pipeline,
+  contract, world, voice, baseline, grading): `git diff --stat eval-freeze 14580ab` on those
+  paths is empty. Only the harness gained the auditor and its clock fix, and the load generator
+  its parallel audio fetch.
+
+**Coverage (run of record, full season, as pre-registered):**
+- **Command:** `earshot evaluate --seeds 1-380 --workers 6 --latency reports/latency-of-record-2026-10-17.json`.
+  The latency is the deployed stack at 30 listeners (section below).
+- **Run:** 380/380 matches, 0 failed. Summary in `reports/eval-season-coverage-of-record.json`.
+
+| Profile | Coverage within 3 s (target 0.95) | Shots within 3 s (of 9,324) | Yellow cards within 3 s (of 1,505) | Shot p50 / p95 | Never-drop aired; goal p50 / p95 | Audit blocks |
+|---|---|---|---|---|---|---|
+| P1 Casual, app voice | **0.780** | 7,312 | 1,137 | 1.83 / 3.87 s | all; 0.56 / 2.62 s | 0 |
+| P2 Analyst, app voice, club + player | **0.730** | 7,251 | 649 | 1.82 / 3.87 s | all; 0.58 / 2.56 s | 0 |
+| P3 Casual, screen reader | **0.774** | 7,247 | 1,137 | 1.83 / 3.87 s | all; 0.61 / 2.70 s | 0 |
+| P4 Analyst, one ear, shot speed | **0.707** | 6,979 | 678 | 1.92 / 3.97 s | all; 0.62 / 2.69 s | 0 |
+| P5 Analyst, app voice | **0.729** | 7,225 | 672 | 1.83 / 3.87 s | all; 0.58 / 2.57 s | 0 |
+
+- **Coverage: miss** in every profile, at the 30-listener deployed latency.
+  - Every goal (1,011), red card (49) and penalty (105) airs in every profile.
+  - The auditor blocked nothing.
+  - Casual aired no number outside the allowed set.
+  - P5 airs 5.18 times P1's numeric slots a minute.
+- **Why it misses:** the deployed stack's delivery under 30 listeners adds about 0.5-2.3 s per line.
+  - Lines that wait behind others on the one voice channel then pass 3 s.
+  - Analyst-mode yellow cards suffer most (about 43-45% within 3 s), because they compete with the
+    Analyst's window lines at stoppages.
+- **With no delivery cost** (provisional model, development section) the same season gave
+  0.971-0.979. The difference is the cost of delivery at this load.
+
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
 branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
