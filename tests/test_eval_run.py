@@ -141,7 +141,8 @@ def test_real_analyst_path_grades_cause_labels_against_the_truth_log():
     assert ex["windows"] == len(m["explanations"]["analyst_calls"])
     assert ex["analyst_proposed"]["labels"] > 0
     assert ex["analyst_proposed"]["correct"] == ex["analyst_proposed"]["labels"]
-    assert ex["analyst_aired"]["labels"] <= ex["analyst_proposed"]["labels"]  # the claim check filters
+    assert ex["analyst_gated"]["labels"] <= ex["analyst_proposed"]["labels"]  # the claim check filters
+    assert ex["causes_aired"] is False  # Carson, 2026-10-16: causes are not spoken
     assert set(ex["baseline"]) == set(R.GRADE_KEYS)
     s = R.summarize([m], R.LatencyModel.provisional_default(), 1.0, 1)
     assert s["explanations"]["analyst_proposed"]["accuracy"] == 1.0

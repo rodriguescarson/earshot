@@ -544,10 +544,12 @@ def explanations(
     """Cause-label grades for one match (counts only: they add up across matches, and the truth log
     never leaves this process).
 
-    ``analyst_aired`` is what a listener hears: a claim the window's claim check accepted that also
-    passes the live ``verify``, with its cause after ``gate_cause`` (which drops causes whose
-    checkable preconditions fail), as ``LiveMatch._window_lines`` airs it. ``analyst_proposed`` is
-    every cause the model gave, accepted or rejected, before the gate."""
+    ``analyst_proposed`` is every cause the model gave, accepted or rejected, before the gate.
+    ``analyst_gated`` is the cause ``gate_cause`` leaves (it drops causes whose checkable
+    preconditions fail) on a claim the window's claim check accepted and the live ``verify`` passes:
+    what would air if causes were spoken. Since 2026-10-16 they are not (``AIR_CAUSES`` is False in
+    ``earshot.agents.claims``): Analyst lines speak only the verified metric change, and
+    ``causes_aired`` records which way the run was."""
     from earshot.eval.baseline_detector import predictions as baseline_predictions
     from earshot.eval.grading import Prediction, analysis_windows, grade
 
@@ -563,19 +565,20 @@ def explanations(
     out: dict[str, Any] = {"windows": len(analysis_windows(r.events)), "baseline": counts(base)}
     if analyst is None or not hasattr(analyst, "calls"):
         return out
+    from earshot.agents import claims as agent_claims
     from earshot.agents.claims import gate_cause, verify
     from earshot.tools.snapshots import MatchView
 
-    aired: list[Prediction] = []
+    gated: list[Prediction] = []
     gate_dropped = 0
     for st, w in windows:
         view = MatchView.of(r.info, list(clubs), list(players), list(r.events), st.wall_ms + 1)
         for c in w.accepted:
-            gated = gate_cause(c, view)[0]
-            if c.cause is not None and gated.cause is None:
+            gated_claim = gate_cause(c, view)[0]
+            if c.cause is not None and gated_claim.cause is None:
                 gate_dropped += 1
-            if gated.cause is not None and verify(c, view).ok:
-                aired.append(Prediction(mid, c.team_id, st.wall_ms, gated.cause))
+            if gated_claim.cause is not None and verify(c, view).ok:
+                gated.append(Prediction(mid, c.team_id, st.wall_ms, gated_claim.cause))
     proposed = [
         Prediction(mid, c.team_id, st.wall_ms, c.cause)
         for st, w in windows
@@ -583,8 +586,9 @@ def explanations(
         if c.cause
     ]
     out |= {
-        "analyst_aired": counts(aired),
+        "analyst_gated": counts(gated),
         "analyst_proposed": counts(proposed),
+        "causes_aired": bool(getattr(agent_claims, "AIR_CAUSES", True)),
         "causes_dropped_by_gate": gate_dropped,
         "window_outcomes": dict(Counter(w.analyst_failure or "claims" for _, w in windows)),
         "analyst_calls": analyst.calls,
@@ -728,7 +732,8 @@ def summarize_explanations(ok: Sequence[dict[str, Any]]) -> dict[str, Any]:
     return {
         "windows": sum(m.get("explanations", {}).get("windows", 0) for m in ok),
         "baseline": total("baseline"),
-        "analyst_aired": total("analyst_aired"),
+        "analyst_gated": total("analyst_gated"),
+        "causes_aired": any(m.get("explanations", {}).get("causes_aired", False) for m in ok),
         "analyst_proposed": total("analyst_proposed"),
         "causes_dropped_by_gate": sum(m.get("explanations", {}).get("causes_dropped_by_gate", 0) for m in ok),
         "window_outcomes": dict(
