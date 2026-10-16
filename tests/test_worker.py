@@ -154,3 +154,19 @@ def test_get_is_not_allowed_on_negotiate(tmp_path, path):
     app, _, _ = app_with(tmp_path)
     with TestClient(app) as c:
         assert c.get(path).status_code == 405
+
+
+def test_a_code_added_after_start_works_within_30_s_without_a_poller(tmp_path):
+    """The MCP app has no poller: JudgeCodesFromFlags re-reads the store when it is over 30 s old."""
+    from earshot.api.flags import JudgeCodesFromFlags
+
+    now = [1_000_000.0]
+    src = FileFlags(tmp_path / "flags.json")
+    src.write({})
+    flags = Flags(src, clock=lambda: now[0])
+    flags.refresh()
+    codes = JudgeCodesFromFlags(flags, refresh=True)
+    assert not codes.valid("late-code")
+    src.write({"judge_code_sha256": [code_hash("late-code")]})
+    now[0] += 31
+    assert codes.valid("late-code")

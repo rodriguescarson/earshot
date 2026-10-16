@@ -195,7 +195,8 @@ class JudgeCodesFromFlags(JudgeCodes):
         super().__init__(None)
 
     def valid(self, code: str | None) -> bool:
-        if self.refresh and self.clock() - self.flags.loaded_at > RELOAD_S:
+        # Compare on the flag store's own clock (wall time); JudgeCodes.clock is monotonic.
+        if self.refresh and self.flags.clock() - self.flags.loaded_at > RELOAD_S:
             self.flags.refresh()
         self._hashes = {h.lower() for h in self.flags.values.get("judge_code_sha256", [])}
         self._loaded_at = self.clock()
