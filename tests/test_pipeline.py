@@ -16,6 +16,7 @@ from earshot.contract.moment import Moment, MomentKind
 from earshot.contract.spadl import SHOT_TYPES, ActionType
 from earshot.pipeline import workflow as wf
 from earshot.sim.match import simulate
+from earshot.stats.claims import THRESHOLD
 from earshot.stats.metrics import Window, metric
 from earshot.world.clubs import world
 
@@ -68,8 +69,6 @@ def fake_check(line, moment, ev, state):
     return (False, "digit outside a slot") if any(ch.isdigit() for ch in line.text) else (True, "")
 
 
-THRESHOLD = {Metric.PRESS_HEIGHT: 5.0, Metric.TEMPO: 2.0, Metric.DIRECTNESS: 0.08, Metric.WIDTH: 2.0,
-             Metric.LINE_HEIGHT: 4.0, Metric.POSSESSION_SHARE: 0.08}  # fmt: skip
 SPAN = 10 * 60_000
 
 
@@ -81,22 +80,7 @@ def values(step: wf.WindowStep, team: str, m: Metric, start: int, end: int):
     return before, after
 
 
-def fake_verify(claim: Claim, step: wf.WindowStep) -> tuple[bool, str]:
-    """A stand-in for agents.claims.verify with the same rules."""
-    if claim.window_end_ms > step.stoppage.wall_ms + 1:
-        return False, "window ends in the future"
-    before, after = values(step, claim.team_id, claim.metric, claim.window_start_ms, claim.window_end_ms)
-    if before is None or after is None:
-        return False, "not enough evidence"
-    if (after > before) != (claim.direction is Direction.UP) or abs(after - before) < THRESHOLD[claim.metric]:
-        return False, "direction wrong or below threshold"
-    seen = {e.event_id for e in step.events.value}
-    if any(i not in seen for i in claim.cited_event_ids):
-        return False, "cited event does not exist"
-    return True, ""
-
-
-def pipeline(seed: int, analyst=wf.no_analyst, timeout_scale: float = 1.0, verify=fake_verify):
+def pipeline(seed: int, analyst=wf.no_analyst, timeout_scale: float = 1.0, verify=wf.shared_verify):
     r = simulate(seed)
     pos = {p.player_id: p.position for p in world().players.values()}
     p = wf.MatchPipeline(fake_step, FakeState(), r.info.home.team_id, r.info.away.team_id, pos, FakeSpotter(),
@@ -132,7 +116,7 @@ def test_window_runs_only_on_qualifying_stoppages_and_see_only_the_past():
 
     p = wf.MatchPipeline(
         fake_step, FakeState(), p.home_id, p.away_id, p.positions, FakeSpotter(), FakeCaller(), fake_check,
-        TARGETS, spy, fake_verify,
+        TARGETS, spy,
     )  # fmt: skip
     results = asyncio.run(p.replay(r.events))
     windows = [w for _, w in results if w is not None]
@@ -156,7 +140,7 @@ def honest_claim(step: wf.WindowStep) -> wf.AnalystOutcome:
     claims = []
     for team in (step.home_id, step.away_id):
         best = None
-        for m in THRESHOLD:
+        for m in (m for m in THRESHOLD if m is not Metric.SHOT_COUNT):
             before, after = values(step, team, m, end - SPAN, end)
             if before is None or after is None:
                 continue

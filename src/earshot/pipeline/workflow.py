@@ -35,6 +35,7 @@ from earshot.contract.claim import Claim
 from earshot.contract.events import Event, StoppageKind, StoppageStart
 from earshot.contract.line import Language, Line, ListeningMode
 from earshot.contract.moment import Moment
+from earshot.stats.claims import verify_claim
 
 ANALYSIS_MIN_EXPECTED_MS = 15_000
 MAX_CLAIMS_PER_CLUB = 3
@@ -61,7 +62,8 @@ AnalystFn = Callable[["WindowStep", int], Awaitable["AnalystOutcome"]]
 """(window step, budget in ms) -> claims; Stream 1's Foundry Analyst behind ``analyst_from_agents``."""
 
 VerifyFn = Callable[[Claim, "WindowStep"], tuple[bool, str]]
-"""(claim, window step) -> (ok, reason); Stream 1's ``agents.claims.verify`` behind ``from_agents``."""
+"""(claim, window step) -> (ok, reason). Default ``shared_verify``; ``from_agents`` uses Stream 1's
+``agents.claims.verify``, which wraps the same verifier with airtime checks."""
 StateStep = Callable[[Any, Event], Any]
 """(state, event) -> new state; the worker's fold over the event stream."""
 
@@ -320,8 +322,14 @@ async def no_analyst(step: WindowStep, budget_ms: int) -> AnalystOutcome:
     return AnalystOutcome((), None)
 
 
+def shared_verify(claim: Claim, step: WindowStep) -> tuple[bool, str]:
+    """The single claim verifier (``earshot.stats.claims``), shared with the Checker and the evaluation."""
+    v = verify_claim(claim, step.events.value, step.home_id, step.positions.value, step.stoppage.wall_ms + 1)
+    return v.ok, v.reason
+
+
 def reject_all(claim: Claim, step: WindowStep) -> tuple[bool, str]:
-    """The default verifier: nothing unverified ever airs."""
+    """A verifier that blocks everything (for drills: nothing unverified ever airs)."""
     return False, "no verifier configured"
 
 
@@ -340,7 +348,7 @@ class MatchPipeline:
     check: CheckFn
     targets: Sequence[tuple[Language, ListeningMode]]
     analyst: AnalystFn = no_analyst
-    verify: VerifyFn = reject_all
+    verify: VerifyFn = shared_verify
     timeout_scale: float = 1.0
     events: list[Event] = field(default_factory=list)
     _seen: dict[str, Event] = field(default_factory=dict)
