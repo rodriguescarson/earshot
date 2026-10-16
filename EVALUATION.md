@@ -378,54 +378,52 @@ runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst -
     running (`--tokens-per-hour`, `--resume`).
   - Raising those alerts for the run is Carson's decision.
 
-### Load test, 30 listeners (2026-10-16, deployed stack)
-`earshot loadtest --url <worker> --listeners 30 --minutes 15`, against the worker at image `f69549b`
-(0.5 vCPU, 1 GiB, one replica), from one machine in India to Sweden Central. The listeners were
-spread over the five profiles' groups. Summary in `reports/loadtest-2026-10-16-n30.json`; latency
-samples in `reports/loadtest-2026-10-16-n30.latency.json`.
+### Load test, 30 listeners: the deployed stack (2026-10-17)
+`earshot loadtest --url <worker> --listeners 30 --minutes 15` against the worker at image
+`f69549b` (one replica), from one machine in India to Sweden Central. The listeners were spread
+over the five profiles' groups. Each listener fetches every line's audio on its own task, as a
+browser does.
 
-- **Traffic:** 5,157 lines and 51,807 ball samples received; 2,188 Caller lines with audio joined
-  to the server's timings.
-- **Event to first audio byte:** p50 2,930 ms, **p95 15,996 ms**, max 29,522 ms. Target: p95 under
-  2.0 s. **Miss.**
+**Two corrections, before the numbers:**
+- **Superseded run:** a first run at 0.5 vCPU on 2026-10-16 fetched audio inline, before reading
+  the next message. That turned slow fetches into fake SSE "transit" (p95 10.9 s). Its result, and
+  a Coverage run built from its samples (0.37-0.41), are superseded and withdrawn; the files are kept in `reports/withdrawn/`.
+- **Network floor:** from this machine, fresh connections time out even to an idle worker (4 of
+  10, 2 of 20, 3 of 40 parallel connections), and GitHub connections timed out several times the
+  same day. So the audio-fetch connect timeouts below are mostly the load generator's network.
+  The percentiles cover only fetches that connected.
 
-| Component | p50 | p95 |
+**Results:** the deployed size is 0.5 vCPU; 1.0 vCPU was a temporary test. Each run had at least
+5 minutes of warm-up beforehand. Summaries: `reports/loadtest-2026-10-17-n30-0.5vcpu.json` and
+`reports/loadtest-2026-10-17-n30-1vcpu.json`.
+
+| 30 listeners, 15 minutes | 0.5 vCPU (deployed) | 1.0 vCPU (test) |
 |---|---|---|
-| Audio ready (cache or speech) | 102 ms | 491 ms |
-| Event to the Director starting the line | 252 ms | 1,790 ms |
-| Start to sent (`_publish_line`: serve and encode M4A) | 1,371 ms | 2,693 ms |
-| SSE transit | 59 ms | **10,888 ms** |
-| Audio first byte | 559 ms | **5,903 ms** |
+| Event to first audio byte, Caller lines: p50 / p95 / max | 1,305 / **3,594** / 6,652 ms (1,274 lines) | 968 / **2,891** / 5,444 ms (2,760 lines) |
+| Audio ready (cache or speech): p50 / p95 | 1 / 148 ms | 2 / 199 ms |
+| Event to the Director starting the line: p50 / p95 | 198 / 1,690 ms | 205 / 1,894 ms |
+| Start to sent (serve and encode): p50 / p95 | 4 / 2,311 ms | 3 / 1,031 ms |
+| SSE transit: p50 / p95 | 71 / 75 ms | 68 / 76 ms |
+| Audio first byte: p50 / p95 | 505 / 714 ms | 514 / 782 ms |
+| Audio fetches that did not connect in 10 s | 165 (11.0%) | 292 (9.0%) |
 
-- **Errors:** 290 connect timeouts and 2 read timeouts on audio fetches.
-- **Reading:** at 30 listeners the single 0.5 vCPU worker saturates. It holds every SSE stream,
-  sends 2 ball samples a second to each listener, serves every audio file and encodes it, so
-  delivery queues.
-- **Speech is not the limit:** audio-ready p95 is 0.5 s. No goal fell inside the 15 minutes, so
-  never-drop latency has no live sample here.
-- **Limits:**
-  - one load generator, far from the region;
-  - the worker's and the generator's clocks are not corrected for skew;
-  - the match's first 15 minutes only.
+- **Latency criterion** (p95 under 2.0 s on the deployed stack): **miss**, at 3.6 s with 30
+  listeners. Doubling the CPU brings p95 to 2.9 s, still a miss.
+- **Where the time goes:**
+  - the single voice channel's queue: event to the Director's start, p95 1.7-1.9 s;
+  - encoding when a line is not cached: p95 2.3 s at 0.5 vCPU;
+  - the distance to the region: first audio byte p50 about 0.5 s.
+- **Not comparable on traffic:** the 0.5 vCPU run's 15 minutes included the match's half-time
+  break (it restarted with the size change), so it carried fewer lines. Per-line timings are
+  comparable.
+- **No never-drop sample:** no goal fell in either window.
+- **The 1.0 vCPU size** costs $0.0432 an hour more (Sweden Central, active vCPU $0.000024/s).
+  Keeping it is Carson's decision; the worker is back at 0.5.
 
-### Coverage with the measured latency (development, 2026-10-16)
-`earshot evaluate --seeds 1-380 --workers 8 --latency reports/loadtest-2026-10-16-n30.latency.json`
-(branch `feat/eval-harness-auditor`: the auditor runs in the harness). 380/380 matches, 0 failed,
-466.1 s. Not of record: no `eval-freeze` tag yet. Summary in
-`reports/eval-season-n30-latency.json`.
-
-| Profile | Coverage within 3 s | Shots p50 / p95 | Yellow cards p50 / p95 | Never-drop aired; p95 (goals) | Audit blocks |
-|---|---|---|---|---|---|
-| P1 | 0.407 | 3.5 / 16.1 s | 3.4 / 15.2 s | all; 18.0 s | 0 |
-| P2 | 0.381 | 3.5 / 16.0 s | 5.1 / 17.6 s | all; 16.0 s | 0 |
-| P3 | 0.399 | 3.5 / 16.3 s | 3.6 / 16.4 s | all; 14.1 s | 0 |
-| P4 | 0.372 | 3.6 / 16.4 s | 5.0 / 17.5 s | all; 16.4 s | 0 |
-| P5 | 0.383 | 3.5 / 16.1 s | 4.8 / 17.3 s | all; 15.3 s | 0 |
-
-- **Coverage misses its 0.95 target** in every profile when delivery is drawn from the 30-listener
-  measurement. Every goal, red card and penalty still airs, but late.
-- With the provisional model (no delivery cost) the same season gave 0.971-0.979 (section above),
-  so delivery under load is what decides Coverage on this stack.
+**The latency model for the runs of record** is in `reports/latency-of-record-2026-10-17.json`:
+- audio-ready and delivery samples from the deployed 0.5 vCPU run;
+- the 18 real Analyst calls the day's load tests recorded (p50 2,318 ms). The deployed run's own 4
+  were response-cache hits of a replayed match, at 0 ms.
 
 ### Load test, trial (development, not of record)
 `earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
