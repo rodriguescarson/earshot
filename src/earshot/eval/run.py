@@ -206,8 +206,10 @@ class LatencyAnalyst:
 class TimedAnalyst:
     """The real Analyst, with its real latency carried onto the virtual clock.
 
-    ``tokens_per_hour`` paces calls (sleeping between them, outside the measured latency) so a
-    long run stays under the kill-switch alert on hourly tokens; ``max_calls`` caps a trial run.
+    ``tokens_per_hour`` paces calls so a long run stays under the kill-switch alerts. The virtual
+    match calls ``pace()`` before it pushes an event that opens an analysis window, never inside
+    ``run``: the window workflow guards each call with a real-time limit (budget + 1.5 s), and a
+    wait inside it would turn into a timeout. ``max_calls`` caps a trial run.
     """
 
     def __init__(
@@ -226,7 +228,7 @@ class TimedAnalyst:
         self.paused_s = 0.0
         self._recent: deque[tuple[float, int]] = deque()
 
-    def _pace(self) -> None:
+    def pace(self) -> None:
         if not self.tokens_per_hour:
             return
         per_call = statistics.mean(c["tokens"] for c in self.calls) if self.calls else ANALYST_TOKENS_GUESS
@@ -246,7 +248,6 @@ class TimedAnalyst:
         if self.max_calls is not None and len(self.calls) >= self.max_calls:
             self.last_ms = 0
             return AnalystResult(window_id, error="skipped: call cap")
-        self._pace()
         t0 = time.perf_counter()
         res = self.inner.run(view, window_id, expected_dead_ms)
         self.last_ms = int((time.perf_counter() - t0) * 1000)
@@ -259,6 +260,7 @@ class TimedAnalyst:
                 "tokens": tokens,
                 "claims": len(getattr(res, "claims", []) or []),
                 "failure": failure,
+                "cached": bool(getattr(res, "cached", False)),
             }
         )
         return res
@@ -267,6 +269,7 @@ class TimedAnalyst:
 def _virtual_match_class():
     from earshot.live.broadcast import GroupError, GroupKey, LiveMatch
     from earshot.live.director import Cut, Drop, Start
+    from earshot.pipeline.workflow import opens_window
 
     class VirtualMatch(LiveMatch):
         """``LiveMatch`` with its clock, audio and sends replaced; everything else runs as live."""
@@ -395,6 +398,8 @@ def _virtual_match_class():
                     self.now_ms = self.vnow  # LiveMatch stamps recaps and window lines with now_ms
                     if self.timer is not None:
                         self.timer.last_ms = 0
+                        if isinstance(self.timer, TimedAnalyst) and opens_window(ev):
+                            await asyncio.to_thread(self.timer.pace)  # outside the window's real-time guard
                     await self._push_all([ev], final=i == n)
                     if self.windows_block and self.timer is not None and self.timer.last_ms:
                         busy_until = self.vnow + self.timer.last_ms  # as built: the feeder waits
@@ -739,7 +744,7 @@ def summarize_explanations(ok: Sequence[dict[str, Any]]) -> dict[str, Any]:
 
     calls = [c for m in ok for c in m.get("explanations", {}).get("analyst_calls", [])]
     tokens = [c["tokens"] for c in calls]
-    lat = [c["latency_ms"] for c in calls if c["failure"] is None]
+    lat = [c["latency_ms"] for c in calls if c["failure"] is None and not c.get("cached")]
     return {
         "windows": sum(m.get("explanations", {}).get("windows", 0) for m in ok),
         "baseline": total("baseline"),
@@ -760,6 +765,7 @@ def summarize_explanations(ok: Sequence[dict[str, Any]]) -> dict[str, Any]:
             },
             "latency_ms": {"p50": pct(lat, 50), "p95": pct(lat, 95), "max": max(lat, default=None)},
             "failures": dict(Counter(c["failure"] for c in calls if c["failure"])),
+            "cached": sum(1 for c in calls if c.get("cached")),
             "paused_s": round(sum(m.get("explanations", {}).get("analyst_paused_s", 0) for m in ok), 1),
         }
         if calls

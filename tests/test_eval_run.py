@@ -107,10 +107,13 @@ def test_pacing_keeps_an_hour_under_the_token_budget():
 
     inner = SimpleNamespace(run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=900))
     a = R.TimedAnalyst(inner, tokens_per_hour=10_000, clock=lambda: now[0], sleep=sleep)
+    a.pace()
     a.run(None, "w1", 20_000)
     assert slept == []
-    a.run(None, "w2", 20_000)  # 6,000 used + about 6,000 more would pass 10,000: wait out the hour
-    assert sum(slept) >= 3_540
+    a.run(None, "w2", 20_000)  # run never waits: a wait there would trip the window's real-time guard
+    assert slept == []
+    a.pace()  # 12,000 used, about 6,000 more would pass 10,000: wait out the hour
+    assert sum(slept) >= 3_540  # until the first call is an hour old
     assert a.paused_s == pytest.approx(sum(slept), abs=60)
     capped = R.TimedAnalyst(inner, max_calls=1)
     capped.run(None, "w1", 20_000)
