@@ -30,6 +30,7 @@ PREEMPT = frozenset(
         MomentKind.PENALTY_AWARDED,
         MomentKind.SHOT,
         MomentKind.SAVE,
+        MomentKind.YELLOW_CARD,  # it waited behind fouls, stoppages and window summaries (ET11, 2026-10-17)
     }
 )
 
