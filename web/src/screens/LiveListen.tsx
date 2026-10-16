@@ -42,6 +42,7 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
   const [recaps, setRecaps] = useState<RecapMessage[]>([]);
   const [down, setDown] = useState(false);
   const announcer = useRef<Announcer>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   const current = useRef<LineMessage | null>(null);
   const queue = useRef<Queued[]>([]);
   const layer = useRef<Continuous | null>(null);
@@ -125,6 +126,11 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
     return stop;
   }, [group, paused, reader, oneEar]);
 
+  // Entering the screen: the pressed button is gone, so a screen reader starts from the score (DR-15).
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
+
   useEffect(() => {
     if (down) announcer.current?.announce(t("listen.reconnecting"), true);
   }, [down, t]);
@@ -160,7 +166,7 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
     <main className="listen">
       <LiveRegions ref={announcer} />
       <section className="plate score" aria-live="off">
-        <h1 tabIndex={-1} className="score__line">
+        <h1 ref={heading} tabIndex={-1} className="score__line">
           {t("listen.score", {
             home: summary.home.name,
             away: summary.away.name,

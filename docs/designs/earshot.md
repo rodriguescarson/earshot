@@ -2654,7 +2654,7 @@ None proposed. Every remaining item is an in-scope task below (DT1–DT15) or an
 ## Design Implementation Tasks
 Synthesized from this review's decisions. Each task derives from a DR above. S1/S2 = stream. Ratios assumed: features ~30x, tests ~50x, design/setup ~8x.
 
-- [ ] **DT1 (P1, human: ~4h / CC: ~30min)** — design system (planning, before Oct 19) — `/impeccable init` (done 2026-10-14: PRODUCT.md); `/impeccable shape` on the listening screen to lock the direction; DESIGN.md from the documenter after the first screen; light and dark tokens, type scale, font `tnum` check, ar/hi fallbacks
+- [x] **DT1 (P1, human: ~4h / CC: ~30min)** — design system (planning, before Oct 19) — `/impeccable init` (done 2026-10-14: PRODUCT.md); `/impeccable shape` on the listening screen to lock the direction; DESIGN.md from the documenter after the first screen; light and dark tokens, type scale, font `tnum` check, ar/hi fallbacks — **done 2026-10-16:** DESIGN.md (scan mode, "The Tactile Plate") and `.impeccable/design.json`; ar/hi glyphs fall back to `system-ui` until DT11 subsets and wires named fallbacks
   - Surfaced by: DR-10, DR-11, DR-12, DR-20
   - Files: `PRODUCT.md` (done), `.impeccable/config.json` (done), `DESIGN.md`
   - Verify: `node ~/.claude/skills/impeccable/scripts/detect.mjs --json .` clean; a contrast table for every text/background pair in both themes (≥4.5:1 body, ≥3:1 large text and UI parts); `tnum` confirmed in the font's feature table
