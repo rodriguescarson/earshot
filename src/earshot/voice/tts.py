@@ -140,6 +140,13 @@ def read_mono(path: Path) -> np.ndarray:
         return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(np.float32) / 32768.0
 
 
+def read_stereo(path: Path) -> np.ndarray:
+    with wave.open(str(path)) as w:
+        assert w.getsampwidth() == 2 and w.getframerate() == SAMPLE_RATE
+        x = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(np.float32) / 32768.0
+        return x.reshape(-1, 2) if w.getnchannels() == 2 else np.repeat(x[:, None], 2, axis=1)
+
+
 def write_stereo(path: Path, stereo: np.ndarray) -> None:
     pcm = (np.clip(stereo, -1.0, 1.0) * 32767).astype("<i2")
     buf = io.BytesIO()

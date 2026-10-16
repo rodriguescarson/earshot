@@ -297,6 +297,10 @@
     "cause.PROTECTING_LEAD.1": {
       "casual": "Parece que quieren proteger la ventaja.",
       "analyst": "Parece que quieren proteger la ventaja."
+    },
+    "replay.1": {
+      "casual": "Otra vez, en sonido.",
+      "analyst": "Otra vez, en sonido."
     }
   }
 }

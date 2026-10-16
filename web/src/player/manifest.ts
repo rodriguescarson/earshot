@@ -12,6 +12,8 @@ export interface ClipLine {
   cut: boolean;
   template_id: string;
   source?: "caller" | "analyst" | "fallback" | "statwatcher" | "on_demand" | "recap" | "notice";
+  /** The sonified goal replay: App voice and one-ear only, never sent to a screen reader. */
+  replay?: boolean;
   pan: number;
 }
 

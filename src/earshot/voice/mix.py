@@ -14,9 +14,10 @@ from enum import StrEnum
 import numpy as np
 
 from earshot.agents.director import Aired
-from earshot.voice.tts import SAMPLE_RATE, Clip, read_mono
+from earshot.voice.tts import SAMPLE_RATE, Clip, read_mono, read_stereo
 
 CONTROL_HZ = 100
+REPLAY_TEMPLATE = "replay.1"
 
 
 class Arm(StrEnum):
@@ -93,20 +94,29 @@ def mix(
     speech_ctl = np.zeros(n // (SAMPLE_RATE // CONTROL_HZ) + 1, np.float32)
     fade = int(0.03 * SAMPLE_RATE)
     for a in aired if arm is not Arm.BED else ():
-        x = read_mono(clips[a.line.line_id].path)
+        replay = a.line.template_id == REPLAY_TEMPLATE
+        if replay and arm not in (Arm.FULL, Arm.MONO):
+            continue  # the replay belongs to the continuous layer: App voice and one-ear only
+        if replay:
+            x2 = read_stereo(clips[a.line.line_id].path)
+            if arm is Arm.MONO:
+                x2 = np.repeat(x2.mean(axis=1, keepdims=True), 2, axis=1)
+        else:
+            mono = read_mono(clips[a.line.line_id].path)
+            pan = 0.0 if arm in (Arm.SPEECH, Arm.MONO) else a.line.pan
+            gl, gr = _pan_gains(pan)
+            x2 = np.stack([mono * float(gl), mono * float(gr)], axis=1)
         if a.cut_at_ms is not None:
             keep = max(0, int((a.cut_at_ms - a.start_ms) / 1000 * SAMPLE_RATE))
-            x = x[:keep].copy()
-            if len(x) > fade:
-                x[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)
+            x2 = x2[:keep].copy()
+            if len(x2) > fade:
+                x2[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)[:, None]
         i0 = int((a.start_ms - start_ms) / 1000 * SAMPLE_RATE)
         if i0 < 0 or i0 >= n:
             continue
-        x = x[: n - i0]
-        pan = 0.0 if arm in (Arm.SPEECH, Arm.MONO) else a.line.pan
-        gl, gr = _pan_gains(pan)
-        out[i0 : i0 + len(x), 0] += x * float(gl)
-        out[i0 : i0 + len(x), 1] += x * float(gr)
+        x2 = x2[: n - i0]
+        out[i0 : i0 + len(x2)] += x2
+        x = x2
         c0, c1 = i0 // (SAMPLE_RATE // CONTROL_HZ), (i0 + len(x)) // (SAMPLE_RATE // CONTROL_HZ)
         speech_ctl[c0 : c1 + 1] = 1.0
 

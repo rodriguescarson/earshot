@@ -297,6 +297,10 @@
     "cause.PROTECTING_LEAD.1": {
       "casual": "They look to be protecting the lead.",
       "analyst": "They look to be protecting the lead."
+    },
+    "replay.1": {
+      "casual": "Here it is again, in sound.",
+      "analyst": "Here it is again, in sound."
     }
   }
 }

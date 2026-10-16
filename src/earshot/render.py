@@ -6,16 +6,19 @@ times, a score/minute timeline, and a 5 Hz ball track for the screen).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
 from dataclasses import replace
 from pathlib import Path
 
+import numpy as np
 from pydantic import TypeAdapter
 
 from earshot.agents.analyst import Analyst, timeout_for
 from earshot.agents.caller import Caller
+from earshot.agents.catalog import load
 from earshot.agents.checker import check_caller_line
 from earshot.agents.claims import (
     check_claim_line,
@@ -30,12 +33,22 @@ from earshot.agents.claims import (
 from earshot.agents.director import Director, Profile
 from earshot.agents.spotter import Spotter
 from earshot.agents.state import MatchState, Roster, is_goal, spoken_minute
-from earshot.contract import Event, Language, Line, ListeningMode, MomentKind, Restart, StoppageStart
+from earshot.contract import (
+    Event,
+    Language,
+    Line,
+    LineSource,
+    ListeningMode,
+    MomentKind,
+    Restart,
+    StoppageStart,
+)
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.pitch import attacks_right, to_attacking
 from earshot.tools.match import MatchView, Teams
-from earshot.voice.mix import Arm, BallPoint, mix
-from earshot.voice.tts import Synthesizer, ssml_for, write_stereo
+from earshot.voice.mix import REPLAY_TEMPLATE, Arm, BallPoint, mix
+from earshot.voice.replay import REPLAY_MS, replay_audio
+from earshot.voice.tts import SAMPLE_RATE, Clip, Synthesizer, read_mono, ssml_for, write_stereo
 
 EV = TypeAdapter(Event)
 EXCITED = frozenset({MomentKind.GOAL, MomentKind.OWN_GOAL, MomentKind.RED_CARD, MomentKind.PENALTY_AWARDED})
@@ -54,6 +67,21 @@ def danger(b: dict, roster: Roster) -> float:
 ANALYST_MIN_DEAD_MS = 15_000
 CACHED_ANALYST_LATENCY_MS = 2_500
 """Replayed (cached) Analyst answers are scheduled as if they took this long, so renders are stable."""
+
+
+def replay_clip(
+    synth: Synthesizer, line: Line, goal_wall_ms: int, ball: list[BallPoint], cache: Path
+) -> Clip:
+    """The spoken intro, a short breath, then the sonified build-up and the roar (one stereo file)."""
+    intro = synth.synthesize(ssml_for(line))
+    voice = read_mono(intro.path)
+    gap = np.zeros(int(0.3 * SAMPLE_RATE), np.float32)
+    head = np.stack([np.concatenate([voice, gap])] * 2, axis=1)
+    audio = np.concatenate([head, replay_audio(ball, goal_wall_ms)])
+    key = hashlib.sha256(f"{intro.path.name}|{goal_wall_ms}|{len(ball)}".encode()).hexdigest()[:24]
+    path = cache / f"replay-{key}.wav"
+    write_stereo(path, audio)
+    return Clip(path, int(len(audio) / SAMPLE_RATE * 1000))
 
 
 def full_match_events(d: dict) -> list[Event]:
@@ -137,6 +165,25 @@ def render_fixture(
                 else:
                     blocked.append({"line": ln.text, "reason": v.reason})
                     log(ln.wall_ms, "Checker", f"blocked: {v.reason}", "block")
+
+    def replay_line(goal: Event) -> Line:
+        cat = load(language)
+        text = cat.render(REPLAY_TEMPLATE, mode, {})
+        return Line(
+            line_id=f"{goal.event_id}-replay-{language.value}-{mode.value}",
+            match_id=match.match_id,
+            moment_id=None,
+            source=LineSource.NOTICE,
+            language=language,
+            listening_mode=mode,
+            template_id=REPLAY_TEMPLATE,
+            slots={},
+            text=text,
+            priority=48,  # after the goal line, before any Analyst line in the celebration window
+            wall_ms=goal.wall_ms + 200,
+            deadline_wall_ms=goal.wall_ms + 60_000,
+            est_ms=REPLAY_MS + 3_500,
+        )
 
     def analyse_window(ev: StoppageStart) -> list[Line]:
         assert the_analyst is not None
@@ -234,6 +281,7 @@ def render_fixture(
         states[ev.event_id] = state
         if is_goal(ev):
             goals.append(ev.wall_ms)
+            pending.append(replay_line(ev))
         timeline.append(
             {
                 "t_ms": ev.wall_ms - t0,
@@ -255,8 +303,17 @@ def render_fixture(
     voice_moments(spotter.flush(), state)
     lines.extend(pending)
 
+    ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     synth = Synthesizer(cache)
-    clips = {ln.line_id: synth.synthesize(ssml_for(ln, excited=kinds[ln.line_id] in EXCITED)) for ln in lines}
+    clips = {
+        ln.line_id: synth.synthesize(ssml_for(ln, excited=kinds.get(ln.line_id) in EXCITED))
+        for ln in lines
+        if ln.template_id != REPLAY_TEMPLATE
+    }
+    for ln in lines:
+        if ln.template_id == REPLAY_TEMPLATE:
+            goal_id = ln.line_id.split("-replay-")[0]
+            clips[ln.line_id] = replay_clip(synth, ln, by_id[goal_id].wall_ms, ball, cache)
     director = Director(
         Profile(listening_mode=mode), duration_ms=lambda line: clips[line.line_id].duration_ms
     )
@@ -282,7 +339,6 @@ def render_fixture(
             log(a.cut_at_ms, "Director", f"cut for a more important line: {a.line.text}", "block")
     agents.sort(key=lambda e: e["t_ms"])
 
-    ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
     out_dir.mkdir(parents=True, exist_ok=True)
     end_ms = clip["end_wall_ms"]
     files = {}
@@ -319,6 +375,7 @@ def render_fixture(
                 "cut": a.cut_at_ms is not None,
                 "template_id": a.line.template_id,
                 "source": a.line.source.value,
+                "replay": a.line.template_id == REPLAY_TEMPLATE,
                 "pan": a.line.pan,
             }
             for a in aired

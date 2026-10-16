@@ -64,7 +64,7 @@ export function Listen({
   // Screen-reader output: each line goes to a live region as it starts (never-drop ones are urgent).
   const lastAnnounced = useRef<number>(-1);
   useEffect(() => {
-    if (output !== "reader" || !onAir || onAir.t_ms === lastAnnounced.current) return;
+    if (output !== "reader" || !onAir || onAir.replay || onAir.t_ms === lastAnnounced.current) return;
     lastAnnounced.current = onAir.t_ms;
     const text =
       onAir.voice_role === "explanation" ? `${t("listen.analysisPrefix")} ${onAir.text}` : onAir.text;
