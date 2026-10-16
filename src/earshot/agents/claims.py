@@ -158,9 +158,16 @@ def claim_slots(claim: Claim, check: ClaimCheck, club_name: str) -> dict[str, Sl
     }
 
 
+AIR_CAUSES = False
+"""Whether a claim's cause ("because they are chasing the game") is spoken. Off since 2026-10-16
+(Carson): on the first graded match the gated causes that would air were right 1 time in 22,
+against 4 in 7 for the baseline detector. The Analyst still proposes causes; they are logged and
+graded (EVALUATION.md, Explanations) but never aired. Only the verified metric change is spoken."""
+
+
 def claim_template_ids(claim: Claim) -> list[str]:
     ids = [f"claim.{claim.metric.value}.{claim.direction.value}.1"]
-    if claim.cause is not None:
+    if AIR_CAUSES and claim.cause is not None:
         ids.append(f"cause.{claim.cause.value}.1")
     return ids
 

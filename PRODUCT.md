@@ -27,7 +27,7 @@ Earshot starts as an entry to the Microsoft x Premier League "Inside the Game" h
 
 ## Positioning
 
-Code produces every name and number a listener hears, straight from event data. The model only explains *why*, only in dead-ball pauses, and only through a fixed set of claims that code checks before they air. Generic AI commentary puts the model on the facts, which is the wrong way round for a listener who cannot check what they are told.
+Code produces every name and number a listener hears, straight from event data. The model only picks which changes in the match are worth saying, only in dead-ball pauses, and only through a fixed set of claims that code recomputes before they air. It also proposes a cause for each change; since 2026-10-16 causes are graded but never spoken, because on the first graded match they were right 1 time in 22. Generic AI commentary puts the model on the facts, which is the wrong way round for a listener who cannot check what they are told.
 
 The ball is placed in sound: a continuous tone panned along the pitch and a crowd layer that rises with danger, so speech only has to say who and why. Several agents compete for one serial audio channel, and a Director arbitrates what airs.
 

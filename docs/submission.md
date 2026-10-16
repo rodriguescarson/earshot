@@ -82,6 +82,11 @@ happened.
   a real player's name in the wrong place.
 - That test run also caught one real mistake of our own: a possession figure that could be off by
   one percent. It is fixed.
+- We also tested whether the AI could say *why* a team changed its tactics, against the hidden log
+  of what each team really did. On the first graded match it was right 1 time in 22, worse than a
+  simple rule-based guess (4 in 7). So Earshot doesn't say why. The AI still picks which changes
+  are worth hearing, and code checks every number in them. [PENDING: the same test on the 40
+  unseen matches.]
 - [PENDING: the run on 40 matches the system had never seen. Facts, coverage, never-drop and the
   Analyst against a simple baseline.]
 - [PENDING: the listening test with eyes closed, Oct 18-19, with the number of listeners stated.]
