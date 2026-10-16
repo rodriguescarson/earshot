@@ -9,6 +9,7 @@ dependencies = [
   "numpy>=2.0",
   "agent-framework-core>=1.21",
   "agent-framework-foundry>=1.14",
+  "mcp>=1.20",
 ]
 
 [project.scripts]

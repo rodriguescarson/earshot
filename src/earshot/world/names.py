@@ -147,10 +147,37 @@ def draw_name(rng: np.random.Generator, tradition: str, taken: set[str]) -> Pers
         s = t.suffixes[int(rng.integers(len(t.suffixes)))]
         n = PersonName(g, surname(p, s), tradition, p, s)
         if n.full not in taken and n.surname not in _SURNAME_BLOCKLIST:
+            n = _avoid_bad_reading(n, t, taken)
             taken.add(n.full)
             return n
     raise RuntimeError(f"name space exhausted for {tradition}")
 
 
+def _avoid_bad_reading(n: PersonName, t: Tradition, taken: set[str]) -> PersonName:
+    """Swap the suffix for the next one in the tradition until the surname reads cleanly.
+
+    Deterministic and draws no random numbers, so blocking a surname never shifts the rest of
+    the generated league (ratings come from the same stream).
+    """
+    if n.surname not in BAD_READINGS:
+        return n
+    i = t.suffixes.index(n.suffix)
+    for k in range(1, len(t.suffixes)):
+        s = t.suffixes[(i + k) % len(t.suffixes)]
+        alt = PersonName(n.given, surname(n.prefix, s), n.tradition, n.prefix, s)
+        if (
+            alt.surname not in BAD_READINGS
+            and alt.surname not in _SURNAME_BLOCKLIST
+            and alt.full not in taken
+        ):
+            return alt
+    raise RuntimeError(f"no clean surname for {n.full}")
+
+
 _SURNAME_BLOCKLIST = frozenset({"Mareo", "Salado", "Barado"})
-"""Surnames that read as ordinary words or slurs in one of the four languages."""
+"""Surnames that read as ordinary words in one of the four languages (redrawn)."""
+
+BAD_READINGS = frozenset({"Hamir", "Khaini", "Khari", "Bhaiya", "Chakar"})
+"""Surnames found to read badly in Arabic or Hindi when the roster tables were written:
+Hamir (Arabic "donkeys"), Khaini (close to Arabic "traitor"), Khari (close to an Arabic
+vulgarity), Bhaiya (Hindi "brother"), Chakar (Hindi "servant"). Replaced deterministically."""

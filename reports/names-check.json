@@ -1,0 +1,138 @@
+{
+ "checked_on": "2026-10-16",
+ "source": "Wikidata SPARQL (query.wikidata.org), live; used as a filter only",
+ "people_checked": 540,
+ "place_words_checked": 66,
+ "person_matches": [],
+ "place_matches": {
+  "Bell": [
+   "Q1658268 (United States)",
+   "Q31909048 (Germany)",
+   "Q3313563 (United States)",
+   "Q377736 (United States)",
+   "Q4883075 (United States)",
+   "Q4883076 (Australia)",
+   "Q4883078 (Australia)",
+   "Q56008581 (Germany)",
+   "Q65415146 (Germany)",
+   "Q815676 (United States)"
+  ],
+  "Fern": [
+   "Q1659452 (United States)",
+   "Q5444433 (United Kingdom)",
+   "Q5444435 (United States)",
+   "Q5444436 (United States)",
+   "Q71119452 (United Kingdom)",
+   "Q97357892 (United States)"
+  ],
+  "Flint": [
+   "Q115225400 (Canada)",
+   "Q1428848 (United Kingdom)",
+   "Q14690406 (United States)",
+   "Q4846015 (United States)",
+   "Q490584 (United States)",
+   "Q5459464 (United States)",
+   "Q5459466 (United States)",
+   "Q5459467 (United States)",
+   "Q5459470 (United States)",
+   "Q55807709 (Australia)",
+   "Q8563815 (United States)"
+  ],
+  "Kiln": [
+   "Q2131161 (United States)"
+  ],
+  "Kite": [
+   "Q2041473 (United States)",
+   "Q6418095 (United States)"
+  ],
+  "Loom": [
+   "Q6675547 (United States)"
+  ],
+  "Maple": [
+   "Q115178283 (Canada)",
+   "Q14708027 (United States)",
+   "Q14711007 (United States)",
+   "Q14711009 (United States)",
+   "Q14714175 (United States)",
+   "Q16911475 (United States)",
+   "Q18352468 (United States)",
+   "Q1885829 (United States)",
+   "Q60674239 (Finland)",
+   "Q6753823 (Canada)",
+   "Q6753824 (Canada)",
+   "Q6753831 (United States)"
+  ],
+  "Masons": [
+   "Q14692184 (United States)"
+  ],
+  "Meadow": [
+   "Q112250307 (Canada)",
+   "Q112459476 (Canada)",
+   "Q140779812 (Australia)",
+   "Q14709769 (United States)",
+   "Q18389597 (United States)",
+   "Q483499 (United States)",
+   "Q55448910 (Australia)",
+   "Q972571 (United States)"
+  ],
+  "Point": [
+   "Q114245228 (Austria)",
+   "Q134609271 (Austria)",
+   "Q79265338 (Austria)",
+   "Q93500007 (Austria)",
+   "Q94405822 (Austria)",
+   "Q96026025 (Austria)",
+   "Q98084547 (Austria)",
+   "Q982183 (United States)"
+  ],
+  "Raven": [
+   "Q1374713 (United States)",
+   "Q18393587 (United States)",
+   "Q3076323 (North Macedonia)",
+   "Q4386905 (Bulgaria)",
+   "Q56229469 (Germany)",
+   "Q7296376 (Canada)",
+   "Q7296377 (United States)",
+   "Q7296378 (United States)"
+  ],
+  "Rise": [
+   "Q10655731 (Sweden)",
+   "Q112594898 (Sweden)",
+   "Q11997946 (Norway)",
+   "Q15195624 (Norway)",
+   "Q19386656 (Norway)",
+   "Q2221449 (United Kingdom)",
+   "Q3433112 (Norway)",
+   "Q7335857 (Norway)"
+  ],
+  "Spray": [
+   "Q2050063 (United States)"
+  ],
+  "Tower": [
+   "Q127100840 (United States)",
+   "Q1645711 (Ireland)",
+   "Q2151661 (United States)"
+  ],
+  "Yard": [
+   "Q48851736 (United States)"
+  ]
+ },
+ "assessment": "No generated person name matches a real association football player, coach or referee. No club name and no full stadium name matches a human settlement. The place matches are single common words inside stadium names (e.g. 'Bell', 'Maple', 'Meadow') that also name small settlements; they do not make a club evoke a real place, so they are kept.",
+ "limits": [
+  "GeoNames cities list not used: it needs a file download (cities15000.zip) not yet approved; Wikidata human settlements are used for places instead.",
+  "Exact English-label matches only: a real person listed under a different spelling is not caught."
+ ],
+ "delta_check": {
+  "names": [
+   "Arjun Bhani",
+   "Kabir Chaore",
+   "Ravi Bhani",
+   "Walid Hamali",
+   "Walid Khaidi",
+   "Zakaria Hamali",
+   "Zakaria Khane"
+  ],
+  "person_matches": [],
+  "why": "surnames replaced after the main run (BAD_READINGS) were checked separately"
+ }
+}
