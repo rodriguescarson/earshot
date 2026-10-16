@@ -228,12 +228,26 @@ seeds 1-40 fit: +0.078, in the far corner cell of the attacking third (x-band 11
 had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 
 ### Planted-defect harness (development run, not of record)
-`reports/planted-dev.json`: seeds 1-10, 25% injection rate, against Stream 1's Caller and Checker
-(throwaway local merge with `feat/agents-core`). Analyst JSON 660 defects, recall 1.0, false-block
-0.0 on 2,136 clean claims. Slot values (en, ar) 1,158 defects, recall 1.0, false-block 0.0 on
-7,914 clean lines. Roster entries recall 0.0 and names typed into template text recall 0.0: both
-by design (the Checker reads the same roster and templates), and the auditor's job. Template
-numerals recall 1.0. The run of record is on the held-out seeds.
+`uv run earshot planted --seeds 1-10` (2026-10-16, branch `feat/eval-run`), English, both modes,
+25% injection rate, against Stream 1's Caller, Checker and auditor. Summary in
+`reports/planted-dev.json`.
+
+| Injection point | Defects | Recall | False-block | Notes |
+|---|---|---|---|---|
+| Analyst JSON | 660 | 1.0 | 0.0 | |
+| Slot values, Casual | 1,158 | 1.0 | 0.0 | |
+| Slot values, Analyst | 1,158 | 1.0 | 0.0 | |
+| Roster entries, Checker alone | 180 per mode | 0.0 | 0.0 | By design: the Checker reads the same roster. |
+| Roster entries, with the auditor (`reference_blocked`, reviewed roster) | 180 per mode | **0.978** | 0.0 | See below. |
+| Template strings, Casual | 639 | 0.845 | 0.0 | Stray numerals 1.0; names typed into fixed text 0.0. |
+| Template strings, Analyst | 633 | 0.921 | 0.0 | Same split. |
+
+- **The auditor's roster misses:** all 4 per mode are `substitution.1` lines. `reference_blocked`
+  checks the `player` and `keeper` slots, while a substitution names its players in `on` and `off`.
+  Reported to Stream 1.
+- **Names typed into fixed text** are the auditor's job, through its exact match against the
+  reviewed templates (Stream 1's section below).
+- The run of record is on the held-out seeds.
 
 ### G8 on the render match (frames, CEO-4)
 2026-10-16, `uv run earshot frames --seed 26 --out data/frames/m00026.frames.npz` (numbers in
@@ -269,3 +283,104 @@ recounts every number from the event log; it shares no code with the Checker's s
 - The 16 rendered demo clips: 557 lines audited, 0 findings, including the Analyst's claim lines.
 The auditor was changed after seeing these development results, so they are not evidence of its
 recall; the run of record is on the held-out seeds with the auditor frozen at `eval-freeze`.
+
+### Accelerated evaluation run, ET11 (development, not of record)
+2026-10-16. The run of record waits for `eval-freeze`, the held-out seeds and the latency model from
+the deployed load test. Everything here uses the development seasons and a **provisional** latency
+model (ready = `READY_DELAY_MS` 350 ms, Analyst = its whole budget, delivery 0), so none of it is a
+result. It records what the harness measures and what it found.
+
+- **Harness:** `src/earshot/eval/run.py`.
+  - Whole matches run through Stream 1's live broadcaster (`LiveMatch`: the Agent Framework
+    pipeline, window lines, claim gating, StatWatcher, recaps) on a virtual clock, with a
+    `LiveDirector` per profile P1-P5 in English.
+  - Targets come from the event log, not the Spotter: goals, red cards and penalties for
+    never-drop; shots and yellow cards for coverage.
+- **Runtime (ET11 check: 380 matches inside 15 min on 8 workers, failed ids reported):**
+  - `uv run earshot evaluate --seeds 1-380 --workers 8`, at commit `6deb846`, run from a detached
+    worktree: 380/380 matches, 0 failed, **402.5 s**.
+  - The same run at `eaecd2a`: 396.6 s, 0 failed. **PASS.**
+- **The finding it made (fixed by Stream 1 in `24f4efb`):**
+  - Before the fix, the broadcaster's event feeder waited for each Analyst window run, so the card
+    that follows a foul waited for the Analyst.
+  - Seeds 1-40, P1, at `eaecd2a`: yellow cards within 3 s **28/149** (p50 4,367 ms); red-card p95
+    5,756 ms; coverage 0.878.
+  - With window runs on their own task (`--windows background`, now the broadcaster as built):
+    **149/149** (p50 855 ms); red-card p95 709 ms; coverage 0.977.
+  - `--windows inline` still reproduces the old behaviour.
+- **The full season as built**, at `6deb846` with provisional latency; summary in
+  `reports/eval-season-dev-provisional.json`:
+
+| Profile | Never-drop aired (1,011 goals, 49 reds, 105 penalties) | Coverage within 3 s | Shots within 3 s (of 9,324) | Yellow cards within 3 s (of 1,505) | Numeric slots a minute |
+|---|---|---|---|---|---|
+| P1 Casual, app voice | all; p95 447 / 697 / 693 ms | 0.979 | 9,092 | 1,505 | 0.253 |
+| P2 Analyst, app voice, club + player | all | 0.974 | 9,042 | 1,504 | 1.573 |
+| P3 Casual, screen reader | all | 0.979 | 9,092 | 1,505 | 0.253 |
+| P4 Analyst, one ear, shot speed | all | 0.971 | 9,009 | 1,504 | 1.700 |
+| P5 Analyst, app voice | all | 0.976 | 9,062 | 1,504 | 1.573 |
+
+  - P5 airs 6.22 times P1's numeric slots a minute (criterion: at least 3).
+  - Casual numbers outside the allowed set: 0. The first run found `red_card.1` saying "down to N
+    players" 49 times; Stream 1 fixed it in `24f4efb`.
+  - P1 and P3 are identical offline by construction: `est_ms` uses the same airtime formula as the
+    screen-reader estimate.
+- **Baseline cause labels** on the same analysis windows (development season, graded against the
+  truth log; not the held-out Explanations result): 7,186 labels, 1,916 correct (accuracy 0.267),
+  recall 695/1,702 (0.408), 13.9 false alarms a match.
+
+### Real Analyst, trial (development, not of record)
+Seed 26 only: 49 analysis windows, the first 20 called, the rest skipped by `--max-calls 20`. Two
+runs, both with `uv run earshot evaluate --seeds 26 --workers 1 --real-analyst --max-calls 20
+--tokens-per-hour 300000`.
+
+**The runs:**
+
+| | Run 1 (`bd75a29`) | Run 2 (`50f53ae`, `--analyst-cache`) |
+|---|---|---|
+| Summary | `reports/eval-analyst-trial-seed26.json` | `reports/eval-analyst-trial-seed26-gated.json` |
+| Tokens a call (p50) | 3,802 | 3,796 |
+| Latency p50 / p95 | 3,891 / 5,490 ms | 3,711 / 5,186 ms |
+| Timeouts | 2 of 20 | 1 of 20 |
+
+**Cause labels against the truth log:**
+
+| Run | Model's raw causes (proposed) | Gated causes on verified claims (what would air) | Baseline, same windows |
+|---|---|---|---|
+| 1 | 2 of 28 correct | not graded | 4 of 7 |
+| 2 | 1 of 28 correct | 1 of 22 correct; the gate dropped 6 | 4 of 7 |
+
+- **Grading change:** run 1 graded the raw cause on accepted claims. Run 2 grades what airs: the
+  cause `gate_cause` leaves on a claim the live `verify` accepts, as `LiveMatch._window_lines`
+  does. That is the definition for the run of record. Run 1's note that "all 28 labels would have
+  aired" was wrong, because it did not apply the gate.
+- **Signal for the Analyst prompt:** the model gives a cause in most windows, and almost none are
+  right. It is one match, so a signal, not a result.
+- **What this means for the run of record:**
+  - About 2,000-2,800 calls on the 40 held-out matches, about 8-11M tokens.
+  - Under the kill-switch alerts (500K tokens an hour, 3M a day) that is about 3.5 days of paced
+    running (`--tokens-per-hour`, `--resume`).
+  - Raising those alerts for the run is Carson's decision.
+
+### Load test, trial (development, not of record)
+`earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
+India to Sweden Central. Summary in `reports/loadtest-trial-2026-10-16.json`.
+
+- **Setup:** 10 SSE listeners spread over the five profiles' groups, each fetching every line's
+  audio. The run makes its own temporary judge code and removes it.
+- **Event to first audio byte (Caller lines):** p50 2,826 ms, **p95 5,866 ms** (target 2.0 s:
+  **miss**).
+
+  | Component | p50 | p95 |
+  |---|---|---|
+  | Audio ready | 123 ms | 688 ms |
+  | Event to the Director starting the line (the single channel's queue) | 302 ms | 2,765 ms |
+  | Start to message sent (`_publish_line`, mostly ffmpeg on 0.5 vCPU) | 716 ms | 2,799 ms |
+  | SSE transit | 52 ms | 59 ms |
+  | Audio first byte | 502 ms | 804 ms |
+
+- **Errors:** 6 connect timeouts.
+- **Limits:**
+  - one load-generator machine, far from the region;
+  - two clocks (the worker's and this machine's), skew not corrected;
+  - 3 minutes.
+- **Proposed to Stream 1:** encode the M4A while the line waits in the queue.
