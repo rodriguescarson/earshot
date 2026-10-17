@@ -51,6 +51,11 @@ class AudioStore:
     def ssml(self, line: Line) -> str:
         return ssml_for(line, excited=line.priority >= EXCITED_PRIORITY)
 
+    def speech_key(self, line: Line) -> str:
+        """Lines with the same SSML (one moment in Casual and Analyst often reads the same) share one
+        speech file, so they share one synthesis call too."""
+        return hashlib.sha256(self.ssml(line).encode()).hexdigest()[:32]
+
     def cached_ms(self, line: Line) -> int | None:
         """The duration if this line's speech is already cached (costs nothing to air)."""
         clip = self.synth.cached(self.ssml(line))

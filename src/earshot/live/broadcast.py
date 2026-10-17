@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -173,6 +174,8 @@ class LiveMatch:
         self.speechq = AudioQueue(SPEECH_WORKERS)
         self.encodeq = AudioQueue(ENCODE_WORKERS)
         """Speech and encoding, each in rank order on threads of its own (``earshot.live.audioqueue``)."""
+        self._publishing: Counter[str] = Counter()
+        """Serve keys that publishing is waiting on: their encode-ahead job is never skipped as stale."""
         self.speed = speed
         self.budget = SpeechBudget()
         self.ball: list[BallSample] = with_danger(ball_path(events), info.home.team_id)
@@ -449,7 +452,7 @@ class LiveMatch:
             else:
                 try:
                     duration = await self.speechq.run(
-                        f"warm:{line.line_id}", rank(line), self.audio.warm, line
+                        f"warm:{self.audio.speech_key(line)}", rank(line), self.audio.warm, line
                     )
                 except Exception as e:  # speech failed (e.g. the kill switch): air it as text (DR-5)
                     log.warning("speech failed for %s (%s): airs as text", line.line_id, e)
@@ -466,28 +469,37 @@ class LiveMatch:
         return f"serve:{line.line_id}:{output.value}"
 
     async def _encode_ahead(self, line: Line, output: OutputMode) -> None:
+        key = self._serve_key(line, output)
+
         def wanted() -> bool:  # a stale line will never air: leave the CPU to lines that will
-            return line.never_drop or self.match_ms() <= line.deadline_wall_ms
+            # A line the Director started before its deadline is still wanted after it: publishing
+            # waits on this job (otherwise the skip reached publishing and the line aired as text).
+            return line.never_drop or self._publishing[key] > 0 or self.match_ms() <= line.deadline_wall_ms
 
         try:
             await self.encodeq.run(
-                self._serve_key(line, output), rank(line), self.audio.serve, line, output,
-                synthesize=False, wanted=wanted,
-            )  # fmt: skip
+                key, rank(line), self.audio.serve, line, output, synthesize=False, wanted=wanted
+            )
         except Skipped:
             pass
         except Exception as e:  # publishing tries again and airs text if it fails too
             log.debug("encode ahead failed for %s: %s", line.line_id, e)
 
     async def _publish_line(self, g: Group, start: Start) -> None:
+        key = self._serve_key(start.line, g.key.output_mode)
+        self._publishing[key] += 1
         try:
             served = await self.encodeq.run(
-                self._serve_key(start.line, g.key.output_mode), rank(start.line), self.audio.serve,
-                start.line, g.key.output_mode, synthesize=not self.cached_only(),
+                key, rank(start.line), self.audio.serve, start.line, g.key.output_mode,
+                synthesize=not self.cached_only(),
             )  # fmt: skip
         except Exception as e:  # speech or encoding failed: the line still airs, as text (DR-5)
             log.warning("audio failed for %s (%s): airs as text", start.line.line_id, e)
             served = None
+        finally:
+            self._publishing[key] -= 1
+            if not self._publishing[key]:
+                del self._publishing[key]
         msg = LineMsg(
             id=start.line.line_id,
             priority=start.line.priority,
