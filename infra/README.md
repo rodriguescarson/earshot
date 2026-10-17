@@ -31,7 +31,24 @@ az deployment group what-if --subscription "$EARSHOT_SUBSCRIPTION" -g rg-earshot
 
 Then run the same command with `az deployment group create … -n earshot-infra-<n>`. `main.parameters.json` carries azd placeholders, so pass the parameters explicitly as above.
 
-**From GitHub** (`.github/workflows/deploy.yml`, OIDC, no stored credentials):
+**From this machine, without GitHub Actions** (the way to deploy now). GitHub Actions starts no
+jobs on this repository: there is a billing hold, and it stays. So CI, merges and deploys run
+locally, through three scripts:
+
+| Script | What it does |
+|---|---|
+| `scripts/ci.sh [--report]` | The checks in `ci.yml`: ruff, pyright, pytest, pip-audit, biome, tsc, vitest, vite build, gitleaks. `--report` posts the result as a `local-ci` commit status, which the API allows without Actions. |
+| `scripts/merge-pr.sh <n>` | Runs `ci.sh` on the PR's head merged with current `main` in a throwaway worktree, posts the status on the head, then squash-merges with `--match-head-commit`. |
+| `scripts/deploy.sh [--infra] [--force]` | `deploy.yml` from here. It refuses unless `DEPLOY_ENABLED` is `true` and `main` has `local-ci` success. It builds `earshot:<short sha>` in ACR from `git archive origin/main`, rolls both apps (or runs `main.bicep` with `--infra`), then runs the smoke tests. |
+
+- **Order:** merge with `merge-pr.sh`, then run `scripts/ci.sh --report` on the updated `main`,
+  then `deploy.sh`.
+- **Identity:** your own `az login`; `.env` gives the subscription.
+- **Checks:** there's no branch protection on a private free-plan repository. The `local-ci` status
+  is the check, and the `pre-push` hook still refuses pushes to `main`.
+
+**From GitHub** (`.github/workflows/deploy.yml`, OIDC, no stored credentials; it doesn't run while
+the billing hold stays):
 - It runs on pushes to `main` while the repository variable `DEPLOY_ENABLED` is `true`, and always on `workflow_dispatch`.
 - It builds `earshot:<sha>` in ACR, rolls both apps with `az containerapp update --image`, and smoke-tests `/healthz`, `/api/status` and `/api/live`.
 - **Identity:** the Entra app `earshot-github-deploy` (the `AZURE_CLIENT_ID` repository variable).
