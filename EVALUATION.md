@@ -596,8 +596,9 @@ the query):
   - Lines aired as text: 230 down to 0.
 - **End to end, this network can't resolve the difference.** The same image measured p95 4.15 s
   and 2.77 s, 20 minutes apart. Run 1's tail is the audio's first byte (p95 2,975 ms against
-  959 ms), while the worker used under 0.12 of a core. That tail came from the load generator's
-  network. From this machine, single-run differences under about 1.4 s at p95 can't be resolved.
+  959 ms), while the worker used under 0.12 of a core. I read that tail as the load generator's
+  network; the 1 vCPU section below corrects that (0 connect timeouts in both runs there). From
+  this machine, single-run differences under about 1.4 s at p95 can't be resolved at 0.25 vCPU.
 - **Latency criterion at 0.25 vCPU: still a miss.** The runs without a network tail have p95
   2.8-2.9 s, against a 2.0 s target. The run of record (0.5 vCPU at the tag) stays 3.6 s.
 - **What remains is the single voice channel's queue:** event to the Director's start, p95
@@ -631,6 +632,55 @@ the query):
   - P5/P1 numeric ratio 5.18;
   - Facts audit blocks 0 in en, es, ar and hi.
 - **Summaries:** `reports/eval-season-54a6495-0.25vcpu.json`, `reports/eval-season-pooled-0.25vcpu.json`.
+
+### After the freeze: the worker at 1 vCPU / 2 GiB, the judging size (2026-10-17, not of record)
+The same application code as `54a6495`; image `a0a07e3` adds only #31's error message. Carson's
+call was to keep 1 vCPU through judging if it measured better. Two runs, each 30 listeners, 15
+minutes in active play after a 5-minute warm-up, in the same match minutes (about 7-23):
+
+| 30 listeners | 0.25 vCPU / 0.5 GiB (`54a6495`) | 1 vCPU / 2 GiB, run 1 | 1 vCPU / 2 GiB, run 2 |
+|---|---|---|---|
+| Event to first audio byte: p50 / p95 | 1,523 / 2,913 ms | 984 / **2,280** ms | 951 / **2,341** ms |
+| Audio ready: p95 | 280 ms | 153 ms | 162 ms |
+| Event to the Director's start: p95 | 1,763 ms | 1,681 ms | 1,746 ms |
+| Start to sent (encode): p50 / p95 | 391 / 1,344 ms | 4 / 232 ms | 3 / 219 ms |
+| Audio first byte: p95 | 1,061 ms | 769 ms | 820 ms |
+| Lines timed | 3,485 | 3,984 | 3,942 |
+| Audio fetches that did not connect in 10 s | 419 | **0** | **0** |
+| Worker CPU, minute mean / peak; memory peak | 66 / 109 mc; 431 MiB of 512 | 61 / 91 mc; 355 MiB of 2,048 | |
+
+Summaries: `reports/loadtest-2026-10-17-n30-1vcpu-a0a07e3.json` and `…-run2.json`.
+
+- **The two runs agree.** p95 is within 61 ms, and encode p95 within 13 ms.
+- **Latency criterion at 1 vCPU: still a miss**, at p95 2.28-2.34 s against 2.0 s. What remains
+  is the single voice channel's queue: event to the Director's start, p95 1.68-1.75 s.
+- **A correction to the 0.25 vCPU reading above:**
+  - Both 1 vCPU runs had 0 audio fetches fail to connect. All four 0.25 vCPU runs had 341-495,
+    across different times of day.
+  - So the connect timeouts, and the first-byte tail they caused, are at least partly the small
+    worker, not only this machine's network. The mechanism is not established.
+  - The run-to-run spread of 1.4 s at p95 was measured at 0.25 vCPU only. At 1 vCPU it was 61 ms.
+
+**Coverage with this latency** (full season, 380/380, harness at `a0a07e3`):
+
+| | Run of record | 0.25 vCPU, three runs pooled | 1 vCPU, run 1 | 1 vCPU, both runs pooled |
+|---|---|---|---|---|
+| Coverage within 3 s, P1-P5 (target 0.95) | 0.707-0.780 | 0.843-0.867 | 0.971-0.979 | **0.970-0.978** |
+| Shots within 3 s (of 9,324) | 6,979-7,312 | 7,705-7,949 | 9,007-9,096 | 9,001-9,082 |
+| Yellow cards within 3 s (of 1,505) | 649-1,137 | 1,411-1,440 | 1,503-1,505 | 1,501-1,504 |
+| Goal p95, P1 | 2,624 ms | 2,323 ms | 964 ms | 955 ms |
+
+- **Coverage at the judging size: above the target** in every profile (0.970-0.978 against
+  0.95), on the latency pooled from both runs. This is after the freeze and not of record. The
+  run of record, at the tag's deployed size, stays a miss at 0.707-0.780.
+- **Both 1 vCPU columns:**
+  - never-drop lines all aired;
+  - 0 audit blocks;
+  - 0 Casual violations;
+  - P5/P1 numeric ratio 5.18;
+  - Facts audit blocks 0 in en, es, ar and hi.
+- **Summaries:** `reports/eval-season-1vcpu-a0a07e3.json` and `reports/eval-season-1vcpu-pooled.json`.
+  The latency models are `reports/latency-1vcpu-a0a07e3.json` and `reports/latency-1vcpu-pooled.json`.
 
 ### Template quality: Foundry evaluators (development, 2026-10-16)
 `earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip

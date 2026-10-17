@@ -2872,7 +2872,10 @@ this is the state and what is left.
 
 **Deployed:**
 - **Worker:** `https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io`.
-  Image `e1c271a`, 0.25 vCPU / 0.5 GiB (Carson: the lowest size), one replica.
+  Image `a0a07e3`, 1 vCPU / 2 GiB, one replica at most.
+  - Until Oct 27 it scales to zero when idle: the first request after that waits for a cold start,
+    and the match restarts at kick-off.
+  - From Oct 27 it is always on (`scripts/deploy.sh --infra`).
 - **MCP app:** `/mcp` on `ca-earshot-mcp`, same image.
 - **Identity:** everything keyless and on managed identity, through Bicep.
 - **Checked after the deploy:** `/healthz`, `/api/status` (cached-only off), `/api/live`, MCP
@@ -2890,20 +2893,20 @@ this is the state and what is left.
 | Planted defects, held-out, 4 languages | auditor 1.0 on rosters and templates; 0 false blocks |
 | G5 press height, held-out | 0.749, reported |
 
-**After the freeze (not of record), at 0.25 vCPU:**
+**After the freeze (not of record):**
 - **Changes:**
   - one priority audio queue, with encoding while a line waits;
   - yellow cards may preempt;
   - mono encode for centred lines;
   - separate speech and encode queues;
-  - three fixes for lines that lost their audio.
-- **Lines aired as text** (worker logs): 230 per load test, then 0.
-- **Server side:**
-  - audio ready p95: 802 down to about 280 ms;
-  - encode p95: 2.4 s down to about 1.2 s.
-- **Latency p95:** 2.8-2.9 s, still a miss. What remains is the single voice channel's queue
-  (about 1.8 s at p95). From this machine, p95 moves by about 1.4 s between two runs of one image.
-- **Coverage:** 0.84-0.88, still a miss, but 0.08-0.15 above the run of record.
+  - three fixes for lines that lost their audio (230 per load test, then 0).
+- **At the judging size, 1 vCPU / 2 GiB** (two load tests that agree):
+  - Latency p95: 2.28-2.34 s, still a miss against 2.0 s. What remains is the single voice
+    channel's queue, about 1.7 s at p95.
+  - Coverage: **0.970-0.978, above the 0.95 target** in every profile (season, latency pooled
+    from both runs).
+- **At 0.25 vCPU:** latency p95 2.8-2.9 s, Coverage 0.84-0.88. The small worker also had 341-495
+  audio fetches fail to connect per run; the 1 vCPU runs had none.
 - **Shot chunking** would cut the Spotter's hold (0.7 s p50). Stream 1 declined it for now.
 
 **Running:** the held-out real-Analyst run.
@@ -2952,12 +2955,21 @@ this is the state and what is left.
     kill-switch action are unchanged. AI access was then restored.
 
 **Cost estimate to Nov 10, when the judge demo can come down** (2026-10-17)
-- **Spent so far:** ₹960 ($10.00) this month, from the Cost Management query (about a day behind):
+- **The plan** (Carson, 2026-10-17):
+  - test locally as far as possible;
+  - the worker scales to zero when idle until the day before submission;
+  - from Oct 27 it runs always-on at 1 vCPU / 2 GiB (measured better, below) through judging.
+  - The infrastructure stays up. Recreating it the day before would change the worker's URL,
+    which the site's CSP and the judge link use. Idle, it costs about $0.20 a day.
+- **No credits:** the official rules (github.com/microsoft/insidethegamehackathon) and the event
+  pages offer no Azure credits, and this subscription is Pay-As-You-Go. The rules require a demo
+  judges can use free until Nov 10, but judges may also judge on the description and video alone.
+- **Spent so far:** ₹960 ($10.00) this month, from Cost Management (about a day behind):
   - speech: $6.99;
   - model tokens: $2.91;
   - registry: $0.10;
-  - Container Apps: $0, still inside the monthly free grant.
-- **Prices:** Azure retail prices, Sweden Central:
+  - Container Apps: $0, inside the monthly free grant.
+- **Prices:** Azure retail, Sweden Central:
   - gpt-5.4-mini: $0.825 per 1M input tokens and $4.95 per 1M output tokens, about $1.23 per 1M
     blended;
   - Neural speech: $15 per 1M characters;
@@ -2968,31 +2980,33 @@ this is the state and what is left.
 | Item | Oct 17-31 | Nov 1-10 | Basis |
 |---|---|---|---|
 | Spent | $10.00 | | Cost Management, month to date |
-| Worker, 0.25 vCPU / 0.5 GiB, always on | $5.60 | $0.93 | the free grant covers about 8 days a month |
-| MCP app (scales to zero), alerts, storage, logs | about $1 | about $0.5 | |
-| Container registry | $2.49 | $1.63 | Basic, per day |
-| Held-out Analyst run: 33 matches re-run, about 5.3M tokens | $6.50 | | paced at 80K tokens an hour, done about Oct 20 |
-| Development and tests until submission | $10-25 | | load tests about $0.5 each; Oct 16, the busiest day, was $9.15 |
-| Judging (Oct 28-Nov 10) | $3-15 | $7-35 | a 20-minute, two-group judge session costs about $0.37 |
-| **Total** | **$39-66** | **$10-38** | **$49-104 overall** |
+| Worker: on demand until Oct 27, then 1 vCPU / 2 GiB always on | $11.60 | $19.90 | $2.59 a day always on, less the free grant |
+| Container registry | $2.44 | $1.63 | Basic, per day |
+| Held-out Analyst run, 33 matches re-run | $6.50 | | about 5.3M tokens at 80K an hour |
+| Testing until submission (local, one final cloud check) | $2-5 | | a cloud load test is about $0.5 |
+| Judging AI (Oct 28-Nov 10) | $3-15 | $7-35 | a 20-minute, two-group judge session is about $0.37 |
+| MCP (scales to zero), alerts, storage, logs | about $1 | about $0.5 | |
+| **Total** | **$37-52** | **$29-57** | **$66-109 overall** |
 
+- **The two dials:**
+  - Testing locally saves about $10-25 against testing on the cloud worker.
+  - The 1 vCPU worker for judging costs about $21 more than 0.25 vCPU. For that, p95 goes from
+    2.9 to 2.3 s, encode p95 from 1.3 to 0.23 s, and memory peaks at 355 MiB of 2 GiB instead of
+    464 of 512.
 - **Ceiling on AI spend:** the kill-switch alerts stop it at 3M tokens or 500K speech characters a
-  day, about $11.19. The worker's own caps cached-only it sooner, at about $9.07 a day.
-- **A bigger worker** (cost per day before the free grant; extra to Nov 10 over 0.25 vCPU):
-
-  | Worker | Per day | Extra to Nov 10 |
-  |---|---|---|
-  | 0.5 vCPU / 1 GiB | $1.30 | +$16 |
-  | 1 vCPU / 2 GiB | $2.59 | +$48 |
-  | 2 vCPU / 4 GiB | $5.18 | +$112 |
-
-  Any of them puts October over ₹4,800, so the budget has to go up first.
+  day, about $11.19.
+- **Budget:** both months stay under ₹4,800 ($50) unless judges use the live demo heavily. At the
+  top of the range the budget trips the kill switch: AI goes off, live goes text-only, and
+  recorded clips still play.
 
 **For Carson:**
-- **The monthly budget is the risk to judging.** `earshot-monthly` (₹4,800 = $50) runs the kill
-  switch at 100% of actual spend, and the October forecast is $39-66 (cost estimate above). Raising
-  it keeps judging's first days (Oct 28-31) safe; the daily token and speech alerts still guard
-  against abuse.
+- **Budget, your call:** ₹4,800 a month covers the plan unless judges use the live demo heavily
+  (the top of the ranges above). Raising November's alone to ₹9,600 would remove that risk.
+- **Oct 27 (the day before submission):**
+  1. `scripts/ci.sh --report` on main.
+  2. `scripts/deploy.sh --infra`, which restores always-on at 1 vCPU / 2 GiB.
+  3. One cloud load test and the judge-link check.
+  4. Set `DEPLOY_ENABLED=false`.
 - **`DEPLOY_ENABLED=false` at submission (T5).** `scripts/deploy.sh` honours it too.
 - **Worker size:** 0.5 vCPU / 1 GiB brought p95 from 3.7 to 2.7 s with the queue. That costs
   +$0.027 an hour while active ($0.000024 per vCPU-second and $0.000003 per GiB-second, Sweden
