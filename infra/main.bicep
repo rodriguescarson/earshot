@@ -246,9 +246,10 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = {
         {
           name: 'worker'
           image: empty(workerImage) ? placeholder : workerImage
-          // The smallest Container Apps size (Carson, 2026-10-17). Measured on 0.5 vCPU / 1 GiB under 30
-          // listeners: memory peak 412 MiB, CPU peak 307 millicores, so load will be CPU-throttled here.
-          resources: { cpu: json('0.25'), memory: '0.5Gi' }
+          // The judging size (Carson, 2026-10-17: "keep it if it's better"). 30 listeners, same code:
+          // 0.25 vCPU / 0.5 GiB gave p95 2.9 s, encode p95 1.3 s, memory peak 464 of 512 MiB;
+          // 1 vCPU / 2 GiB gave p95 2.3 s, encode p95 0.23 s, memory peak 355 MiB (EVALUATION.md).
+          resources: { cpu: json('1.0'), memory: '2Gi' }
           env: [
             { name: 'AZURE_CLIENT_ID', value: workerId.properties.clientId }
             { name: 'EARSHOT_STORAGE_URL', value: storage.properties.primaryEndpoints.blob }
@@ -264,7 +265,9 @@ resource worker 'Microsoft.App/containerApps@2024-03-01' = {
           ]
         }
       ]
-      // One replica: live Director state is per replica (CEO Section 9: single-revision mode).
+      // One replica: live Director state is per replica (CEO Section 9: single-revision mode). Until the
+      // day before submission the live app runs with minReplicas 0 (an `az containerapp update`
+      // override, so it costs nothing idle); `scripts/deploy.sh --infra` restores this, for judging.
       scale: { minReplicas: 1, maxReplicas: 1 }
     }
   }

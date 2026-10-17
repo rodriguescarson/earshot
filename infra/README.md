@@ -15,7 +15,10 @@ Everything runs in subscription `$EARSHOT_SUBSCRIPTION` (from `.env`), resource 
 - **User-assigned identities** `id-earshot-worker` and `id-earshot-mcp`, with RBAC scoped to single containers.
 - **Web PubSub**: Free_F1 by default, `disableLocalAuth`, hub `earshot` with anonymous connect denied. Publishing is opt-in (`EARSHOT_WEBPUBSUB_PUBLISH=1`); the web client listens over SSE.
 - **Container Apps environment** with two apps from the same image:
-  - `ca-earshot-worker`: `uvicorn earshot.api.server:app`. Min = max = 1, because the match state lives in-process.
+  - `ca-earshot-worker`: `uvicorn earshot.api.server:app`, 1 vCPU / 2 GiB. Min = max = 1, because the match state lives in-process.
+    Until the day before submission it runs with an override, so it costs nothing idle:
+    `az containerapp update -n ca-earshot-worker --min-replicas 0 --max-replicas 1`.
+    `scripts/deploy.sh --infra` restores always-on.
   - `ca-earshot-mcp`: `uvicorn earshot.api.mcp:app`. Min 0, max 2.
 
 ## Deploy
