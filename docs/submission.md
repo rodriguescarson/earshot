@@ -96,8 +96,12 @@ happened.
   server with 30 people listening at once it was 71% to 78%, depending on the listening mode.
   And we wanted the first sound of a call within 2 seconds of the event in 95% of cases; it was
   3.6 seconds. Most of the delay is calls queueing for the one voice, and the trip from India to
-  the server in Sweden. [PENDING: the result after the speed fixes now in progress, measured the
-  same way; and whether the server size changed since.]
+  the server in Sweden.
+- After that official run we changed how audio is prepared and gave the server the size it will
+  have while judges use it. Measured the same way, with 30 listeners, 97% to 98% of shots and cards
+  were spoken within 3 seconds, above the target. The first sound came within 2.3 seconds in 95% of
+  cases, close to the target but still over it; what is left is calls waiting for the one voice.
+  These numbers come from after we locked the code, so the official results stay the misses above.
 - [PENDING: the listening test with eyes closed, Oct 18-19, with the number of listeners stated.]
 
 ## Testing instructions
