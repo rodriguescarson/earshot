@@ -10,10 +10,12 @@ repo=$(git rev-parse --show-toplevel)
 ci="$repo/scripts/ci.sh"  # main's copy, so a PR from before this script still gets the same checks
 
 head=$(gh pr view "$n" --json headRefOid -q .headRefOid)
+branch=$(gh pr view "$n" --json headRefName -q .headRefName)
 state=$(gh pr view "$n" --json state -q .state)
 [ "$state" = OPEN ] || { echo "merge-pr: #$n is $state" >&2; exit 1; }
 
 git fetch -q origin main "pull/$n/head"
+base=$(git rev-parse --short origin/main)
 wt=$(mktemp -d)/pr-$n
 git worktree add -q --detach "$wt" "$head"
 cleanup() { git worktree remove --force "$wt" 2>/dev/null || true; }
@@ -25,5 +27,7 @@ trap cleanup EXIT
     { echo "merge-pr: #$n conflicts with main; resolve it on the branch first" >&2; exit 1; }
   CI_REPORT_SHA=$head "$ci" --report
 )
-gh pr merge "$n" --squash --match-head-commit "$head" --delete-branch
-echo "merge-pr: #$n merged ($head tested merged with $(git rev-parse --short origin/main))"
+gh pr merge "$n" --squash --match-head-commit "$head"
+# Not --delete-branch: it fails the whole command when the branch is checked out in a worktree.
+git push -q origin --delete "$branch" 2>/dev/null || true
+echo "merge-pr: #$n merged ($head tested merged with main at $base)"

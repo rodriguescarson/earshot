@@ -2862,10 +2862,13 @@ held-out run is paced under the existing spend alerts (Carson, same day).
 Engine, evaluation and infrastructure. Results and their commands are in EVALUATION.md section 5;
 this is the state and what is left.
 
-**On `main`:** #1-#32 are merged (main is `e1c271a`).
-- GitHub Actions starts no jobs (a billing hold), so the later PRs were merged on Carson's
-  instruction after local checks. The full suite passes locally (429 tests).
-- Deploys go directly through ACR and Bicep while CI is off.
+**On `main`:** every PR is merged.
+- **No GitHub Actions:** it starts no jobs, because of a billing hold that Carson is leaving as it
+  is (2026-10-17). So CI, merges and deploys run from this machine (#34, `infra/README.md`):
+  - `scripts/ci.sh --report`: every `ci.yml` check, posted as a `local-ci` commit status;
+  - `scripts/merge-pr.sh <n>`: CI on the PR merged with `main`, then a squash merge;
+  - `scripts/deploy.sh`: `deploy.yml`'s build, roll and smoke tests, gated on `DEPLOY_ENABLED`
+    and `local-ci`.
 
 **Deployed:**
 - **Worker:** `https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io`.
@@ -2905,11 +2908,32 @@ this is the state and what is left.
 
 **Running:** the held-out real-Analyst run.
 - **Gives:** Explanations, Never-drop, Casual vs Analyst, and Facts in en/es/ar/hi of record.
-- **Where:** `~/earshot-eval-runs/heldout-2026-10-17` (HOW-TO.md there).
-- **Pace:** 90K tokens an hour, under the existing kill-switch alerts.
-- **Progress:** 4 of 40 matches after 5.5 h, about two more days.
-- **Early signal (3 matches):** 15 of 259 gated causes correct. About 13% of Analyst calls time
-  out from this machine's network.
+- **Where:** `~/earshot-eval-runs/heldout-2026-10-17` (HOW-TO.md there), at `296138b`. That is the
+  first commit `a9000c8` plus the harness fix in #35; frozen paths are identical to the tag at both.
+- **Pace:** 80K tokens an hour, under the existing kill-switch alerts.
+- **Progress:**
+  - 9001-9007 are kept.
+  - 9008-9040 are withdrawn (incident below) and re-running since 07:19 UTC. At about 160K tokens
+    a match, it should finish around Oct 20.
+- **Early signal:** 15 of 259 gated causes correct on the first 3 matches. About 13% of Analyst
+  calls time out from this machine's network.
+
+**Incident, 2026-10-17 05:23 UTC: the kill switch tripped during the held-out run**
+- **What happened:** `kill-tokens-daily` (3M tokens in a rolling 24 h) fired. AI public network
+  access was disabled and the worker went cached-only.
+- **Cause:** Oct 16's development hours were still inside the window: the template judge and load
+  tests, up to 478K tokens an hour. On top of that the held-out run spent 88-151K tokens in a
+  clock hour against its 90K pace, because a new pacer per match started each match with an empty
+  hour. Its own token count matched Azure's exactly in the hours it ran alone.
+- **Effect:**
+  - The live demo was text-only for 1 h 44 m.
+  - The held-out run finished 9009-9040 in about 45 s each with every Analyst call failing (403),
+    recorded as ok. 9008 straddled the trip.
+- **Recovery:** at 07:07 UTC I ran `restore-ai.sh` and turned cached-only off.
+  - Withdrawn: the 33 rows, kept in the run's `withdrawn-2026-10-17-kill-switch/`.
+  - #35 makes the pace one window per process. A run now stops (exit 1, resumable) after 5 Analyst
+    errors in a row, instead of recording matches without one.
+  - The re-run is at 80K tokens an hour. The alerts are unchanged.
 
 **Incidents, 2026-10-16:**
 - **Kill switch, 13:54 UTC:**
@@ -2927,9 +2951,49 @@ this is the state and what is left.
   - **Fix:** with Carson's approval it is now ₹4,800 (= $50 at Azure's rate). Thresholds and the
     kill-switch action are unchanged. AI access was then restored.
 
+**Cost estimate to Nov 10, when the judge demo can come down** (2026-10-17)
+- **Spent so far:** ₹960 ($10.00) this month, from the Cost Management query (about a day behind):
+  - speech: $6.99;
+  - model tokens: $2.91;
+  - registry: $0.10;
+  - Container Apps: $0, still inside the monthly free grant.
+- **Prices:** Azure retail prices, Sweden Central:
+  - gpt-5.4-mini: $0.825 per 1M input tokens and $4.95 per 1M output tokens, about $1.23 per 1M
+    blended;
+  - Neural speech: $15 per 1M characters;
+  - Container Apps: $0.000024 per vCPU-second and $0.000003 per GiB-second, after 180K vCPU-s and
+    360K GiB-s free each month;
+  - registry: $0.1666 a day.
+
+| Item | Oct 17-31 | Nov 1-10 | Basis |
+|---|---|---|---|
+| Spent | $10.00 | | Cost Management, month to date |
+| Worker, 0.25 vCPU / 0.5 GiB, always on | $5.60 | $0.93 | the free grant covers about 8 days a month |
+| MCP app (scales to zero), alerts, storage, logs | about $1 | about $0.5 | |
+| Container registry | $2.49 | $1.63 | Basic, per day |
+| Held-out Analyst run: 33 matches re-run, about 5.3M tokens | $6.50 | | paced at 80K tokens an hour, done about Oct 20 |
+| Development and tests until submission | $10-25 | | load tests about $0.5 each; Oct 16, the busiest day, was $9.15 |
+| Judging (Oct 28-Nov 10) | $3-15 | $7-35 | a 20-minute, two-group judge session costs about $0.37 |
+| **Total** | **$39-66** | **$10-38** | **$49-104 overall** |
+
+- **Ceiling on AI spend:** the kill-switch alerts stop it at 3M tokens or 500K speech characters a
+  day, about $11.19. The worker's own caps cached-only it sooner, at about $9.07 a day.
+- **A bigger worker** (cost per day before the free grant; extra to Nov 10 over 0.25 vCPU):
+
+  | Worker | Per day | Extra to Nov 10 |
+  |---|---|---|
+  | 0.5 vCPU / 1 GiB | $1.30 | +$16 |
+  | 1 vCPU / 2 GiB | $2.59 | +$48 |
+  | 2 vCPU / 4 GiB | $5.18 | +$112 |
+
+  Any of them puts October over ₹4,800, so the budget has to go up first.
+
 **For Carson:**
-- **GitHub billing:** CI and the CD workflow don't run until it is fixed.
-- **`DEPLOY_ENABLED=false` at submission (T5).**
+- **The monthly budget is the risk to judging.** `earshot-monthly` (₹4,800 = $50) runs the kill
+  switch at 100% of actual spend, and the October forecast is $39-66 (cost estimate above). Raising
+  it keeps judging's first days (Oct 28-31) safe; the daily token and speech alerts still guard
+  against abuse.
+- **`DEPLOY_ENABLED=false` at submission (T5).** `scripts/deploy.sh` honours it too.
 - **Worker size:** 0.5 vCPU / 1 GiB brought p95 from 3.7 to 2.7 s with the queue. That costs
   +$0.027 an hour while active ($0.000024 per vCPU-second and $0.000003 per GiB-second, Sweden
   Central retail prices), $19.44 per 30 days if always active. Both sizes miss 2.0 s.
