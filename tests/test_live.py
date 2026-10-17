@@ -59,6 +59,9 @@ class FakeAudio:
     def cached_ms(self, line):
         return 1000 if line.line_id in self.cached else None
 
+    def speech_key(self, line):
+        return line.line_id
+
     def warm(self, line):
         self.synthesized.append(line.line_id)
         return int(len(line.text) / 14 * 1000) + 300
@@ -314,3 +317,88 @@ def test_a_speech_failure_still_airs_the_line_as_text(match26):
     aired = [msg for _, msg in sent if msg["kind"] == "line"]
     assert [msg["text"] for msg in aired] == [line.text]
     assert aired[0]["audio_url"] is None
+
+
+def test_a_started_line_is_not_skipped_as_stale_while_publishing_waits_for_its_encode(match26):
+    # Found in the worker's logs (load test, 0.25 vCPU, 2026-10-17): the Director started a line
+    # before its deadline, publishing joined its encode-ahead job still queued behind another
+    # encode, the deadline passed meanwhile, and the job's staleness skip aired the line as text.
+    import threading
+
+    r, _, _ = match26
+    line = real_lines(match26, 1)[0]
+    m, sent = _match(match26, FakeAudio(cached={line.line_id}))
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    clock = [0]
+    m.match_ms = lambda: clock[0]  # type: ignore[method-assign]
+
+    async def go():
+        gate = threading.Event()
+        busy = asyncio.ensure_future(m.encodeq.run("busy", (0, 0, 0), gate.wait))
+        await asyncio.sleep(0)  # the other encode holds the only slot
+        await m._offer(g, line)
+        await asyncio.sleep(0)  # the encode-ahead job is queued
+        start = next(a for a in g.director.tick(clock[0]) if isinstance(a, Start))
+        publish = asyncio.ensure_future(m._publish_line(g, start))
+        await asyncio.sleep(0)
+        clock[0] = line.deadline_wall_ms + 1  # the deadline passes while the job waits
+        gate.set()
+        await asyncio.gather(busy, publish)
+
+    asyncio.run(go())
+    aired = [msg for _, msg in sent if msg["kind"] == "line"]
+    assert [msg["text"] for msg in aired] == [line.text]
+    assert aired[0]["audio_url"] is not None
+    assert m.encodeq.skipped == 0
+
+
+def test_a_stale_line_nobody_is_publishing_is_still_skipped(match26):
+    import threading
+
+    r, _, _ = match26
+    line = real_lines(match26, 1)[0]
+    m, _ = _match(match26, FakeAudio(cached={line.line_id}))
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+    clock = [0]
+    m.match_ms = lambda: clock[0]  # type: ignore[method-assign]
+
+    async def go():
+        gate = threading.Event()
+        busy = asyncio.ensure_future(m.encodeq.run("busy", (0, 0, 0), gate.wait))
+        await asyncio.sleep(0)
+        await m._offer(g, line)
+        await asyncio.sleep(0)
+        clock[0] = line.deadline_wall_ms + 1
+        gate.set()
+        await busy
+        for _ in range(20):  # let the encode-ahead task take its turn
+            await asyncio.sleep(0.01)
+
+    asyncio.run(go())
+    assert m.encodeq.skipped == 1
+
+
+def test_lines_with_the_same_speech_share_one_synthesis(match26):
+    # A moment often reads the same in Casual and Analyst: one speech call, not one per line.
+    import time as _time
+
+    class SlowAudio(FakeAudio):
+        def speech_key(self, line):
+            return line.text
+
+        def warm(self, line):
+            _time.sleep(0.2)
+            return super().warm(line)
+
+    r, _, _ = match26
+    line = real_lines(match26, 1)[0]
+    twin = line.model_copy(update={"line_id": "l-twin"})
+    audio = SlowAudio()
+    m, _ = _match(match26, audio)
+    g = m.join(GroupKey(r.info.match_id, Language.EN, ListeningMode.CASUAL, OutputMode.APP_VOICE))
+
+    async def go():
+        await asyncio.gather(m._offer(g, line), m._offer(g, twin))
+
+    asyncio.run(go())
+    assert len(audio.synthesized) == 1

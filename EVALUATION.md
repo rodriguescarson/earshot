@@ -492,6 +492,177 @@ browser does.
 - the 18 real Analyst calls the day's load tests recorded (p50 2,318 ms). The deployed run's own 4
   were response-cache hits of a replayed match, at 0 ms.
 
+### After the freeze: the audio queue and yellow-card preemption (2026-10-17, not of record)
+Changes after `eval-freeze` (PR #26, `1343b41`), measured the same way as the runs of record. The
+runs of record above stay as measured at the tag.
+
+**What changed:**
+- **One priority audio queue** for speech and encoding: never-drop first, then preempting lines,
+  then by priority. Two threads of its own; identical jobs share one run.
+- **Encode while waiting:** each line's M4A is encoded while it waits in the Director's queue.
+- **Yellow cards may preempt.** On the virtual clock (seeds 1-40) a card had waited behind fouls,
+  stoppages and, in Analyst mode, window summaries (73 of P5's 149). With preemption, yellows within
+  3 s went from 52-113/149 to 133-142/149 per profile.
+
+**Load test, 30 listeners, worker at the smallest size (0.25 vCPU / 0.5 GiB, Carson's choice).**
+Both runs had 5 minutes of warm-up after a restart and 15 minutes in active play. The baseline fell
+in the second half, the change in the first.
+
+| | Before (`633f2ff`) | Audio queue (`1343b41`) |
+|---|---|---|
+| Event to first audio byte: p50 / p95 / max | 3,800 / **11,838** / 18,863 ms | 2,046 / **3,687** / 10,375 ms |
+| Audio ready: p50 / p95 | 118 / 1,299 ms | 95 / 802 ms |
+| Event to the Director's start: p50 / p95 | 594 / 2,151 ms | 228 / 1,911 ms |
+| Start to sent (encode): p50 / p95 | 2,790 / 8,504 ms | 898 / 2,405 ms |
+| Audio first byte: p50 / p95 | 804 / 3,956 ms | 568 / 979 ms |
+
+- **Gain:** at 0.25 vCPU the queue cuts the p95 from 11.8 s to 3.7 s.
+- **Still a miss:** the target is 2.0 s. Lines that air the moment they arrive have not finished
+  encoding (start-to-sent p95 2.4 s).
+- **Memory:** the worker reached 519 MiB under this load, above its 0.5 GiB limit. No restart was
+  recorded, but there is no headroom.
+
+**The same change at 0.5 vCPU** (temporary, back to 0.25 after). 30 listeners, 15 minutes in the
+second half after a 5-minute warm-up. Summary in `reports/loadtest-2026-10-17-n30-0.5vcpu-queue.json`.
+
+| 30 listeners | 0.5 vCPU, before | 0.25 vCPU, queue | 0.5 vCPU, queue |
+|---|---|---|---|
+| Event to first audio byte: p50 / p95 | 1,305 / 3,594 ms | 2,046 / 3,687 ms | **1,270 / 2,666 ms** |
+| Event to the Director's start: p95 | 1,690 ms | 1,911 ms | 1,651 ms |
+| Start to sent (encode): p95 | 2,311 ms | 2,405 ms | 1,080 ms |
+| Audio first byte: p95 | 714 ms | 979 ms | 795 ms |
+
+- **At 0.5 vCPU** the queue brings p95 from 3.6 s to 2.7 s. That is still above the 2.0 s target.
+- **What remains:**
+  - the single voice channel's queue (p95 about 1.65 s);
+  - the encode for lines that air the moment they arrive;
+  - the distance from the load generator to the region (first byte p50 about 0.5 s).
+
+**Coverage with this latency** (full season, `1343b41`, delivery from the 0.25 vCPU run):
+- **Coverage within 3 s:** 0.673-0.706 in P1-P5. The run of record was 0.707-0.780, with delivery
+  measured at 0.5 vCPU without the queue.
+- **Yellow cards within 3 s:** 1,285-1,320 of 1,505 (record: 649-1,137).
+- **Shots within 3 s:** 5,970-6,324 of 9,324 (record: 6,979-7,312).
+- **Never-drop:** all aired; 0 audit blocks.
+- **Reading:** the yellow-card change works. The smaller worker's slower delivery costs more on
+  shots than the queue wins back. The 0.5 vCPU point with the queue is in the table above.
+
+### After the freeze: mono centred lines, split queues and three audio fixes (2026-10-17, not of record)
+Changes after `eval-freeze`, on top of the audio queue. The worker stayed at 0.25 vCPU / 0.5 GiB.
+Measured as above: 30 listeners, 15 minutes in active play, each after a 5-minute warm-up.
+
+**What changed:**
+- **#28:** centred lines (one-ear mode, the centre pan bucket) are encoded mono at 64 kbps. That
+  halves the encode work at the same level in each ear.
+- **#29:** speech (4 threads, network-bound) and encoding (1 thread, CPU-bound) are separate
+  queues. On a quarter core the top-ranked encode has the core alone.
+- **#30:** fixes three ways a line lost its audio, found in the worker's logs (table below).
+  Lines with the same speech also share one speech call.
+- **#31:** an ffmpeg failure reports ffmpeg's own error. Before, it said "no working AAC encoder".
+
+| 0.25 vCPU, 30 listeners | Queue (`1343b41`) | + mono, split (`83f6286`), run 1 | Same image, run 2 | + #30 (`54a6495`, deployed) |
+|---|---|---|---|---|
+| Event to first audio byte: p50 / p95 | 2,046 / 3,687 ms | 1,721 / **4,151** ms | 1,259 / **2,765** ms | 1,523 / **2,913** ms |
+| Audio ready: p95 | 802 ms | 291 ms | 284 ms | 280 ms |
+| Event to the Director's start: p95 | 1,911 ms | 1,747 ms | 1,849 ms | 1,763 ms |
+| Start to sent (encode): p50 / p95 | 898 / 2,405 ms | 290 / 1,205 ms | 3 / 1,213 ms | 391 / 1,344 ms |
+| Audio first byte: p95 | 979 ms | 2,975 ms | 959 ms | 1,061 ms |
+| Lines timed | 2,921 | 3,505 | 4,309 | 3,485 |
+| Audio fetches that did not connect in 10 s | 341 | 422 | 495 | 419 |
+| Worker CPU, minute mean / peak | 89 / 163 mc | 62 / 111 mc | 46 / 92 mc | 66 / 109 mc |
+
+Summaries are in `reports/loadtest-2026-10-17-n30-0.25vcpu-{queue,mono-split-run1,mono-split-run2,54a6495}.json`.
+CPU and memory come from Azure Monitor (`UsageNanoCores`, `WorkingSetBytes`, 1-minute grain).
+Memory peaked at 431-464 MiB in the last three runs, under the 512 MiB limit.
+
+**Lines aired as text when they could have had audio** (worker logs, one per group and line, over
+each revision's whole life, warm-up included; `reports/worker-audio-failures-2026-10-17.json` has
+the query):
+
+| Cause | `1343b41` at 0.25 | `1343b41` at 0.5 | `83f6286` (two runs) | `54a6495` |
+|---|---|---|---|---|
+| Shared scratch WAV between one-ear and centre-bucket files (fixed in #28) | 181 | 112 | 0 | 0 |
+| A started line's encode skipped as stale while publishing waited on it (#30) | 33 | 1 | 11 | 0 |
+| Two syntheses of one SSML sharing one `.part` file (#30) | 11 | 27 | 13 | 0 |
+| ffmpeg error reported as "no AAC encoder", cause unknown (#31) | 2 | 0 | 0 | 0 |
+| Speech failed with an empty error | 3 | 0 | 0 | 0 |
+| **Total** | **230** | **140** | **24** | **0** |
+
+**Reading:**
+- **The server side improved, and repeatably.**
+  - Audio ready p95: 802 ms down to 280-291 ms.
+  - Start to sent p95: 2.4 s down to 1.2-1.3 s.
+  - Worker CPU: about a third less.
+  - Lines aired as text: 230 down to 0.
+- **End to end, this network can't resolve the difference.** The same image measured p95 4.15 s
+  and 2.77 s, 20 minutes apart. Run 1's tail is the audio's first byte (p95 2,975 ms against
+  959 ms), while the worker used under 0.12 of a core. That tail came from the load generator's
+  network. From this machine, single-run differences under about 1.4 s at p95 can't be resolved.
+- **Latency criterion at 0.25 vCPU: still a miss.** The runs without a network tail have p95
+  2.8-2.9 s, against a 2.0 s target. The run of record (0.5 vCPU at the tag) stays 3.6 s.
+- **What remains is the single voice channel's queue:** event to the Director's start, p95
+  1.75-1.85 s. Lines wait for one voice by design. Shot chunking ("X shoots!" at once, the outcome
+  after) would remove the Spotter's hold (0.67 s p50 / 1.42 s p95). Stream 1 declined it for now:
+  it adds a line per shot to that same queue, and needs new templates in four languages after the
+  freeze.
+- **A correction to the runs at `1343b41`:** the load test times only lines that have audio. The
+  230 and 140 lines lost to these races are missing from those runs' samples, including the
+  0.5 vCPU run with the queue above.
+
+**Coverage with this latency** (full season, 380/380 matches, harness at `54a6495`):
+
+| | Run of record | Queue (`1343b41`) | `54a6495` | Pooled: `83f6286` runs 1-2 + `54a6495` |
+|---|---|---|---|---|
+| Coverage within 3 s, P1-P5 (target 0.95) | 0.707-0.780 | 0.673-0.706 | **0.860-0.881** | **0.843-0.867** |
+| Shots within 3 s (of 9,324) | 6,979-7,312 | 5,970-6,324 | 7,847-8,077 | 7,705-7,949 |
+| Yellow cards within 3 s (of 1,505) | 649-1,137 | 1,285-1,320 | 1,465-1,484 | 1,411-1,440 |
+| Goal p95, P1 | 2,624 ms | 3,207 ms | 2,126 ms | 2,323 ms |
+
+- **Coverage: still a miss**, at 0.84-0.88 against 0.95. That is 0.08-0.15 above the run of
+  record, on a worker half its size.
+- **Two latency models:**
+  - one from the deployed image's own run (`reports/latency-54a6495-0.25vcpu.json`);
+  - one pooling all three runs (`reports/latency-pooled-0.25vcpu.json`), which includes the
+    network tail of `83f6286` run 1.
+- **In both new runs:**
+  - never-drop lines all aired;
+  - 0 audit blocks;
+  - 0 Casual violations;
+  - P5/P1 numeric ratio 5.18;
+  - Facts audit blocks 0 in en, es, ar and hi.
+- **Summaries:** `reports/eval-season-54a6495-0.25vcpu.json`, `reports/eval-season-pooled-0.25vcpu.json`.
+
+### Template quality: Foundry evaluators (development, 2026-10-16)
+`earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip
+cut off (the commands, and why there were two runs, are in the Stream 2 status). Summary and every
+judged sentence with the judge's reason are in `reports/template-eval-2026-10-16.json`.
+
+**What was judged:**
+- The sentences are what the product airs: lines from three development matches through the live
+  broadcaster, one per template, mode and language.
+- Templates no match produced were rendered with slot values seen in that language.
+- The prefix "Earlier: " was judged on a real goal line.
+- Totals: 544 sentences (256 aired, 280 rendered, 8 composed). 20 template-mode pairs per language
+  were not judged, for want of slot values.
+- **Judge:** Foundry's built-in `FluencyEvaluator` and `CoherenceEvaluator` (`azure-ai-evaluation`
+  1.18) on the `fast` deployment (gpt-5.4-mini), keyless. 1,144 judge calls, 550,399 tokens.
+
+| Language | Sentences | Fluency mean (min) | Below 3 | Coherence mean (min) | Below 3 |
+|---|---|---|---|---|---|
+| English | 136 | 2.65 (1) | 42 | 3.71 (2) | 9 |
+| Spanish | 136 | 2.60 (1) | 49 | 3.61 (2) | 10 |
+| Arabic | 136 | 2.63 (2) | 52 | 3.69 (2) | 6 |
+| Hindi | 136 | 2.61 (1) | 50 | 3.57 (2) | 10 |
+
+**How to read this (a limit-aware check, as pre-registered, not proof of fluency):**
+- The four languages score within 0.05 of each other on fluency and 0.14 on coherence. The check
+  finds no language markedly worse than English.
+- The fluency judge scores the product's style, not errors. Its lowest scores go to short
+  broadcast lines ("Galuela, down the left.", "Throw-in, Sparkwheel.", "Saca Saltwings.",
+  "सॉल्टविंग्स ऑफ़साइड।"), which its reasons call fragments.
+- A few low coherence scores are worth a native reader's look rather than a rewrite, for example
+  Arabic `replay.1` "مرة أخرى، بالصوت.".
+
 ### Load test, trial (development, not of record)
 `earshot loadtest --url <worker> --listeners 10 --minutes 3`, 2026-10-16, image `1b2172a`, from
 India to Sweden Central. Summary in `reports/loadtest-trial-2026-10-16.json`.

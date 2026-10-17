@@ -21,7 +21,8 @@ export function followed(c: Choices): Stat | null {
 
 export const ARM_FOR: Record<Output, Arm> = { app: "full", reader: "bed", oneEar: "mono" };
 
-const BASE = import.meta.env.VITE_CLIP_BASE ?? "/clips";
+/** Where the recorded clips live: Blob Storage when deployed (VITE_CLIP_BASE), the dev server locally. */
+export const CLIP_BASE: string = import.meta.env.VITE_CLIP_BASE ?? "/clips";
 
 /**
  * The recorded clip for these choices. A followed stat has its own clip only when the stat crosses a
@@ -29,7 +30,7 @@ const BASE = import.meta.env.VITE_CLIP_BASE ?? "/clips";
  */
 export function clipBase(c: Choices): string {
   const stat = followed(c);
-  return `${BASE}/demo-${c.lang}-${c.mode}${stat ? `-${stat}` : ""}`;
+  return `${CLIP_BASE}/demo-${c.lang}-${c.mode}${stat ? `-${stat}` : ""}`;
 }
 
 const KEY = "earshot.choices";

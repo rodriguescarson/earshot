@@ -326,9 +326,13 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "loadtest":
         import asyncio
         import os
+        import signal
 
         from earshot.eval.loadtest import run as load
         from earshot.eval.loadtest import temporary_judge_code
+
+        # A stopped run (SIGTERM) must still remove its temporary judge code: exit through finally.
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
 
         url = os.environ.get("EARSHOT_STORAGE_URL")
         if not url:

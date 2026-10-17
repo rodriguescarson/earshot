@@ -10,7 +10,10 @@ Status: in development. The design and every review decision live in [docs/desig
 uv sync
 uv run pytest
 uv run earshot schemas   # regenerate schemas/*.v1.json after a contract change
+scripts/ci.sh            # every CI check, locally (GitHub Actions doesn't run on this repo)
 ```
+
+Merging and deploying go through `scripts/merge-pr.sh` and `scripts/deploy.sh`; see `infra/README.md`.
 
 ## Data we keep
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -50,6 +51,7 @@ from earshot.contract.ball import BallSample
 from earshot.contract.events import Event, PeriodEnd, StoppageStart
 from earshot.contract.match import ClubInfo, MatchInfo, PlayerInfo
 from earshot.live.audio import AudioStore
+from earshot.live.audioqueue import ENCODE_WORKERS, SPEECH_WORKERS, AudioQueue, Skipped, rank
 from earshot.live.director import Cut, Drop, LiveDirector, Start
 from earshot.pipeline.workflow import MatchPipeline, WindowResult, WindowStep
 from earshot.sim.ballpath import ball_path
@@ -169,6 +171,11 @@ class LiveMatch:
         self.info, self.events = info, events
         self.cached_only = cached_only
         self.audio, self.send, self.audio_base = audio, send, audio_base.rstrip("/")
+        self.speechq = AudioQueue(SPEECH_WORKERS)
+        self.encodeq = AudioQueue(ENCODE_WORKERS)
+        """Speech and encoding, each in rank order on threads of its own (``earshot.live.audioqueue``)."""
+        self._publishing: Counter[str] = Counter()
+        """Serve keys that publishing is waiting on: their encode-ahead job is never skipped as stale."""
         self.speed = speed
         self.budget = SpeechBudget()
         self.ball: list[BallSample] = with_danger(ball_path(events), info.home.team_id)
@@ -444,22 +451,55 @@ class LiveMatch:
                 duration = int(len(line.text) / 14 * 1000) + 300
             else:
                 try:
-                    duration = await asyncio.to_thread(self.audio.warm, line)
+                    duration = await self.speechq.run(
+                        f"warm:{self.audio.speech_key(line)}", rank(line), self.audio.warm, line
+                    )
                 except Exception as e:  # speech failed (e.g. the kill switch): air it as text (DR-5)
                     log.warning("speech failed for %s (%s): airs as text", line.line_id, e)
                     duration = int(len(line.text) / 14 * 1000) + 300
         for act in g.director.offer(line, duration, self.match_ms()):
             if isinstance(act, Cut):
                 log.debug("cut %s", act.line.text)
+        if g.key.output_mode is not OutputMode.SCREEN_READER:
+            # Encode while the line waits in the Director's queue; publishing awaits the same job.
+            self._spawn(self._encode_ahead(line, g.key.output_mode))
+
+    @staticmethod
+    def _serve_key(line: Line, output: OutputMode) -> str:
+        return f"serve:{line.line_id}:{output.value}"
+
+    async def _encode_ahead(self, line: Line, output: OutputMode) -> None:
+        key = self._serve_key(line, output)
+
+        def wanted() -> bool:  # a stale line will never air: leave the CPU to lines that will
+            # A line the Director started before its deadline is still wanted after it: publishing
+            # waits on this job (otherwise the skip reached publishing and the line aired as text).
+            return line.never_drop or self._publishing[key] > 0 or self.match_ms() <= line.deadline_wall_ms
+
+        try:
+            await self.encodeq.run(
+                key, rank(line), self.audio.serve, line, output, synthesize=False, wanted=wanted
+            )
+        except Skipped:
+            pass
+        except Exception as e:  # publishing tries again and airs text if it fails too
+            log.debug("encode ahead failed for %s: %s", line.line_id, e)
 
     async def _publish_line(self, g: Group, start: Start) -> None:
+        key = self._serve_key(start.line, g.key.output_mode)
+        self._publishing[key] += 1
         try:
-            served = await asyncio.to_thread(
-                self.audio.serve, start.line, g.key.output_mode, synthesize=not self.cached_only()
-            )
+            served = await self.encodeq.run(
+                key, rank(start.line), self.audio.serve, start.line, g.key.output_mode,
+                synthesize=not self.cached_only(),
+            )  # fmt: skip
         except Exception as e:  # speech or encoding failed: the line still airs, as text (DR-5)
             log.warning("audio failed for %s (%s): airs as text", start.line.line_id, e)
             served = None
+        finally:
+            self._publishing[key] -= 1
+            if not self._publishing[key]:
+                del self._publishing[key]
         msg = LineMsg(
             id=start.line.line_id,
             priority=start.line.priority,
