@@ -2857,81 +2857,92 @@ held-out run is paced under the existing spend alerts (Carson, same day).
 - The iPhone + VoiceOver lock test (Carson).
 - The listening test (Carson, Oct 18-19).
 
-## Stream 2 status (2026-10-16)
+## Stream 2 status (2026-10-17)
 
-Engine, evaluation and infrastructure. PR stack, each green in CI:
-- #2 engine slice
-- #4 truth store and baseline
-- #5 Agent Framework workflow
-- #6 MCP tools
-- #7 season gate and deploy
-- #8 the integrated worker
-- #9 ET11 harness and load test
+Engine, evaluation and infrastructure. Results and their commands are in EVALUATION.md section 5;
+this is the state and what is left.
 
-Nothing is on `main` yet: the stack waits on #1 (foundation), whose only failing check is `secrets`.
-The fix is the `permissions` block on that job, already in #2.
+**On `main`:** #1-#32 are merged (main is `e1c271a`).
+- GitHub Actions starts no jobs (a billing hold), so the later PRs were merged on Carson's
+  instruction after local checks. The full suite passes locally (429 tests).
+- Deploys go directly through ACR and Bicep while CI is off.
 
-**Built and verified:**
-- **Engine and gate:**
-  - Events-first engine 1.1.0 (fictional clubs, stoppages, cards, penalties, `flight_ms`,
-    `nearest_opp_m`, a 10 Hz ball path) and its truth log behind the `hidden` import guard.
-  - The P1 gate on the full 380-match season: every applicable gate passes, and the G3 misses are
-    reported (EVALUATION.md section 5).
-  - Frames and G8 for the render match.
-- **Deployed:**
-  - Worker: `https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io`,
-    image `4c0103f`. It serves Stream 1's live broadcaster and the guards in one app.
-  - MCP app: `/mcp` on `ca-earshot-mcp`.
-  - Everything keyless and on managed identity, through Bicep.
-  - Verified live: negotiate, the stream and ticket limits, judge bypass, cached-only flip without
-    a restart (ET10 drill), kill-switch flag drill, body caps.
-- **Security (SEC4):** a manual review, `docs/security/sec4-review-2026-10-16.md`.
-  - 2 High and 3 Medium were found today; all are fixed and checked live.
-  - `/gstack-cso` was **not assessed**: its launcher is not installed.
-- **ET11:** `earshot evaluate` runs 380 matches through the live broadcaster on a virtual clock in
-  about 400 s on 8 workers.
-  - It found the feeder waiting on the Analyst, which delayed yellow-card lines (fixed in `24f4efb`).
-  - Development results (provisional latency): never-drop 100% and coverage 0.971-0.979 in every
-    profile.
+**Deployed:**
+- **Worker:** `https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io`.
+  Image `e1c271a`, 0.25 vCPU / 0.5 GiB (Carson: the lowest size), one replica.
+- **MCP app:** `/mcp` on `ca-earshot-mcp`, same image.
+- **Identity:** everything keyless and on managed identity, through Bicep.
+- **Checked after the deploy:** `/healthz`, `/api/status` (cached-only off), `/api/live`, MCP
+  `tools/list`.
+- **The judge code works.** Every load test makes and removes its own temporary code. The judges'
+  link is outside the repo.
 
-**Measured and missed (development):**
-- Load-test trial, 10 listeners: p95 event-to-first-audio-byte 5.9 s against the 2.0 s target.
-  Encoding after the Director's start is the biggest part.
-- Real-Analyst trial: 2 of 28 cause labels correct.
+**Runs of record** (`eval-freeze` = `f69549b`; held-out seeds 9001-9040 were generated after it):
 
-**Incident, 2026-10-16:**
-- **What happened:** the hourly token kill switch (`kill-tokens-hourly`, 500K tokens an hour)
-  fired at 13:54 UTC.
-- **Cause:** my template-evaluator pass was paced at 400K tokens an hour, which left too little
-  room for live use and the other sessions' testing.
-- **Effect:**
-  - The AI account was disabled and the worker went cached-only.
-  - The evaluator lost every Arabic and Hindi judgement (403s).
-  - It also showed that a speech failure in `LiveMatch._offer` drops a cache-miss line instead of
-    airing it as text. Reported to Stream 1.
-- **Recovery:** the alert had resolved. At 14:24 I ran `restore-ai.sh` and turned cached-only
-  off; live lines with audio were back at 14:28.
-- **Change:** background evaluator and Analyst runs now default to 200K tokens an hour.
+| Criterion | Result |
+|---|---|
+| Latency, 30 listeners, deployed 0.5 vCPU | p95 3.6 s against 2.0 s: **miss** |
+| Coverage, full season, with that latency | 0.707-0.780 against 0.95: **miss**; never-drop all aired; 0 audit blocks |
+| G7 pass difficulty, held-out | **pass** |
+| Planted defects, held-out, 4 languages | auditor 1.0 on rosters and templates; 0 false blocks |
+| G5 press height, held-out | 0.749, reported |
 
-**Incident, 2026-10-16 18:18 UTC:**
-- **What happened:** the kill switch fired again, from the subscription budget rather than a usage
-  alert.
-- **Cause:** `earshot-monthly` had been created with amount 50 in INR (the billing currency), so
-  about $0.60. Month-to-date spend of ₹180 (about $2) was over 100%.
-- **Fix:** with Carson's approval, the amount is now ₹4,800 (= $50 at Azure's retail rate). The
-  thresholds and the kill-switch action are unchanged. I then restored AI access and turned
-  cached-only off; live lines with audio were back.
+**After the freeze (not of record), at 0.25 vCPU:**
+- **Changes:**
+  - one priority audio queue, with encoding while a line waits;
+  - yellow cards may preempt;
+  - mono encode for centred lines;
+  - separate speech and encode queues;
+  - three fixes for lines that lost their audio.
+- **Lines aired as text** (worker logs): 230 per load test, then 0.
+- **Server side:**
+  - audio ready p95: 802 down to about 280 ms;
+  - encode p95: 2.4 s down to about 1.2 s.
+- **Latency p95:** 2.8-2.9 s, still a miss. What remains is the single voice channel's queue
+  (about 1.8 s at p95). From this machine, p95 moves by about 1.4 s between two runs of one image.
+- **Coverage:** 0.84-0.88, still a miss, but 0.08-0.15 above the run of record.
+- **Shot chunking** would cut the Spotter's hold (0.7 s p50). Stream 1 declined it for now.
 
-**Not done, and why:**
-- `eval-freeze`, held-out seeds 9001-9040, and the runs of record: they wait on Stream 1 finalising
-  the Analyst prompt and claim templates. The held-out Analyst run needs about 3.5 days of pacing
-  under the kill-switch alerts.
-- The full load test: after the encode-ahead change.
-- Web PubSub Standard: not on. Carson's decision ($1.61 a day); the client uses SSE.
-- `/gstack-cso`: needs gstack setup with its CSO build (Docker). Carson's call.
-- GeoNames name check: the download was not approved. Wikidata is the only name filter, stated as
-  a limit.
-- `DEPLOY_ENABLED=false` at submission (T5).
+**Running:** the held-out real-Analyst run.
+- **Gives:** Explanations, Never-drop, Casual vs Analyst, and Facts in en/es/ar/hi of record.
+- **Where:** `~/earshot-eval-runs/heldout-2026-10-17` (HOW-TO.md there).
+- **Pace:** 90K tokens an hour, under the existing kill-switch alerts.
+- **Progress:** 4 of 40 matches after 5.5 h, about two more days.
+- **Early signal (3 matches):** 15 of 259 gated causes correct. About 13% of Analyst calls time
+  out from this machine's network.
+
+**Incidents, 2026-10-16:**
+- **Kill switch, 13:54 UTC:**
+  - **What happened:** the hourly token alert (`kill-tokens-hourly`, 500K tokens an hour) fired.
+  - **Cause:** my template-evaluator pass ran at 400K tokens an hour, next to live use and the
+    other sessions' testing.
+  - **Effect:** the AI account was disabled and the worker went cached-only. The evaluator lost
+    its Arabic and Hindi judgements; they were re-run later. It also showed that a speech failure
+    dropped a cache-miss line, which Stream 1 fixed.
+  - **Recovery:** `restore-ai.sh` and cached-only off at 14:24. Live audio was back at 14:28.
+  - **Change:** background paces now default to 200K tokens an hour.
+- **Kill switch, 18:18 UTC:**
+  - **Cause:** the subscription budget `earshot-monthly` had been created at 50 in INR (the
+    billing currency), about $0.60.
+  - **Fix:** with Carson's approval it is now ₹4,800 (= $50 at Azure's rate). Thresholds and the
+    kill-switch action are unchanged. AI access was then restored.
+
+**For Carson:**
+- **GitHub billing:** CI and the CD workflow don't run until it is fixed.
+- **`DEPLOY_ENABLED=false` at submission (T5).**
+- **Worker size:** 0.5 vCPU / 1 GiB brought p95 from 3.7 to 2.7 s with the queue. That costs
+  +$0.027 an hour while active ($0.000024 per vCPU-second and $0.000003 per GiB-second, Sweden
+  Central retail prices), $19.44 per 30 days if always active. Both sizes miss 2.0 s.
+- **Not on, Carson's call:**
+  - Web PubSub Standard ($1.61 a day); the client uses SSE.
+  - `/gstack-cso`: needs gstack setup with its CSO build (Docker).
+- **GeoNames name check:** the download was not approved, so Wikidata is the only name filter.
+  That's stated as a limit.
+- **Judge-code hashes:** the flag blob holds 3. One is the judges' link; one is from a load test
+  that was interrupted before it removed its temporary code (its plaintext is gone). The third is
+  not identified. `--remove-judge-code` needs the plaintext, so clearing the unknown ones means
+  `earshot flags --rotate-judge-codes --add-judge-code <the judges' code>`. That also removes any
+  code someone else uses.
 
 ## GSTACK REVIEW REPORT
 
