@@ -11,6 +11,7 @@ import hashlib
 import io
 import os
 import time
+import uuid
 import wave
 from dataclasses import dataclass
 from pathlib import Path
@@ -117,9 +118,14 @@ class Synthesizer:
                 r.raise_for_status()
                 break
             assert r is not None
-            tmp = path.with_suffix(".part")
-            tmp.write_bytes(trim_silence(r.content))
-            tmp.replace(path)
+            # A unique scratch name: two lines with the same SSML synthesized at once used to share one
+            # ".part" file, and the second rename failed (load test, 2026-10-17: 43 lines aired as text).
+            tmp = path.with_suffix(f".{uuid.uuid4().hex[:8]}.part")
+            try:
+                tmp.write_bytes(trim_silence(r.content))
+                os.replace(tmp, path)
+            finally:
+                tmp.unlink(missing_ok=True)
             self.characters += len(ssml)
         return Clip(path, wav_duration_ms(path))
 
