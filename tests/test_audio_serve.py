@@ -68,3 +68,16 @@ def test_concurrent_writers_of_one_file_leave_one_good_file(tmp_path):
     assert len(set(names)) == 1
     assert channels(tmp_path / "out" / names[0]) == 1
     assert sorted(p.suffix for p in (tmp_path / "out").iterdir()) == [".m4a"]
+
+
+def test_an_ffmpeg_failure_reports_ffmpegs_error_not_a_missing_encoder(tmp_path, monkeypatch):
+    # The worker's logs said "no working AAC encoder: install ffmpeg" on a machine with ffmpeg,
+    # which hid the real failure (load test, 2026-10-17).
+    from earshot.voice import encode
+
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("needs ffmpeg")
+    which = shutil.which
+    monkeypatch.setattr(encode.shutil, "which", lambda name: which(name) if name == "ffmpeg" else None)
+    with pytest.raises(RuntimeError, match=r"^ffmpeg failed on gone\.wav: .+"):
+        encode.encode_aac(tmp_path / "gone.wav", tmp_path / "out.m4a")
