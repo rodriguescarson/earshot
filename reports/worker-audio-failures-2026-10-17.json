@@ -1,0 +1,58 @@
+{
+ "what": "Worker log lines saying a line aired as text when it could have had audio, one per group and line, per revision.",
+ "source": "Log Analytics workspace log-earshot, table ContainerAppConsoleLogs, each revision's whole life (warm-up and load tests included)",
+ "query": "ContainerAppConsoleLogs | where ContainerAppName == \"ca-earshot-worker\" and TimeGenerated > datetime(2026-10-16T12:00:00Z) | where RevisionName endswith \"0000017\" or RevisionName endswith \"0000018\" or RevisionName endswith \"0000019\" or RevisionName endswith \"0000020\" | where Log has \"audio failed\" or Log has \"speech failed\" or Log has \"speech unavailable\" | extend reason = case(Log has \"live-audio\" and Log has \".wav\", \"shared scratch WAV (fixed in #28)\", Log has \".part\", \"shared TTS .part file (fixed in #30)\", Log has \"(serve:\", \"started line skipped as stale (fixed in #30)\", Log has \"AAC encoder\", \"no AAC encoder\", Log has \"speech unavailable\", \"speech unavailable (cached-only or budget)\", \"other\") | summarize n=count() by RevisionName, reason",
+ "revisions": {
+  "ca-earshot-worker--0000017": {
+   "image": "1343b41",
+   "cpu": 0.25,
+   "load": "warm-up + 15-minute load test, 30 listeners",
+   "lines_aired_as_text": {
+    "shared scratch WAV (fixed in #28)": 181,
+    "started line skipped as stale (fixed in #30)": 33,
+    "shared TTS .part file (fixed in #30)": 11,
+    "other": 3,
+    "no AAC encoder": 2
+   },
+   "total": 230,
+   "logged": "2026-10-16 21:45-22:21 UTC"
+  },
+  "ca-earshot-worker--0000018": {
+   "image": "1343b41",
+   "cpu": 0.5,
+   "load": "warm-up + 15-minute load test, 30 listeners",
+   "lines_aired_as_text": {
+    "shared scratch WAV (fixed in #28)": 112,
+    "shared TTS .part file (fixed in #30)": 27,
+    "started line skipped as stale (fixed in #30)": 1
+   },
+   "total": 140,
+   "logged": "22:20-23:49 UTC"
+  },
+  "ca-earshot-worker--0000019": {
+   "image": "83f6286",
+   "cpu": 0.25,
+   "load": "warm-up + two 15-minute load tests, 30 listeners",
+   "lines_aired_as_text": {
+    "shared TTS .part file (fixed in #30)": 13,
+    "started line skipped as stale (fixed in #30)": 11
+   },
+   "total": 24,
+   "logged": "23:47-00:38 UTC"
+  },
+  "ca-earshot-worker--0000020": {
+   "image": "54a6495",
+   "cpu": 0.25,
+   "load": "warm-up + one 15-minute load test, 30 listeners",
+   "lines_aired_as_text": {},
+   "total": 0,
+   "logged": "from 00:36 UTC (queried 01:2x, after its load test)"
+  }
+ },
+ "notes": [
+  "The worker logs warnings only, so a revision with no rows here logged no failure; revision 0000020 logged only its 4 startup lines.",
+  "'no AAC encoder' (2, revision 0000017): encode_aac reports any ffmpeg failure that way and drops ffmpeg's error, so the cause cannot be told; a missing input WAV from the shared-scratch race is one way to get it.",
+  "'other' (3, revision 0000017): 'speech failed' with an empty error message, one line in three groups.",
+  "The load test times only lines that have audio, so the runs on revisions 0000017 and 0000018 are missing these lines from their latency samples."
+ ]
+}
