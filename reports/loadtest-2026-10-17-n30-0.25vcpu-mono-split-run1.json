@@ -1,0 +1,80 @@
+{
+ "base": "https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io",
+ "match_id": "m00026",
+ "listeners": 30,
+ "groups": [
+  "m00026.en.analyst.app_voice.-.-.-",
+  "m00026.en.analyst.app_voice.spa.spa-09.-",
+  "m00026.en.analyst.one_ear.-.-.-",
+  "m00026.en.casual.app_voice.-.-.-",
+  "m00026.en.casual.screen_reader.-.-.-"
+ ],
+ "minutes": 15.0,
+ "event_to_first_audio_byte_ms": {
+  "n": 3505,
+  "p50": 1721,
+  "p95": 4151,
+  "max": 13433
+ },
+ "never_drop_event_to_first_audio_byte_ms": {
+  "n": 0,
+  "p50": null,
+  "p95": null,
+  "max": null
+ },
+ "p95_under_2s": false,
+ "components_ms": {
+  "server_ready": {
+   "n": 1227,
+   "p50": 95,
+   "p95": 291,
+   "max": 832
+  },
+  "server_start": {
+   "n": 815,
+   "p50": 241,
+   "p95": 1747,
+   "max": 7941
+  },
+  "server_publish": {
+   "n": 871,
+   "p50": 290,
+   "p95": 1205,
+   "max": 3582
+  },
+  "transit": {
+   "n": 3771,
+   "p50": 78,
+   "p95": 201,
+   "max": 5954
+  },
+  "audio_ttfb": {
+   "n": 3771,
+   "p50": 670,
+   "p95": 2975,
+   "max": 9427
+  },
+  "analyst": {
+   "n": 10,
+   "p50": 2279,
+   "p95": 3290,
+   "max": 3290
+  }
+ },
+ "received_lines": 5193,
+ "unmatched_lines": 0,
+ "message_kinds": {
+  "state": 739,
+  "ball": 52853,
+  "line": 5193
+ },
+ "errors": {
+  "ConnectTimeout": 422
+ },
+ "limits": [
+  "two clocks (the worker's and the load generator's), both NTP-synchronised; skew not corrected",
+  "one load-generator machine and network path"
+ ],
+ "command": "uv run earshot loadtest --url https://ca-earshot-worker.kinddune-86a4b9a4.swedencentral.azurecontainerapps.io --listeners 30 --minutes 15 --out <scratch>/lt-025-v3.json",
+ "run": "image 83f6286 (#28 mono centred lines, #29 split queues), revision 0000019, 2026-10-16 23:55-00:10 UTC, match minutes about 8-23"
+}
