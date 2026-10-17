@@ -296,6 +296,10 @@ def main(argv: list[str] | None = None) -> None:
         args.out.write_text(json.dumps(summary, indent=1) + "\n")
         brief = {k: summary[k] for k in ("matches", "ok", "failed", "workers", "wall_s")}
         print(json.dumps(brief | {"out": str(args.out), "rows": str(rows)}, indent=1))
+        if any(f["error"].startswith("AnalystUnavailable") for f in summary["failed"]):
+            sys.exit(
+                "evaluate: stopped, the Analyst is unavailable. Bring it back, then rerun with --resume."
+            )
     elif args.cmd == "planted":
         from earshot.contract import Language
         from earshot.eval.planted import run_all

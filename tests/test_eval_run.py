@@ -195,3 +195,87 @@ def test_cached_answers_do_not_count_against_the_pace():
         a.run(None, f"w{i}", 20_000)
     assert slept == []  # 30,000 tokens of cached answers, nothing spent, no wait
     assert all(c["cached"] for c in a.calls)
+
+
+def test_the_pace_carries_over_from_one_match_to_the_next(monkeypatch):
+    # Held-out run, 2026-10-17: a new TimedAnalyst per match started with an empty hour, so each
+    # match's first calls went through unpaced, up to 150K tokens a clock hour at a 90K pace.
+    from collections import deque
+    from types import SimpleNamespace
+
+    now = [0.0]
+    slept: list[float] = []
+
+    def sleep(s):
+        slept.append(s)
+        now[0] += s
+
+    inner = SimpleNamespace(run=lambda v, w, d: SimpleNamespace(tokens=6_000, claims=[], latency_ms=900))
+    spent: deque = deque()
+    first = R.TimedAnalyst(inner, tokens_per_hour=10_000, clock=lambda: now[0], sleep=sleep, spent=spent)
+    first.run(None, "w1", 20_000)
+    first.run(None, "w2", 20_000)
+    second = R.TimedAnalyst(inner, tokens_per_hour=10_000, clock=lambda: now[0], sleep=sleep, spent=spent)
+    second.pace()  # the next match: 12,000 already spent this hour
+    assert sum(slept) >= 3_540
+    import earshot.agents.analyst as analyst_module
+
+    monkeypatch.setattr(analyst_module, "Analyst", lambda **kw: inner)  # no endpoint needed
+    assert (
+        R.real_analyst({"tokens_per_hour": 1})._recent is R.real_analyst({})._recent
+    )  # one hour per process
+
+
+def test_an_analyst_that_keeps_failing_stops_the_match_but_timeouts_do_not():
+    from types import SimpleNamespace
+
+    def result(**kw):
+        return SimpleNamespace(tokens=0, claims=[], latency_ms=50, **kw)
+
+    down = SimpleNamespace(run=lambda v, w, d: result(error="PermissionDeniedError: Error code: 403"))
+    a = R.TimedAnalyst(down)
+    for i in range(R.UNAVAILABLE_AFTER - 1):
+        a.run(None, f"w{i}", 20_000)
+    a.check()  # four in a row: still a blip
+    a.run(None, "w5", 20_000)
+    with pytest.raises(R.AnalystUnavailable, match="403"):
+        a.check()
+    slow = SimpleNamespace(
+        run=lambda v, w, d: result(error="APITimeoutError: Request timed out.", timed_out=True)
+    )
+    b = R.TimedAnalyst(slow)
+    for i in range(3 * R.UNAVAILABLE_AFTER):
+        b.run(None, f"w{i}", 20_000)
+    b.check()  # timeouts are this network's known limit, not an Analyst that is down
+
+
+@needs_live
+def test_a_match_whose_analyst_is_down_is_not_recorded(monkeypatch):
+    from types import SimpleNamespace
+
+    down = SimpleNamespace(
+        run=lambda v, w, d: SimpleNamespace(
+            tokens=0, claims=[], latency_ms=50, error="PermissionDeniedError: 403"
+        )
+    )
+    with pytest.raises(R.AnalystUnavailable):
+        R.evaluate_match(26, R.LatencyModel.provisional_default(), R.TimedAnalyst(down))
+
+
+@needs_live
+def test_the_season_stops_when_the_analyst_is_unavailable(tmp_path, monkeypatch):
+    calls: list[int] = []
+
+    def evaluate(seed, latency, analyst, windows):
+        calls.append(seed)
+        if seed == 2:
+            raise R.AnalystUnavailable("5 Analyst errors in a row, last: PermissionDeniedError: 403")
+        return {"seed": seed, "match_id": f"m{seed:05d}", "minutes": 90.0, "targets": {}, "notes": [],
+                "profiles": {}, "explanations": {}, "wall_s": 1.0}  # fmt: skip
+
+    monkeypatch.setattr(R, "evaluate_match", evaluate)
+    rows = tmp_path / "e.matches.jsonl"
+    s, _ = R.run_season([1, 2, 3, 4], R.LatencyModel.provisional_default(), workers=1, rows_path=rows)
+    assert calls == [1, 2]  # nothing after the stop: 3 and 4 wait for --resume
+    assert s["ok"] == 1
+    assert s["failed"][0]["error"].startswith("AnalystUnavailable")

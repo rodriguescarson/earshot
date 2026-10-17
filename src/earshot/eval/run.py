@@ -203,6 +203,22 @@ class LatencyAnalyst:
         return AnalystResult(window_id, timed_out=ms > budget, latency_ms=ms)
 
 
+SPENT: deque[tuple[float, int]] = deque()
+"""The tokens real Analyst calls spent in this process over the last hour, kept across matches.
+A new ``TimedAnalyst`` per match used to start with an empty hour, so each match's first calls went
+through unpaced (held-out run, 2026-10-17: up to 150K tokens in a clock hour at a 90K pace)."""
+
+UNAVAILABLE_AFTER = 5
+"""Errors in a row (timeouts excluded) after which the Analyst counts as down."""
+
+
+class AnalystUnavailable(RuntimeError):
+    """The Analyst failed on every call in a row: the kill switch, a lost login, a deleted deployment.
+    A match that ran on would record windows with no Analyst at all as if it had answered nothing
+    (held-out run, 2026-10-17: 32 matches after the kill switch), so the run stops instead and can be
+    resumed once the Analyst is back."""
+
+
 class TimedAnalyst:
     """The real Analyst, with its real latency carried onto the virtual clock.
 
@@ -220,13 +236,23 @@ class TimedAnalyst:
         max_calls: int | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
+        spent: deque[tuple[float, int]] | None = None,
     ) -> None:
         self.inner, self.tokens_per_hour, self.max_calls = inner, tokens_per_hour, max_calls
         self.clock, self.sleep = clock, sleep
         self.last_ms = 0
         self.calls: list[dict[str, Any]] = []
         self.paused_s = 0.0
-        self._recent: deque[tuple[float, int]] = deque()
+        self._recent: deque[tuple[float, int]] = deque() if spent is None else spent
+        self._errors_in_row = 0
+        self.unavailable: str | None = None
+        """Set once the Analyst failed ``UNAVAILABLE_AFTER`` times in a row. ``run`` can't raise: the
+        window workflow turns every Analyst exception into a fallback line, so the harness's feeder
+        checks this (``check``) outside the workflow instead."""
+
+    def check(self) -> None:
+        if self.unavailable:
+            raise AnalystUnavailable(self.unavailable)
 
     def pace(self) -> None:
         if not self.tokens_per_hour:
@@ -255,6 +281,12 @@ class TimedAnalyst:
         if not getattr(res, "cached", False):  # a cached answer spends nothing: it must not slow the pace
             self._recent.append((self.clock(), tokens))
         failure = "timeout" if getattr(res, "timed_out", False) else getattr(res, "error", None)
+        if failure and failure != "timeout" and "Timeout" not in failure:
+            self._errors_in_row += 1
+            if self._errors_in_row >= UNAVAILABLE_AFTER:
+                self.unavailable = f"{self._errors_in_row} Analyst errors in a row, last: {failure}"
+        else:
+            self._errors_in_row = 0
         self.calls.append(
             {
                 "latency_ms": int(getattr(res, "latency_ms", self.last_ms) or self.last_ms),
@@ -399,8 +431,10 @@ def _virtual_match_class():
                     self.now_ms = self.vnow  # LiveMatch stamps recaps and window lines with now_ms
                     if self.timer is not None:
                         self.timer.last_ms = 0
-                        if isinstance(self.timer, TimedAnalyst) and opens_window(ev):
-                            await asyncio.to_thread(self.timer.pace)  # outside the window's real-time guard
+                        if isinstance(self.timer, TimedAnalyst):
+                            self.timer.check()  # a match without its Analyst is not a result: stop
+                            if opens_window(ev):
+                                await asyncio.to_thread(self.timer.pace)  # outside the window's guard
                     await self._push_all([ev], final=i == n)
                     if self.windows_block and self.timer is not None and self.timer.last_ms:
                         busy_until = self.vnow + self.timer.last_ms  # as built: the feeder waits
@@ -507,6 +541,8 @@ def evaluate_match(
             vm.join(key)
             facts_groups[key.name] = lang.value
     asyncio.run(vm.play())
+    if isinstance(analyst, TimedAnalyst):
+        analyst.check()  # the last windows' failures
     goals = targets(r.events)
     minutes = playing_minutes(r.events)
     out: dict[str, Any] = {
@@ -639,6 +675,7 @@ def real_analyst(config: dict[str, Any]) -> TimedAnalyst:
         Analyst(cache_dir=Path(cache) if cache else None, patient=True),
         tokens_per_hour=config.get("tokens_per_hour"),
         max_calls=config.get("max_calls"),
+        spent=SPENT,
     )
 
 
@@ -646,6 +683,8 @@ def _safe(args: tuple[int, LatencyModel, str, dict[str, Any] | None]) -> dict[st
     seed, latency, windows, analyst = args
     try:
         return evaluate_match(seed, latency, real_analyst(analyst) if analyst else None, windows=windows)
+    except AnalystUnavailable as e:
+        return {"seed": seed, "error": f"AnalystUnavailable: {e}", "stop": True}
     except Exception:
         return {"seed": seed, "error": traceback.format_exc(limit=6)}
 
@@ -840,11 +879,16 @@ def run_season(
 
     if workers <= 1:
         for j in jobs:
-            keep(_safe(j))
+            keep(row := _safe(j))
+            if row.get("stop"):
+                break
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             for row in pool.map(_safe, jobs, chunksize=1):
                 keep(row)
+                if row.get("stop"):
+                    pool.shutdown(wait=False, cancel_futures=True)
+                    break
     by_seed = done | {r["seed"]: r for r in new}
     matches = [by_seed[s] for s in seeds if s in by_seed]
     summary = summarize(matches, latency, time.perf_counter() - t0, workers, windows)
