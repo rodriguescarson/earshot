@@ -72,4 +72,5 @@ the billing hold stays):
 
 - **Trigger:** usage alerts (500K tokens an hour, 3M a day, 150K speech characters an hour, 500K a day) fire action group `ag-earshot-killswitch`.
 - **What it does:** it runs `infra/killswitch/disable-ai.ps1` in `aa-earshot-killswitch`. That disables the AI account's network access, then sets cached-only.
+- **Only on firing:** the webhook is called on both transitions of a metric alert. The runbook does nothing on a resolve (`monitorCondition` = `Resolved`). A budget alert or an unreadable payload still cuts off. Publish a change with `az automation runbook replace-content … --content @infra/killswitch/disable-ai.ps1`, then `az automation runbook publish`.
 - **Undo:** `EARSHOT_SUBSCRIPTION=… infra/killswitch/restore-ai.sh` restores the AI account. Then turn cached-only off by hand.

@@ -1,7 +1,8 @@
 <#
   Earshot budget kill switch (Azure Automation runbook, PowerShell 7.2).
 
-  Fired by the action group on the monthly budget's 100% "actual" alert.
+  Run by action group ag-earshot-killswitch (webhook, common alert schema) when a usage alert
+  (tokens or speech, hourly or daily) or the monthly budget's 100% "actual" alert fires.
   Cuts off every Cognitive Services / Foundry account in the resource group by
   disabling public network access: model calls and speech both stop at once.
   Deployments, keys-off auth and settings are untouched, so restoring is one
@@ -22,6 +23,26 @@
 param([object]$WebhookData, [bool]$DrillFlagOnly = $false)
 
 $ErrorActionPreference = 'Stop'
+
+# The action group calls this webhook on both transitions of a metric alert: fired and resolved.
+# Only a firing alert cuts the AI off. On 2026-10-17 the daily token alert's *resolve* at 14:23 UTC
+# ran this and disabled AI again, seven hours after it had been restored. A budget alert carries
+# no monitorCondition and still acts, and so does a payload that can't be read (fail safe).
+if ($WebhookData -and -not $DrillFlagOnly) {
+  try {
+    $wd = if ($WebhookData -is [string]) { $WebhookData | ConvertFrom-Json } else { $WebhookData }
+    $alert = if ($wd.RequestBody -is [string]) { $wd.RequestBody | ConvertFrom-Json } else { $wd.RequestBody }
+    $essentials = $alert.data.essentials
+    if ($essentials.monitorCondition -eq 'Resolved') {
+      Write-Output "Alert $($essentials.alertRule) resolved: nothing to do (the kill switch acts when an alert fires)."
+      return
+    }
+    Write-Output "Alert $($essentials.alertRule) $($essentials.monitorCondition): cutting the AI off."
+  } catch {
+    Write-Output "Alert payload unreadable ($($_.Exception.Message)): cutting the AI off."
+  }
+}
+
 $ResourceGroup  = 'rg-earshot'
 $ApiVersion     = '2024-10-01'
 $StorageAccount = 'stearshotn6bxjyeo'   # the app's storage account (infra/main.bicep output STORAGE_ACCOUNT)
