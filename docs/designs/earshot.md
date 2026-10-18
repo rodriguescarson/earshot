@@ -2938,6 +2938,23 @@ this is the state and what is left.
     errors in a row, instead of recording matches without one.
   - The re-run is at 80K tokens an hour. The alerts are unchanged.
 
+**Incident, 2026-10-17 14:24 UTC to 2026-10-18 08:22 UTC: the kill switch ran on an alert's resolve**
+- **What happened:** `kill-tokens-daily` resolved at 14:23:21, and 46 s later the runbook disabled AI
+  again. The AI had been restored at 07:07 after the same alert fired at 05:23.
+- **Cause:** the action group's webhook fires on both transitions, and `disable-ai.ps1` never read
+  the payload. The job history shows the same on 2026-10-16: the hourly alert resolved at 14:11 and
+  the runbook ran at 14:12. That time the restore came after it, so it went unnoticed.
+- **Effect:**
+  - The live demo was text-only for about 18 h.
+  - The held-out re-run stopped by itself at 9010 (#35's safeguard: 5 Analyst errors in a row, so
+    nothing recorded). 9008 and 9009 finished before the trip and stand.
+- **Fix:** the runbook now reads the common alert schema and does nothing when `monitorCondition`
+  is `Resolved`. A budget alert (no `monitorCondition`) or an unreadable payload still cuts off.
+  - Published to `aa-earshot-killswitch` and tested with the real payloads of the 14:23 run
+    ("resolved: nothing to do") and the 05:24 run (cut off, cached-only written).
+  - AI was restored at 08:22 UTC on Oct 18, and the held-out run resumed.
+- **My miss:** I had predicted the resolve, but never checked what the runbook does on it.
+
 **Incidents, 2026-10-16:**
 - **Kill switch, 13:54 UTC:**
   - **What happened:** the hourly token alert (`kill-tokens-hourly`, 500K tokens an hour) fired.
