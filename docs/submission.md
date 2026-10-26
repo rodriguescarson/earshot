@@ -37,7 +37,10 @@ Casual mode says what happened and who did it. Analyst mode adds the numbers: pa
 speed, and how each team's tactics are shifting. In Analyst mode you can also follow one stat,
 such as shot speed or press height, and hear about it every time it moves.
 
-Two buttons answer the questions people ask most: where's the ball, and what did I miss. At half
+A match view shows the 22 players and the ball moving with the commentary, so a sighted companion
+or a studio can follow the same match the listener hears; it is drawn from the engine's positions,
+not from footage, because every match here is made up. Two buttons answer the questions people ask
+most: where's the ball, and what did I miss. At half
 time and full time there's a recap, which a studio can also take as text or data.
 
 Facts and explanations come in different voices, so you always know which line the AI wrote. On a
@@ -144,8 +147,9 @@ construction (Category adherence).
    help.
 2. Press **Listen now**. A recorded clip plays at once.
 3. To try another language or mode, choose **Choose language and style**.
-4. A pitch map under the score shows where the ball is; the line on air sits below it. On a screen
-   1024 px or wider, the agents' decisions appear in a second column.
+4. A match view under the score shows all 22 players and the ball moving with the commentary,
+   from the engine's own positions; the line on air sits below it. On a screen 1024 px or wider,
+   the agents' decisions appear in a second column.
 5. To hear a match as it happens, choose **Join the live match** on the first screen. The match
    loops all day, so you may join in the middle of it. Judges' link: [PASTE AT SUBMISSION: the link
    in judge-link.txt, which Stream 2 opened for you. It skips the per-visitor limits. It never

@@ -10,7 +10,25 @@ export interface BallPos {
   danger?: number;
 }
 
-export function Pitch({ ball, home, away }: { ball: BallPos | null; home: string; away: string }) {
+export interface PlayerDot {
+  id: string;
+  name: string;
+  home: boolean;
+  x: number;
+  y: number;
+}
+
+export function Pitch({
+  ball,
+  players = [],
+  home,
+  away,
+}: {
+  ball: BallPos | null;
+  players?: PlayerDot[];
+  home: string;
+  away: string;
+}) {
   const { t } = useTranslation();
   const L = 105;
   const W = 68;
@@ -34,6 +52,15 @@ export function Pitch({ ball, home, away }: { ball: BallPos | null; home: string
         <rect x={L - 5.5} y={(W - 18.32) / 2} width="5.5" height="18.32" className="pitch__line" />
         <rect x="-1.2" y={(W - 7.32) / 2} width="1.2" height="7.32" className="pitch__goal" />
         <rect x={L} y={(W - 7.32) / 2} width="1.2" height="7.32" className="pitch__goal" />
+        {players.map((p) => (
+          <g
+            key={p.id}
+            className={`pitch__player${p.home ? " pitch__player--home" : " pitch__player--away"}`}
+          >
+            <circle cx={p.x} cy={p.y} r="1.7" className="pitch__shirt" />
+            <title>{p.name}</title>
+          </g>
+        ))}
         {ball && (
           <g className={`pitch__ball${ball.inPlay ? "" : " pitch__ball--dead"}`}>
             {ball.danger !== undefined && ball.danger > 0.5 && (

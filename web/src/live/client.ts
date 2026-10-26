@@ -32,6 +32,8 @@ export interface BallMessage {
   y: number;
   danger: number;
   in_play?: boolean;
+  /** x, y per player in the order of the state message's `tracks.ids`; -1, -1 while off the pitch. */
+  players?: number[];
 }
 export interface StateMessage {
   kind: "state";
@@ -39,6 +41,7 @@ export interface StateMessage {
   away_score: number;
   minute?: string;
   status: string;
+  tracks?: { ids: string[]; home: boolean[]; names: string[] };
 }
 export interface RecapMessage {
   kind: "recap";

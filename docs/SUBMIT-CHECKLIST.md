@@ -10,6 +10,8 @@ not Devpost. Judging 27 Oct to 10 Nov; winners by 20 Nov.
 - docs/submission.md: every field drafted, numbers final, "How it maps to the brief" added.
 - Architecture diagram: docs/img/architecture.png (3840x2160, official Azure icons).
 - Demo video: video/brag-output/brag.mp4, 72 s, result card swapped to the held-out number.
+- Azure HD voices, the match view (22 players + ball, recorded and live) and a streamed audio path
+  behind a flag are on main and deployed; Stream 1 measures the flag on Oct 27.
 - Clean clone: `uv sync` 6 s, 1,259 tests pass in 88 s. Live site plays the clip from the deployed URL.
 - Stream 1 (session earshot-p0-p1-plan) runs the Oct 27 infra at about 10:00 IST: always-on
   worker, 30-listener load test, judge-link check, then DEPLOY_ENABLED=false by 09:00 IST Oct 28.

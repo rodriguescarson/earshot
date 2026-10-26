@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ballAt, type Manifest, onAirAt, scoreAt, spokenBy, TRANSCRIPT_CAP } from "./manifest";
+import { ballAt, type Manifest, onAirAt, playersAt, scoreAt, spokenBy, TRANSCRIPT_CAP } from "./manifest";
 
 const line = (t: number, end: number, text: string) => ({
   t_ms: t,
@@ -66,5 +66,30 @@ describe("ballAt", () => {
     expect(ballAt(withBall, 200)?.x).toBe(60);
     expect(ballAt(withBall, 9999)?.in_play).toBe(false);
     expect(ballAt(m, 100)).toBeNull();
+  });
+});
+
+describe("playersAt", () => {
+  const withPlayers: Manifest = {
+    ...m,
+    players: {
+      hz: 2,
+      ids: ["h1", "a1"],
+      home: [true, false],
+      names: ["Home One", "Away One"],
+      t_ms: [0, 500],
+      xy: [
+        [10, 10, 90, 60],
+        [20, 10, 90, 50],
+      ],
+    },
+  };
+  it("interpolates between frames and holds the last frame", () => {
+    expect(playersAt(withPlayers, -1)).toEqual([]);
+    expect(playersAt(withPlayers, 0)[0]).toMatchObject({ id: "h1", x: 10, y: 10, home: true });
+    expect(playersAt(withPlayers, 250)[0]?.x).toBe(15);
+    expect(playersAt(withPlayers, 250)[1]?.y).toBe(55);
+    expect(playersAt(withPlayers, 5000)[0]?.x).toBe(20);
+    expect(playersAt(m, 100)).toEqual([]);
   });
 });

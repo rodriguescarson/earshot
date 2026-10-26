@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import threading
 import time
 from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Protocol
 
 from earshot.agents.analyst import AnalystResult
@@ -65,6 +68,56 @@ log = logging.getLogger("earshot.live")
 TICK_S = 0.1
 SUMMARY_GAP_MS = 10 * 60_000
 BALL_EVERY_MS = 500
+
+
+@dataclass
+class LiveTracks:
+    """The engine's 10 Hz player frames for the match view, sent with every ball message."""
+
+    ids: list[str]
+    home: list[bool]
+    names: list[str]
+    t_ms: Any
+    """numpy array of frame times (wall ms)."""
+    xy: list[Any]
+    """per player, a (frames, 2) numpy array; NaN while off the pitch."""
+
+    def meta(self) -> dict:
+        return {"ids": self.ids, "home": self.home, "names": self.names}
+
+    def at(self, now_ms: int) -> list[float]:
+        """x, y per player in ``ids`` order at the nearest frame; -1, -1 while off the pitch."""
+        import numpy as np
+
+        i = int(np.searchsorted(self.t_ms, now_ms, side="right")) - 1
+        if i < 0 or i >= len(self.t_ms):
+            return []
+        out: list[float] = []
+        for arr in self.xy:
+            x, y = arr[i]
+            if np.isnan(x) or np.isnan(y):
+                out += [-1.0, -1.0]
+            else:
+                out += [round(float(x), 1), round(float(y), 1)]
+        return out
+
+
+def tracks_from_npz(path: Path, home_id: str, names: dict[str, str]) -> LiveTracks:
+    """Read the frames file ``earshot frames`` writes next to the match log (t_ms, period, one
+    (n, 2) array per player). Numpy only: the live side never imports the simulator."""
+    import numpy as np
+
+    with np.load(path, allow_pickle=False) as d:
+        ids = [k for k in d.files if k not in ("t_ms", "period")]
+        return LiveTracks(
+            ids=ids,
+            home=[pid.startswith(f"{home_id}-") for pid in ids],
+            names=[str(names.get(pid, pid)) for pid in ids],
+            t_ms=d["t_ms"],
+            xy=[d[pid] for pid in ids],
+        )
+
+
 DAILY_SPEECH_CHARS = 150_000
 MAX_GROUPS = 64
 GROUP_IDLE_S = 45.0
@@ -167,6 +220,7 @@ class LiveMatch:
         analyst: WindowAnalyst | None = None,
         speed: float = 1.0,
         cached_only: Callable[[], bool] = lambda: False,
+        tracks_path: Path | None = None,
     ) -> None:
         self.info, self.events = info, events
         self.cached_only = cached_only
@@ -179,6 +233,18 @@ class LiveMatch:
         self.speed = speed
         self.budget = SpeechBudget()
         self.ball: list[BallSample] = with_danger(ball_path(events), info.home.team_id)
+        self.tracks: LiveTracks | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        """The match loop's event loop, set when it starts; the tracks thread posts back through it."""
+        """Player positions for the match view, from the engine's frames; None until the thread is done."""
+        if (
+            tracks_path is not None
+            and tracks_path.exists()
+            and os.environ.get("EARSHOT_LIVE_TRACKS", "1") == "1"
+        ):
+            threading.Thread(
+                target=self._load_tracks, args=(tracks_path, info.home.team_id, players), daemon=True
+            ).start()
         self.groups: dict[str, Group] = {}
         self.state = MatchState.start(info)
         self.roster = Roster.build(info, clubs, players)
@@ -270,6 +336,7 @@ class LiveMatch:
         self.started = time.monotonic()
         for g in list(self.groups.values()):
             await self._send_state(g)
+        self._loop = asyncio.get_running_loop()
         i, last_ball = 0, -BALL_EVERY_MS
         feeder: asyncio.Task | None = None
         pending: list[Event] = []
@@ -529,8 +596,27 @@ class LiveMatch:
             status=status,  # type: ignore[arg-type]
         )
         await self.send(
-            g.key.name, {**msg.model_dump(mode="json"), "minute": spoken_minute(st.period_id, st.clock_ms)}
+            g.key.name,
+            {
+                **msg.model_dump(mode="json"),
+                "minute": spoken_minute(st.period_id, st.clock_ms),
+                **({"tracks": self.tracks.meta()} if self.tracks is not None else {}),
+            },
         )
+
+    def _load_tracks(self, path: Path, home_id: str, players: list[PlayerInfo]) -> None:
+        try:
+            self.tracks = tracks_from_npz(path, home_id, {p.player_id: p.short_name for p in players})
+            log.info("player tracks ready from %s: %d players", path.name, len(self.tracks.ids))
+            # Listeners who joined before this point have no track metadata yet: one state message
+            # to every group carries it (the next one would otherwise wait for a goal or a period).
+            loop = self._loop
+            if loop is not None:
+                loop.call_soon_threadsafe(
+                    lambda: [self._spawn(self._send_state(g)) for g in list(self.groups.values())]
+                )
+        except Exception:  # the match view is a bonus; the match goes on without it
+            log.exception("player tracks failed for %s", path)
 
     async def _send_ball(self) -> None:
         if not self.groups:
@@ -540,6 +626,8 @@ class LiveMatch:
             return
         msg = BallMsg(clock_ms=sample.clock_ms, x=sample.x, y=sample.y, danger=sample.danger or 0.0)
         payload = {**msg.model_dump(mode="json"), "in_play": sample.in_play}
+        if self.tracks is not None:
+            payload["players"] = self.tracks.at(self.now_ms)
         for g in list(self.groups.values()):
             await self.send(g.key.name, payload)
 
