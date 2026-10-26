@@ -308,6 +308,45 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
   - G3 is informational on 40 matches. Yellow cards, 3.40 a match, fall outside their band
     (3.78-4.62).
 
+**Explanations, real Analyst on the held-out seeds (run of record):**
+- **Command:** `uv run earshot evaluate --seeds 9001-9040 --workers 1 --real-analyst
+  --tokens-per-hour 100000 --analyst-cache out/analyst-cache --resume --latency
+  out/latency-of-record.json --out out/eval-heldout-of-record.json`, harness `296138b` (frozen
+  paths identical to `eval-freeze`; `296138b` only changed the pacer and the stop-on-Analyst-down
+  rule, PR #35).
+- **Reports:** `reports/eval-heldout-of-record-9001-9040.json` (summary),
+  `reports/eval-heldout-of-record-9001-9040.matches.jsonl` (one row per match),
+  `reports/eval-heldout-of-record-9001-9040.progress.log`.
+- **When:** matches 9001-9022 between 2026-10-17 and 2026-10-24 across resumed attempts (the
+  first attempt was withdrawn after the kill switch tripped, see above; the resume kept only
+  matches whose Analyst calls succeeded), matches 9023-9040 from 2026-10-24 17:14 to
+  2026-10-26 17:56 IST in one tmux session. 40 of 40 matches, 0 failed. Wall clock 147,860 s
+  with 305,248 s of pacing pauses; median match 7,285 s at 100K tokens an hour.
+- **Analyst calls:** 2,322 analysis windows, 2,322 calls, 8,978,397 tokens (p50 3,930 a call),
+  latency p50 3,829 ms, p95 5,342 ms. 112 windows (4.8%) returned no claims because the call
+  failed: 70 timeouts, 39 API timeouts, 1 kill-switch 403, 1 Azure CLI credential error, 1
+  connection error, 1 malformed JSON. 194 windows were served from the analyst cache (re-runs of
+  the same window after a resume). 21 windows returned invalid claims and were dropped by code.
+
+| Causes, 40 held-out matches | Labels given | Correct | Accuracy | Recall (184 real changes) | False alarms a match |
+|---|---|---|---|---|---|
+| Model's raw causes (proposed) | 7,129 | 560 | **0.079** | 66 (0.359) | 164.2 |
+| Gated causes on verified claims (what would have aired; `causes_aired = false`) | 3,387 | 324 | **0.096** | 62 (0.337) | 76.6 |
+| Baseline detector, same windows | 747 | 177 | **0.237** | 67 (0.364) | 14.3 |
+
+- **Reading, as pre-registered in section 4:** the Analyst's gated cause accuracy is reported next
+  to the baseline's on the same windows. It is 0.096 against 0.237. Recall is level (62 versus 67
+  of 184 changes found); the difference is false alarms, five times the baseline's. The gate
+  dropped 3,721 of the 7,129 raw causes and raised accuracy from 0.079 to 0.096, so it helps but
+  does not close the gap. The development trial on seed 26 (1 of 22) pointed the same way; the
+  held-out result is the number of record.
+- **Consequence:** causes stay off air (`AIR_CAUSES = False`, decided 2026-10-16). The Analyst's
+  verified metric changes still air; this run does not grade those, the planted-defect harness
+  does.
+- **Limits:** one model (gpt-5.4-mini) at one prompt; 4.8% of windows lost to transport failures
+  are counted as windows with no claims, which lowers recall slightly for the model and not for
+  the baseline; the pacing pauses mean the run spans nine days of service, not one.
+
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
 branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
