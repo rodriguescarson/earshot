@@ -59,7 +59,9 @@ decides what airs, and cuts the small stuff when a goal goes in. Last, the Voice
 right Azure neural voice.
 
 Microsoft Agent Framework runs this as workflows, one per event and one per stoppage. Azure AI
-Speech supplies two neural voices per language. An MCP server gives other agents, a broadcaster's
+Speech supplies two neural voices per language, Azure HD voices where the language has them
+(English and Spanish both roles; Arabic facts; Hindi explanations), chosen in a blind A/B on the
+same goal line on 26 October. An MCP server gives other agents, a broadcaster's
 assistant for example, the same read-only match tools, and it never sees past the current minute.
 
 It runs on Azure Container Apps, Container Registry, Web PubSub, Storage and Static Web Apps,
@@ -102,6 +104,10 @@ happened.
   And we wanted the first sound of a call within 2 seconds of the event in 95% of cases; it was
   3.6 seconds. Most of the delay is calls queueing for the one voice, and the trip from India to
   the server in Sweden.
+- A streamed audio path exists behind a flag: the service's own compressed speech is served as it
+  is and the browser places it between the ears. On 20 uncached lines it cut the per-line cost
+  from 831 ms to 702 ms at the median and from 1,509 ms to 1,213 ms at the 95th percentile, with
+  files 18% smaller. It is measured, not yet the default; the numbers above are the file path.
 - After that official run we changed how audio is prepared and gave the server the size it will
   have while judges use it. Measured the same way, with 30 listeners, 97% to 98% of shots and cards
   were spoken within 3 seconds, above the target. The first sound came within 2.3 seconds in 95% of
@@ -138,7 +144,8 @@ construction (Category adherence).
    help.
 2. Press **Listen now**. A recorded clip plays at once.
 3. To try another language or mode, choose **Choose language and style**.
-4. On a screen 1024 px or wider, the agents' decisions appear in a second column.
+4. A pitch map under the score shows where the ball is; the line on air sits below it. On a screen
+   1024 px or wider, the agents' decisions appear in a second column.
 5. To hear a match as it happens, choose **Join the live match** on the first screen. The match
    loops all day, so you may join in the middle of it. Judges' link: [PASTE AT SUBMISSION: the link
    in judge-link.txt, which Stream 2 opened for you. It skips the per-visitor limits. It never

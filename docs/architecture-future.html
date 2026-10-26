@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Earshot: agentic layers, loops, and what comes next</title>
+<style>
+  :root { --azure:#0078D4; --azure-dark:#005A9E; --ink:#1f2427; --soft:#5b646a; --line:#c7ced3; --bg:#fff; --lane:#f3f7fb; --next:#f6f3fb; --nextline:#b9a7e0; --red:#c42b21; --green:#107c10; }
+  * { box-sizing:border-box; }
+  body { margin:0; width:1920px; height:1080px; background:var(--bg); font-family:"Segoe UI","Atkinson Hyperlegible Next",system-ui,sans-serif; color:var(--ink); position:relative; overflow:hidden; }
+  h1 { position:absolute; left:48px; top:26px; margin:0; font-size:30px; font-weight:700; }
+  h1 small { display:block; font-size:15px; font-weight:400; color:var(--soft); margin-top:4px; }
+  .badge { position:absolute; right:48px; top:30px; font-size:14px; color:var(--soft); text-align:right; }
+  .badge b { color:var(--azure); font-size:20px; display:block; }
+  .col { position:absolute; top:112px; height:900px; border:1px solid var(--line); border-radius:12px; }
+  .col.now { left:48px; width:1100px; background:var(--lane); }
+  .col.next { left:1172px; width:700px; background:var(--next); border-color:var(--nextline); }
+  .col > .t { position:absolute; left:16px; top:-12px; background:var(--bg); padding:0 8px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--azure-dark); }
+  .col.next > .t { color:#5b3fa8; }
+  .layer { position:absolute; left:16px; width:1066px; height:112px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 14px; display:grid; grid-template-columns: 190px 1fr 300px; gap:14px; align-items:start; }
+  .layer .ln { font-size:12px; font-weight:700; color:var(--azure-dark); text-transform:uppercase; letter-spacing:.05em; }
+  .layer .lt { font-size:17px; font-weight:700; margin-top:2px; line-height:1.15; }
+  .layer .ls { font-size:11.5px; color:var(--soft); margin-top:4px; }
+  .layer .who { font-size:12.5px; line-height:1.35; }
+  .layer .who b { color:var(--ink); }
+  .layer .loop { font-size:11.5px; line-height:1.35; color:var(--ink); border-left:3px solid var(--azure); padding-left:10px; }
+  .layer .loop b { color:var(--azure-dark); }
+  .pill { display:inline-block; font-size:10.5px; padding:1px 6px; border-radius:10px; background:#e8f1fb; color:var(--azure-dark); margin-right:4px; }
+  .pill.code { background:#eceff1; color:#444; } .pill.model { background:#e8f1fb; } .pill.human { background:#fbe9e7; color:var(--red); }
+  .nx { position:absolute; left:16px; width:668px; background:#fff; border:1px solid var(--nextline); border-radius:10px; padding:10px 14px; }
+  .nx .h { font-size:15px; font-weight:700; }
+  .nx .when { font-size:11px; color:#5b3fa8; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .nx ul { margin:6px 0 0; padding-left:16px; font-size:12px; line-height:1.4; }
+  .foot { position:absolute; right:48px; bottom:22px; font-size:11.5px; color:var(--soft); }
+  .legend { position:absolute; left:48px; bottom:22px; font-size:11.5px; color:var(--soft); }
+</style></head><body>
+<h1>Earshot: agentic layers, the loops that run them, and what comes next <small>Left: what runs today, layer by layer, with the loop that drives each one. Right: the next steps, in order, with the Azure service that carries each.</small></h1>
+<div class="badge"><b>Microsoft Azure</b>Azure AI Foundry · Microsoft Agent Framework · Azure AI Speech · Container Apps</div>
+
+<div class="col now"><div class="t">Today: eight agents on one audio channel, seven loops</div>
+  <div class="layer" style="top:34px">
+    <div><div class="ln">Layer 1</div><div class="lt">Ingest</div><div class="ls">synthetic events, 10 Hz ball</div></div>
+    <div class="who"><b>Match engine</b> streams passes, shots, tackles, pressure and ball samples on a real-time clock. <b>Spotter</b> turns events into moments worth saying. <span class="pill code">code</span></div>
+    <div class="loop"><b>Event loop</b>: one Agent Framework workflow per event; Pub/Sub-free, in-process, &lt;5 ms. Runs all day on Container Apps; the clock is the engine's, not the browser's.</div>
+  </div>
+  <div class="layer" style="top:158px">
+    <div><div class="ln">Layer 2</div><div class="lt">Interpret</div><div class="ls">stats, patterns, context</div></div>
+    <div class="who"><b>Caller</b> writes play-by-play from reviewed sentences in four languages. <b>StatWatcher</b> reports the one stat you follow (shot speed, pass length, press height). <span class="pill code">code</span></div>
+    <div class="loop"><b>Stat loop</b>: every event recomputes possession, pass length, shot speed, press height from the raw events; nothing is stored that the events cannot rebuild.</div>
+  </div>
+  <div class="layer" style="top:282px">
+    <div><div class="ln">Layer 3</div><div class="lt">Explain</div><div class="ls">why a moment matters</div></div>
+    <div class="who"><b>Analyst</b> reads the match through tools during stoppages and returns structured claims (metric, before, after); causes are graded against a hidden truth log and never spoken. <span class="pill model">gpt-5.4-mini on Foundry</span></div>
+    <div class="loop"><b>Stoppage loop</b>: one workflow per stoppage of 15 s or more; paced by a token budget; no Analyst call while nobody listens. 2,322 windows graded on 40 held-out matches.</div>
+  </div>
+  <div class="layer" style="top:406px">
+    <div><div class="ln">Layer 4</div><div class="lt">Verify</div><div class="ls">the model proposes, code decides</div></div>
+    <div class="who"><b>Checker</b> recomputes every claim and every number. <b>Auditor</b> re-reads each line on its own code path against templates, roster and event log. <span class="pill code">code</span></div>
+    <div class="loop"><b>Verification loop</b>: 63,430 wrong names and numbers planted on 40 unseen matches, all blocked, none false. A line that fails airs as nothing, never as a guess.</div>
+  </div>
+  <div class="layer" style="top:530px">
+    <div><div class="ln">Layer 5</div><div class="lt">Arbitrate and render</div><div class="ls">one serial audio channel</div></div>
+    <div class="who"><b>Director</b> decides who has the floor, cuts small lines when a goal goes in, keeps never-drop lines with an "earlier" marker. <b>Voice</b> picks the Azure HD neural voice and the ear. <b>Recap</b> at half and full time. <span class="pill code">code</span></div>
+    <div class="loop"><b>Air loop</b>: the Director ticks with the clock; audio is synthesised once per unique line and cached; the ball is placed in sound between the ears; 97-98% of shots and cards spoken within 3 s at 30 listeners (post-freeze).</div>
+  </div>
+  <div class="layer" style="top:654px">
+    <div><div class="ln">Layer 6</div><div class="lt">Personalise</div><div class="ls">one match, many listeners</div></div>
+    <div class="who">Casual or Analyst mode, four languages, follow one stat, app voice or screen reader, one ear or both. The same intelligence reaches a data-hungry analyst and a casual fan as different experiences. <span class="pill human">listener chooses</span></div>
+    <div class="loop"><b>Group loop</b>: one Director per language × mode × output; groups capped at 64 and pruned after 45 s idle; lines shared across groups when the SSML is the same.</div>
+  </div>
+  <div class="layer" style="top:778px; height:106px">
+    <div><div class="ln">Layer 7</div><div class="lt">Govern and learn</div><div class="ls">spend, safety, evidence</div></div>
+    <div class="who">Monitor alerts fire an Automation runbook that switches the AI off; the app falls back to cached audio by itself. Entra managed identities, no keys. Pre-registered evaluation with a hidden truth log. <span class="pill code">code</span> <span class="pill human">budget: Carson</span></div>
+    <div class="loop"><b>Guard loop</b> (alerts, hourly and daily) and <b>evaluation loop</b> (tag, run of record, publish whichever way it goes). The number that decided a feature: causes right 1 in 10 vs 1 in 4 for a rule, so causes do not air.</div>
+  </div>
+</div>
+
+<div class="col next"><div class="t">Next: the same loops on real feeds, with memory and more agents</div>
+  <div class="nx" style="top:34px"><div class="when">Weeks 1 to 4 after the hackathon</div><div class="h">Real event feeds and streamed audio</div>
+    <ul><li>Replace the engine with a licensed live feed (StatsBomb, Opta or the Premier League's own) behind the same Ingest contract; the engine stays as the test double.</li>
+      <li>Streamed speech: Azure AI Speech returns compressed audio as it synthesises; the client starts playing on the first chunk. Flagged build measured against today's load test.</li>
+      <li>Listening test with blind testers (protocol earshot-listening-v1, pre-registered), then fix what they say.</li></ul></div>
+  <div class="nx" style="top:230px"><div class="when">Months 2 to 3</div><div class="h">Auto-eventing from video, more agents</div>
+    <ul><li>Vision agent on the broadcast feed (Azure AI Vision + Foundry) to generate passes, shots and speeds without hand tagging, checked against the feed where both exist.</li>
+      <li>Scout agent: favourite club and player focus; a Player agent that follows one player through the match.</li>
+      <li>Agents published as A2A cards in Foundry's Agent Registry; MCP server already exposes the match tools to other agents.</li></ul></div>
+  <div class="nx" style="top:426px"><div class="when">Months 3 to 6</div><div class="h">Memory and personal context</div>
+    <ul><li>Foundry Memory Bank per listener: the clubs you follow, the stats you ask for, the pace you prefer; lines adapt without the listener resetting anything.</li>
+      <li>Accounts, notifications and support (decisions in PRODUCT.md); offline-first caching of recaps on the phone.</li>
+      <li>Studio mode: recaps and the agent trail as data for broadcasters, over the same MCP tools.</li></ul></div>
+  <div class="nx" style="top:622px"><div class="when">Scale</div><div class="h">Many matches, many languages</div>
+    <ul><li>One Container Apps job per match, fanned out by Azure Service Bus; Web PubSub for tens of thousands of listeners; Azure Front Door and a Speech endpoint per region so the first sound stays under 2 s everywhere.</li>
+      <li>Microsoft Fabric as the stats lakehouse across seasons; the evaluation harness runs nightly on every match and publishes its own error rate.</li>
+      <li>Languages added by writing the sentence set and picking two HD voices; the pipeline does not change.</li></ul></div>
+  <div class="nx" style="top:818px; padding-bottom:8px"><div class="when">What stays fixed</div><div class="h">The rules that do not change</div>
+    <ul><li>Every number a listener hears is computed by code and checked twice. The model explains; it never asserts a fact it did not read from the data.</li>
+      <li>A listener who cannot check what they are told is never told something wrong: a failed check airs as silence, not a guess.</li></ul></div>
+</div>
+<div class="legend">Blue bars: the loop that runs each layer. Grey pills: deterministic code. Blue pills: the model. Red pills: a person.</div>
+<div class="foot">Earshot · Inside the Game hackathon · 26 October 2026 · github.com/rodriguescarson/earshot</div>
+<script>window.ready = true;</script>
+</body></html>

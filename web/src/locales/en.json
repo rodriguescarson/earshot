@@ -54,7 +54,8 @@
       "full_time": "Full-time"
     },
     "busy": "Earshot is busy. Try again in a few minutes, or play the recorded clip.",
-    "playRecorded": "Play the recorded clip"
+    "playRecorded": "Play the recorded clip",
+    "pitch": "Pitch map: {{home}} attack left to right, {{away}} right to left. The ball is the dot."
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minute {{minute}}",

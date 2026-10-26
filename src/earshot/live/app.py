@@ -302,7 +302,9 @@ async def audio(request: Request) -> Response:
     if p is None:
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(
-        p, media_type="audio/mp4", headers={"Cache-Control": "public, max-age=86400, immutable"}
+        p,
+        media_type="audio/mpeg" if p.suffix == ".mp3" else "audio/mp4",
+        headers={"Cache-Control": "public, max-age=86400, immutable"},
     )
 
 

@@ -352,6 +352,33 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
   are counted as windows with no claims, which lowers recall slightly for the model and not for
   the baseline; the pacing pauses mean the run spans nine days of service, not one.
 
+**Changes after `eval-freeze` that touch what a listener hears (2026-10-26, not of record):**
+- **Voices:** Azure HD neural voices (`EARSHOT_VOICE_TIER=hd`, the default; `standard` restores the
+  frozen voices): English and Spanish on both roles, Arabic facts, Hindi explanations; the other two
+  roles stay on the standard voices (no native Arabic HD voice for a second role; the Hindi HD voices
+  read short lines about twice as slowly, measured on the same text). HD voices take no prosody
+  wrapper. A refused HD voice falls back to the standard voice for the same line. Chosen in a blind
+  A/B on one goal line and one routine line (`video/voice-ab/`, local only).
+- **Demo clips re-rendered** with the HD voices from the same fixture and the same cached Analyst
+  answers. Line durations changed, so the Director's choices moved on six of the sixteen clips by one
+  or two lines (an extra on-ball line fitted; one shot-speed line was dropped in Spanish and Arabic).
+- **Streamed audio path** (`EARSHOT_AUDIO_STREAM=1`, off by default): the service's own
+  24 kHz 96 kbit/s mono MP3 is served as it is; the message carries the pan and the browser places
+  the line through Web Audio. Cache-miss cost per line, 20 uncached English lines from India to
+  Sweden Central, one at a time (`uv run python scripts/bench_stream.py`, 2026-10-26 18:50 IST):
+
+  | Path | p50 | p95 | mean | file |
+  |---|---|---|---|---|
+  | File path (WAV from the service, pan, ffmpeg AAC) | 831 ms | 1,509 ms | 975 ms | 42.4 KB |
+  | Streamed (MP3 from the service, no encode) | 702 ms | 1,213 ms | 819 ms | 34.8 KB |
+
+  The service call dominates both; the encode and the second file are what the streamed path
+  removes. End-to-end event-to-first-audio-byte with 30 listeners is Stream 1's load test to run on
+  the deployed worker with the flag on; the coverage and latency numbers of record above are the
+  file path.
+- **Pitch map** on the listening screens (ball position from the clip manifest or the live ball
+  messages): visual only; the ball was already in sound.
+
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
 branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
