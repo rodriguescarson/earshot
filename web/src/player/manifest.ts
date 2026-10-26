@@ -55,6 +55,31 @@ export interface Manifest {
   lines: ClipLine[];
   timeline: TimelinePoint[];
   agents?: AgentEntry[];
+  /** Ball samples at 10 Hz (every other sample kept): metres on a 105 x 68 pitch. */
+  ball?: BallSample[];
+}
+
+export interface BallSample {
+  t_ms: number;
+  x: number;
+  y: number;
+  in_play: boolean;
+}
+
+/** The last ball sample at or before tMs, or null before the first one. */
+export function ballAt(m: Manifest, tMs: number): BallSample | null {
+  const b = m.ball;
+  const first = b?.[0];
+  if (!b || !first || tMs < first.t_ms) return null;
+  let lo = 0;
+  let hi = b.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    const s = b[mid];
+    if (s && s.t_ms <= tMs) lo = mid;
+    else hi = mid - 1;
+  }
+  return b[lo] ?? null;
 }
 
 /** Each agent's latest decision at tMs. */

@@ -54,7 +54,8 @@
       "full_time": "Final"
     },
     "busy": "Earshot está ocupado. Vuelve a intentarlo en unos minutos o escucha el clip grabado.",
-    "playRecorded": "Escuchar el clip grabado"
+    "playRecorded": "Escuchar el clip grabado",
+    "pitch": "Mapa del campo: {{home}} ataca de izquierda a derecha, {{away}} de derecha a izquierda. El balón es el punto."
   },
   "media": {
     "title": "{{home}} {{homeScore}}, {{away}} {{awayScore}}. Minuto {{minute}}",

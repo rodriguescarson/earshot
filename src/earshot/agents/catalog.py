@@ -7,6 +7,7 @@ may not contain digits or number words; numbers only ever enter through slots.
 from __future__ import annotations
 
 import json
+import os
 import re
 import string
 from dataclasses import dataclass
@@ -19,13 +20,45 @@ from earshot.contract.line import SlotValue
 
 LOCALES = {Language.EN: "en-GB", Language.ES: "es-ES", Language.AR: "ar-SA", Language.HI: "hi-IN"}
 
-VOICES = {
+VOICES_STANDARD = {
     # (facts voice, explanation voice): two voices per language (CEO-5)
     Language.EN: ("en-GB-RyanNeural", "en-GB-SoniaNeural"),
     Language.ES: ("es-ES-AlvaroNeural", "es-ES-ElviraNeural"),
     Language.AR: ("ar-SA-HamedNeural", "ar-SA-ZariyahNeural"),
     Language.HI: ("hi-IN-ArjunNeural", "hi-IN-AartiNeural"),
 }
+# Azure HD voices (Carson, 2026-10-26, after an A/B on the same goal line): the HD model sets
+# emotion from the text, so these take no prosody wrapper. Where a language has no native HD
+# voice for a role, the standard voice stays: Arabic's explanation voice (the only native Arabic
+# HD voice is male) and Hindi's facts voice (the Hindi HD voices speak short lines about twice
+# as slowly as the standard ones, measured 2026-10-26, and the facts voice carries most lines).
+VOICES_HD = {
+    Language.EN: ("en-GB-Ryan:DragonHDLatestNeural", "en-GB-Sonia:DragonHDLatestNeural"),
+    Language.ES: ("es-ES-Tristan:DragonHDLatestNeural", "es-ES-Ximena:DragonHDLatestNeural"),
+    Language.AR: ("ar-AE-Rashid:DragonHDLatestNeural", "ar-SA-ZariyahNeural"),
+    Language.HI: ("hi-IN-ArjunNeural", "hi-IN-Kavya:MAI-Voice-2.1"),
+}
+# HD voice -> the standard voice that stands in if the service refuses it (preview voices, regions).
+STANDARD_FOR = {
+    hd: std
+    for lang in VOICES_STANDARD
+    for hd, std in zip(VOICES_HD[lang], VOICES_STANDARD[lang], strict=True)
+    if hd != std
+}
+
+
+def voice_tier() -> str:
+    """``hd`` (default) or ``standard``; ``EARSHOT_VOICE_TIER`` switches the whole fleet at once."""
+    tier = os.environ.get("EARSHOT_VOICE_TIER", "hd")
+    return tier if tier in ("hd", "standard") else "hd"
+
+
+def is_hd(voice: str) -> bool:
+    return ":" in voice
+
+
+VOICES = VOICES_HD
+"""The active table at import, for callers that only read it; ``voice_for`` reads the tier live."""
 
 NUMERIC_SLOTS = frozenset(
     {

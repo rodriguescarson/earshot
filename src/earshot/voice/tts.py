@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import logging
 import os
 import time
 import uuid
@@ -21,17 +22,40 @@ import httpx
 import numpy as np
 from azure.identity import DefaultAzureCredential
 
-from earshot.agents.catalog import LOCALES, VOICES, load, placeholders
+from earshot.agents.catalog import (
+    LOCALES,
+    STANDARD_FOR,
+    VOICES_HD,
+    VOICES_STANDARD,
+    is_hd,
+    load,
+    placeholders,
+    voice_tier,
+)
 from earshot.contract import Language, Line, VoiceRole
 
 SAMPLE_RATE = 24_000
 OUTPUT_FORMAT = "riff-24khz-16bit-mono-pcm"
+OUTPUT_FORMAT_MP3 = "audio-24khz-96kbitrate-mono-mp3"
+MP3_BITRATE = 96_000
+"""The streamed path asks the service for compressed audio and serves it as it is: no decode, no
+ffmpeg, no per-pan file. Pan happens in the browser (EARSHOT_AUDIO_STREAM=1)."""
 SCOPE = "https://cognitiveservices.azure.com/.default"
+log = logging.getLogger(__name__)
 
 
 def voice_for(language: Language, role: VoiceRole) -> str:
-    facts, explanation = VOICES[language]
+    table = VOICES_HD if voice_tier() == "hd" else VOICES_STANDARD
+    facts, explanation = table[language]
     return explanation if role is VoiceRole.EXPLANATION else facts
+
+
+def fallback_ssml(ssml: str) -> str | None:
+    """The same document on the standard voice, if it names an HD voice; else None."""
+    for hd, std in STANDARD_FOR.items():
+        if f'name="{hd}"' in ssml:
+            return ssml.replace(f'name="{hd}"', f'name="{std}"', 1)
+    return None
 
 
 def ssml_for(line: Line, *, excited: bool = False) -> str:
@@ -45,13 +69,17 @@ def ssml_for(line: Line, *, excited: bool = False) -> str:
     body = " ".join(parts)
     if line.late:
         body = f"{cat.ssml_body('late.1', line.listening_mode, {})}{body}"
-    rate, pitch = ("+12%", "+6%") if excited else ("+4%", "+0%")
     voice = voice_for(line.language, line.voice_role)
+    if is_hd(voice):
+        # HD voices read the emotion off the text; a prosody wrapper only flattens them (A/B, 2026-10-26).
+        inner = body
+    else:
+        rate, pitch = ("+12%", "+6%") if excited else ("+4%", "+0%")
+        inner = f"<prosody rate={quoteattr(rate)} pitch={quoteattr(pitch)}>{body}</prosody>"
     return (
         '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
         f"xml:lang={quoteattr(LOCALES[line.language])}>"
-        f"<voice name={quoteattr(voice)}><prosody rate={quoteattr(rate)} pitch={quoteattr(pitch)}>"
-        f"{body}</prosody></voice></speak>"
+        f"<voice name={quoteattr(voice)}>{inner}</voice></speak>"
     )
 
 
@@ -83,17 +111,51 @@ class Synthesizer:
             self._token = (tok.token, tok.expires_on)
         return self._token[0]
 
-    def _path(self, ssml: str) -> Path:
-        return self.cache_dir / f"v2-{hashlib.sha256(ssml.encode()).hexdigest()[:32]}.wav"
+    def _path(self, ssml: str, ext: str = "wav") -> Path:
+        prefix = "v3" if ext == "mp3" else "v2"
+        return self.cache_dir / f"{prefix}-{hashlib.sha256(ssml.encode()).hexdigest()[:32]}.{ext}"
 
     def cached(self, ssml: str) -> Clip | None:
         """The clip if it is already in the cache; never calls the service."""
         path = self._path(ssml)
         return Clip(path, wav_duration_ms(path)) if path.exists() else None
 
+    def cached_mp3(self, ssml: str) -> Clip | None:
+        path = self._path(ssml, "mp3")
+        return Clip(path, mp3_duration_ms(path)) if path.exists() else None
+
+    def synthesize_mp3(self, ssml: str) -> Clip:
+        """Compressed mono speech straight from the service, cached under its own key."""
+        path = self._path(ssml, "mp3")
+        if not path.exists():
+            data = self._request(ssml, OUTPUT_FORMAT_MP3)
+            tmp = path.with_suffix(f".{uuid.uuid4().hex[:8]}.part")
+            try:
+                tmp.write_bytes(data)
+                os.replace(tmp, path)
+            finally:
+                tmp.unlink(missing_ok=True)
+            self.characters += len(ssml)
+        return Clip(path, mp3_duration_ms(path))
+
     def synthesize(self, ssml: str) -> Clip:
         path = self._path(ssml)
         if not path.exists():
+            data = self._request(ssml, OUTPUT_FORMAT)
+            # A unique scratch name: two lines with the same SSML synthesized at once used to share one
+            # ".part" file, and the second rename failed (load test, 2026-10-17: 43 lines aired as text).
+            tmp = path.with_suffix(f".{uuid.uuid4().hex[:8]}.part")
+            try:
+                tmp.write_bytes(trim_silence(data))
+                os.replace(tmp, path)
+            finally:
+                tmp.unlink(missing_ok=True)
+            self.characters += len(ssml)
+        return Clip(path, wav_duration_ms(path))
+
+    def _request(self, ssml: str, output_format: str) -> bytes:
+        """One synthesis call with retries; falls back to the standard voice if an HD voice is refused."""
+        if True:
             r: httpx.Response | None = None
             for attempt in range(5):
                 try:
@@ -102,7 +164,7 @@ class Synthesizer:
                         headers={
                             "Authorization": f"Bearer {self._bearer()}",
                             "Content-Type": "application/ssml+xml",
-                            "X-Microsoft-OutputFormat": OUTPUT_FORMAT,
+                            "X-Microsoft-OutputFormat": output_format,
                             "User-Agent": "earshot",
                         },
                         content=ssml.encode(),
@@ -115,19 +177,15 @@ class Synthesizer:
                 if (r.status_code == 429 or r.status_code >= 500) and attempt < 4:
                     time.sleep(1.5 * (attempt + 1))
                     continue
+                if 400 <= r.status_code < 500 and (alt := fallback_ssml(ssml)) is not None:
+                    # The service refused an HD voice (preview withdrawn, region): the standard voice
+                    # says the same line instead.
+                    log.warning("HD voice refused (%s); falling back to the standard voice", r.status_code)
+                    return self._request(alt, output_format)
                 r.raise_for_status()
                 break
             assert r is not None
-            # A unique scratch name: two lines with the same SSML synthesized at once used to share one
-            # ".part" file, and the second rename failed (load test, 2026-10-17: 43 lines aired as text).
-            tmp = path.with_suffix(f".{uuid.uuid4().hex[:8]}.part")
-            try:
-                tmp.write_bytes(trim_silence(r.content))
-                os.replace(tmp, path)
-            finally:
-                tmp.unlink(missing_ok=True)
-            self.characters += len(ssml)
-        return Clip(path, wav_duration_ms(path))
+            return r.content
 
 
 def trim_silence(wav_bytes: bytes, threshold_db: float = -45.0, pad_ms: int = 40) -> bytes:
@@ -145,6 +203,11 @@ def trim_silence(wav_bytes: bytes, threshold_db: float = -45.0, pad_ms: int = 40
         w.setparams(params)
         w.writeframes(x.tobytes())
     return buf.getvalue()
+
+
+def mp3_duration_ms(path: Path) -> int:
+    """Constant-bitrate MP3 from the service, no tags: duration follows from the size."""
+    return int(path.stat().st_size * 8 / MP3_BITRATE * 1000)
 
 
 def wav_duration_ms(path: Path) -> int:

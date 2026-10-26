@@ -15,6 +15,13 @@ scripts/ci.sh            # every CI check, locally (GitHub Actions doesn't run o
 
 Merging and deploying go through `scripts/merge-pr.sh` and `scripts/deploy.sh`; see `infra/README.md`.
 
+## Switches
+
+- `EARSHOT_VOICE_TIER`: `hd` (default) uses Azure HD neural voices where the language has them;
+  `standard` restores the voices the evaluation of record used.
+- `EARSHOT_AUDIO_STREAM=1`: serve the service's own mono MP3 per line and let the browser pan it
+  (measured in EVALUATION.md; off by default, so the numbers of record describe what runs).
+
 ## Data we keep
 
 Earshot stores no personal data. Every match, club and player is made up.

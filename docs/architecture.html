@@ -63,9 +63,9 @@
 
 <!-- Delivery -->
 <div class="box" id="swa" style="left:396px; top:150px; width:252px"><div class="h"><img src="img/azure-icons/static-web-apps.svg"><div><div class="n">Azure Static Web Apps</div><div class="r">earshot-web · React + Vite, Atkinson Hyperlegible</div></div></div>
-  <ul><li>16 recorded clips (4 languages × modes) served as M4A + manifest</li><li>Setup flow, live screen, test page</li><li>No accounts, no cookies, choices in localStorage</li></ul><span class="pill">Free tier</span></div>
+  <ul><li>16 recorded clips (4 languages × modes) served as M4A + manifest</li><li>Setup flow, pitch map, live screen, test page</li><li>No accounts, no cookies, choices in localStorage</li></ul><span class="pill">Free tier</span></div>
 <div class="box" id="sse" style="left:396px; top:390px; width:252px"><div class="h"><img src="img/azure-icons/web-pubsub.svg"><div><div class="n">Live transport</div><div class="r">SSE per listener group from the worker; Azure Web PubSub opt-in fan-out</div></div></div>
-  <ul><li>One stream per language × mode × output</li><li>Groups capped at 64, pruned after 45 s idle</li><li>Audio fetched over HTTPS, one M4A per line and pan</li></ul><span class="pill">wps-earshot · Free F1</span></div>
+  <ul><li>One stream per language × mode × output</li><li>Groups capped at 64, pruned after 45 s idle</li><li>Audio over HTTPS: one M4A per line and pan, or streamed mono MP3 panned in the browser</li></ul><span class="pill">wps-earshot · Free F1</span></div>
 
 <!-- Container apps: agents -->
 <div class="box agent code" id="spotter" style="left:720px; top:150px"><div class="n">Spotter</div><div class="r">events → moments worth saying</div><span class="pill grey">code</span></div>
@@ -75,7 +75,7 @@
 <div class="box agent code" id="checker" style="left:720px; top:262px"><div class="n">Checker</div><div class="r">recomputes every claim and every number</div><span class="pill grey">code</span></div>
 <div class="box agent code" id="auditor" style="left:884px; top:262px"><div class="n">Auditor</div><div class="r">re-reads each line on its own path: templates, roster, event log</div><span class="pill grey">code</span></div>
 <div class="box agent code" id="director" style="left:720px; top:392px"><div class="n">Director</div><div class="r">arbitrates one serial audio channel; cuts small stuff when a goal goes in</div><span class="pill grey">code</span></div>
-<div class="box agent code" id="voice" style="left:1048px; top:392px"><div class="n">Voice</div><div class="r">picks the Azure neural voice, pan, excitement; cache keyed on SSML</div><span class="pill grey">code</span></div>
+<div class="box agent code" id="voice" style="left:1048px; top:392px"><div class="n">Voice</div><div class="r">picks the Azure HD voice and the ear; cache keyed on SSML</div><span class="pill grey">code</span></div>
 <div class="box agent code" id="recap" style="left:884px; top:392px"><div class="n">Recap</div><div class="r">half-time and full-time, as speech, text or JSON</div><span class="pill grey">code</span></div>
 <div class="box" id="worker" style="left:720px; top:528px; width:300px"><div class="h"><img src="img/azure-icons/container-apps.svg"><div><div class="n">ca-earshot-worker</div><div class="r">FastAPI + Microsoft Agent Framework workflows: one per event, one per stoppage</div></div></div>
   <ul><li>Live match on a real-time clock, all day</li><li>1 vCPU / 2 GiB during judging; scale-to-zero otherwise</li><li>Spend guards: cached-only hook, no Analyst calls while nobody listens</li></ul></div>
@@ -85,8 +85,8 @@
 <!-- AI Foundry -->
 <div class="box" id="foundry" style="left:1364px; top:150px; width:242px"><div class="h"><img src="img/azure-icons/ai-foundry.svg"><div><div class="n">Azure AI Foundry</div><div class="r">AI Services earshot-ai · project earshot</div></div></div>
   <ul><li>Deployment "fast": gpt-5.4-mini, DataZone, 30K TPM / 30 RPM</li><li>Tools, strict claim schema, cause gate; causes graded, never spoken</li></ul><span class="pill">Entra managed identity, no key</span></div>
-<div class="box" id="speech" style="left:1622px; top:150px; width:232px"><div class="h"><img src="img/azure-icons/speech.svg"><div><div class="n">Azure AI Speech</div><div class="r">neural text to speech, 24 kHz</div></div></div>
-  <ul><li>Two voices per language: facts and explanation</li><li>SSML prosody by moment; one synthesis per unique line</li></ul><span class="pill">8 voices · 4 languages</span></div>
+<div class="box" id="speech" style="left:1622px; top:150px; width:232px"><div class="h"><img src="img/azure-icons/speech.svg"><div><div class="n">Azure AI Speech</div><div class="r">HD neural text to speech, 24 kHz</div></div></div>
+  <ul><li>Two voices per language: facts and explanation; HD voices read the emotion off the text</li><li>One synthesis per unique line; MP3 streamed as-is behind a flag</li></ul><span class="pill">8 voices · 4 languages · HD</span></div>
 
 <!-- State and media -->
 <div class="box" id="blob" style="left:1364px; top:470px; width:242px"><div class="h"><img src="img/azure-icons/storage.svg"><div><div class="n">Azure Storage</div><div class="r">earshotclips · stearshot</div></div></div>

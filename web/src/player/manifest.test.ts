@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Manifest, onAirAt, scoreAt, spokenBy, TRANSCRIPT_CAP } from "./manifest";
+import { ballAt, type Manifest, onAirAt, scoreAt, spokenBy, TRANSCRIPT_CAP } from "./manifest";
 
 const line = (t: number, end: number, text: string) => ({
   t_ms: t,
@@ -47,5 +47,24 @@ describe("clip manifest", () => {
   it("caps the transcript", () => {
     const many = { ...m, lines: Array.from({ length: 80 }, (_, i) => line(i, i + 1, `l${i}`)) };
     expect(spokenBy(many, 1000)).toHaveLength(TRANSCRIPT_CAP);
+  });
+});
+
+describe("ballAt", () => {
+  const withBall: Manifest = {
+    ...m,
+    ball: [
+      { t_ms: 0, x: 52.5, y: 34, in_play: true },
+      { t_ms: 200, x: 60, y: 30, in_play: true },
+      { t_ms: 400, x: 70, y: 20, in_play: false },
+    ],
+  };
+  it("returns null before the first sample and the latest sample at or before t", () => {
+    expect(ballAt(withBall, -1)).toBeNull();
+    expect(ballAt(withBall, 0)?.x).toBe(52.5);
+    expect(ballAt(withBall, 199)?.x).toBe(52.5);
+    expect(ballAt(withBall, 200)?.x).toBe(60);
+    expect(ballAt(withBall, 9999)?.in_play).toBe(false);
+    expect(ballAt(m, 100)).toBeNull();
   });
 });

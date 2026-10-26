@@ -511,6 +511,8 @@ class LiveMatch:
             deadline_ms=start.line.deadline_wall_ms,
             voice_role=start.line.voice_role,
             late=start.late,
+            pan=getattr(served, "pan", 0.0) if served else 0.0,
+            codec=getattr(served, "codec", "m4a") if served else "m4a",
         )
         await self.send(g.key.name, msg.model_dump(mode="json"))
 

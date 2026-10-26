@@ -22,6 +22,9 @@ export interface LineMessage {
   text: string;
   voice_role: "facts" | "explanation";
   late: boolean;
+  /** Streamed path: mono MP3 the browser pans itself. Absent or "m4a": already panned in the file. */
+  codec?: "m4a" | "mp3";
+  pan?: number;
 }
 export interface BallMessage {
   kind: "ball";
