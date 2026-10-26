@@ -27,12 +27,13 @@ def test_meta_names_the_order_the_positions_use():
 
 def test_tracks_load_from_the_frames_file_without_the_simulator(tmp_path):
     path = tmp_path / "m00026.frames.npz"
-    np.savez_compressed(
-        path,
-        t_ms=np.array([0, 100]),
-        period=np.array([1, 1]),
-        **{"h-1": np.array([[1.0, 2.0], [3.0, 4.0]]), "a-9": np.array([[np.nan, np.nan], [9.0, 9.0]])},
-    )
+    arrays = {
+        "t_ms": np.array([0, 100]),
+        "period": np.array([1, 1]),
+        "h-1": np.array([[1.0, 2.0], [3.0, 4.0]]),
+        "a-9": np.array([[np.nan, np.nan], [9.0, 9.0]]),
+    }
+    np.savez_compressed(path, allow_pickle=False, **arrays)
     tr = tracks_from_npz(path, "h", {"h-1": "One"})
     assert tr.ids == ["h-1", "a-9"]
     assert tr.home == [True, False]
