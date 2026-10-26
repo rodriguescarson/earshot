@@ -376,8 +376,11 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
   removes. End-to-end event-to-first-audio-byte with 30 listeners is Stream 1's load test to run on
   the deployed worker with the flag on; the coverage and latency numbers of record above are the
   file path.
-- **Pitch map** on the listening screens (ball position from the clip manifest or the live ball
-  messages): visual only; the ball was already in sound.
+- **Match view** on the listening screens: the ball (clip manifest or live ball messages) and all
+  22 players from the engine's 10 Hz frames, thinned to 2 Hz (clip manifests carry them; the live
+  worker renders the match's frames in a background thread at load, about 12 s of CPU, and adds
+  positions to the existing ball messages, `EARSHOT_LIVE_TRACKS=0` turns it off). Visual only; the
+  ball was already in sound.
 
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this

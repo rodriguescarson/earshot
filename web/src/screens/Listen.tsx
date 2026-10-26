@@ -5,7 +5,7 @@ import { Dot } from "../components/Dot";
 import { type Announcer, LiveRegions } from "../components/LiveRegions";
 import { Pitch } from "../components/Pitch";
 import { ARM_FOR, type Output } from "../player/choices";
-import { ballAt, type Manifest, onAirAt, scoreAt, spokenBy } from "../player/manifest";
+import { ballAt, type Manifest, onAirAt, playersAt, scoreAt, spokenBy } from "../player/manifest";
 import { useClipPlayer } from "../player/useClipPlayer";
 
 /** The agent column appears at 1024 px and wider (DR-2). */
@@ -44,6 +44,7 @@ export function Listen({
   const score = scoreAt(manifest, player.tMs);
   const onAir = onAirAt(manifest, player.tMs);
   const ball = ballAt(manifest, player.tMs);
+  const players = playersAt(manifest, player.tMs);
   const spoken = useMemo(() => spokenBy(manifest, player.tMs), [manifest, player.tMs]);
   const names = useMemo(() => ({ home: manifest.home.name, away: manifest.away.name }), [manifest]);
   const scoreText = t("listen.score", {
@@ -122,6 +123,7 @@ export function Listen({
 
         <Pitch
           ball={ball ? { x: ball.x, y: ball.y, inPlay: ball.in_play } : null}
+          players={players}
           home={manifest.home.name}
           away={manifest.away.name}
         />

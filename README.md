@@ -19,6 +19,8 @@ Merging and deploying go through `scripts/merge-pr.sh` and `scripts/deploy.sh`; 
 
 - `EARSHOT_VOICE_TIER`: `hd` (default) uses Azure HD neural voices where the language has them;
   `standard` restores the voices the evaluation of record used.
+- `EARSHOT_LIVE_TRACKS`: `1` (default) renders the live match's player frames at load and sends
+  positions with the ball messages for the match view; `0` leaves the view with the ball only.
 - `EARSHOT_AUDIO_STREAM=1`: serve the service's own mono MP3 per line and let the browser pan it
   (measured in EVALUATION.md; off by default, so the numbers of record describe what runs).
 

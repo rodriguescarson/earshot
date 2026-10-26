@@ -117,6 +117,30 @@ def full_match_events(d: dict) -> list[Event]:
     return events
 
 
+def player_tracks(d: dict, t0: int, t_end: int, home_id: str, hz: int = 2) -> dict:
+    """The engine's player frames inside the clip window, thinned to ``hz``, for the match view.
+
+    Players off the pitch (substitutes) have NaN positions and are left out. Shape kept small:
+    one row per frame, x and y per player in ``ids`` order, tenths of a metre.
+    """
+    import numpy as np
+
+    from earshot.sim.frames import HZ, render_frames
+
+    fr = render_frames(d["seed"])
+    idx = np.flatnonzero((fr.t_ms >= t0) & (fr.t_ms <= t_end))[:: max(1, HZ // hz)]
+    ids = [pid for pid, xy in fr.players.items() if not np.isnan(xy[idx]).any()]
+    names = {p["player_id"]: p["short_name"] for p in d["players"]}
+    return {
+        "hz": hz,
+        "ids": ids,
+        "home": [pid.startswith(f"{home_id}-") for pid in ids],
+        "names": [names.get(pid, pid) for pid in ids],
+        "t_ms": [int(fr.t_ms[i] - t0) for i in idx],
+        "xy": [[round(float(v), 1) for pid in ids for v in fr.players[pid][i]] for i in idx],
+    }
+
+
 def render_fixture(
     fixture: Path,
     out_dir: Path,
@@ -372,6 +396,7 @@ def render_fixture(
     lines = kept
 
     ball = [BallPoint(b["wall_ms"], b["x"], b["y"], b["in_play"], danger(b, roster)) for b in d["ball"]]
+    players = player_tracks(d, t0, clip["end_wall_ms"], roster.home_id)
     synth = Synthesizer(cache)
     clips = {
         ln.line_id: synth.synthesize(ssml_for(ln, excited=kinds.get(ln.line_id) in EXCITED))
@@ -453,6 +478,7 @@ def render_fixture(
             {"t_ms": b.wall_ms - t0, "x": round(b.x, 1), "y": round(b.y, 1), "in_play": b.in_play}
             for b in ball[::2]
         ],
+        "players": players,
         "stats": {
             "lines_checked": len(lines) + len(blocked),
             "lines_blocked": len(blocked),

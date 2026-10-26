@@ -550,3 +550,34 @@
   font-size: 0.8rem;
   color: var(--ink-soft);
 }
+
+/* Players: home filled, away ringed; the ball sits on top, small, ground-filled. */
+.pitch__shirt {
+  transition:
+    cx 450ms linear,
+    cy 450ms linear;
+}
+.pitch__player--home .pitch__shirt {
+  fill: var(--ink);
+}
+.pitch__player--away .pitch__shirt {
+  fill: var(--ground);
+  stroke: var(--ink);
+  stroke-width: 0.6;
+}
+.pitch__ball .pitch__dot {
+  fill: var(--ground);
+  stroke: var(--ink);
+  stroke-width: 0.5;
+  r: 1.1;
+}
+.pitch__ball--dead .pitch__dot {
+  fill: var(--ground);
+  stroke: var(--seam);
+}
+@media (min-width: 64rem) {
+  .pitch__svg,
+  .pitch__ends {
+    max-width: 48rem;
+  }
+}
