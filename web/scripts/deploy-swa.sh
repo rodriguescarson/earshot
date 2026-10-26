@@ -26,9 +26,22 @@ if [ "$size_mb" -ge 245 ]; then
   exit 1
 fi
 
+# The SWA CLI's upload client is an x86-64 .NET binary. Without Rosetta (gone from this Mac after
+# the macOS 27 update, 2026-10-26: "spawn Unknown system error -86") it cannot run, so the same
+# CLI runs in an amd64 container instead, with the token passed only through the environment.
+deploy_cmd() {
+  if arch -x86_64 /usr/bin/true >/dev/null 2>&1 || [ "$(uname -m)" = x86_64 ] || [ "$(uname -s)" = Linux ]; then
+    npx -y @azure/static-web-apps-cli@2.0.6 deploy ./dist --env production --no-use-keychain
+  else
+    docker run --rm --platform linux/amd64 -e SWA_CLI_DEPLOYMENT_TOKEN -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+      -v "$PWD/dist:/app/dist:ro" -w /app node:20 \
+      sh -c 'npx -y @azure/static-web-apps-cli@2.0.6 deploy ./dist --env production --no-use-keychain'
+  fi
+}
+
 SWA_CLI_DEPLOYMENT_TOKEN=$(az staticwebapp secrets list --name earshot-web -g rg-earshot \
   --subscription "$EARSHOT_SUBSCRIPTION" --query properties.apiKey -o tsv) \
-  npx -y @azure/static-web-apps-cli@latest deploy ./dist --env production --no-use-keychain 2>&1 |
+  deploy_cmd 2>&1 |
   grep -v -i "token" || true
 
 # The CLI can report an upload failure and still exit 0, so check the live site serves this build:
