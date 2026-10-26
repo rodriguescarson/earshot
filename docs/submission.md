@@ -63,7 +63,7 @@ Speech supplies two neural voices per language. An MCP server gives other agents
 assistant for example, the same read-only match tools, and it never sees past the current minute.
 
 It runs on Azure Container Apps, Container Registry, Web PubSub, Storage and Static Web Apps,
-watched by Application Insights and Log Analytics. [PENDING: confirm each is live at submission.]
+watched by Application Insights and Log Analytics. All of it is live in one resource group as of 26 October: two container apps, a container registry, a Web PubSub instance, two storage accounts, the static site, Application Insights and a Log Analytics workspace. During judging the live-match worker runs always on at 1 vCPU; outside judging it scales to zero.
 No service holds a key: everything signs in with Microsoft Entra managed identity. Usage alerts
 and a monthly budget can switch the AI off, and the app then falls back to cached audio by itself.
 
@@ -90,8 +90,12 @@ happened.
 - We also tested whether the AI could say *why* a team changed its tactics, against the hidden log
   of what each team really did. On the first graded match it was right 1 time in 22, worse than a
   simple rule-based guess (4 in 7). So Earshot doesn't say why. The AI still picks which changes
-  are worth hearing, and code checks every number in them. [PENDING: the same test on the 40
-  unseen matches.]
+  are worth hearing, and code checks every number in them. The run of record on the 40 unseen
+  matches, finished on 26 October, says the same thing with real numbers: the causes that would have
+  aired were right 324 times out of 3,387, about 1 in 10, against 177 of 747 for the rule-based
+  baseline on the same stoppages, about 1 in 4. The model did find roughly as many of the real
+  changes as the baseline (62 versus 67 of 184) but raised five times as many false alarms. That
+  is why causes stay off air.
 - Two targets we missed. We wanted 95% of shots and cards spoken within 3 seconds; on our live
   server with 30 people listening at once it was 71% to 78%, depending on the listening mode.
   And we wanted the first sound of a call within 2 seconds of the event in 95% of cases; it was
@@ -102,7 +106,30 @@ happened.
   were spoken within 3 seconds, above the target. The first sound came within 2.3 seconds in 95% of
   cases, close to the target but still over it; what is left is calls waiting for the one voice.
   These numbers come from after we locked the code, so the official results stay the misses above.
-- [PENDING: the listening test with eyes closed, Oct 18-19, with the number of listeners stated.]
+- We pre-registered a listening test with blind testers (protocol earshot-listening-v1 in EVALUATION.md, section 4.1). It did not run before the deadline, so there is no listener result in this submission. It is the first thing we do after.
+
+## How it maps to the brief
+
+Category entered: **Best Multi-Agent System**. Eight agents share one audio channel, and the
+Director arbitrates who speaks; five of them are deterministic code and one is a model, which is
+the point: the model proposes and code decides what airs.
+
+The brief's five stages, in Earshot:
+
+| Stage | Where it happens |
+|---|---|
+| Ingest | the match engine streams events; the Spotter turns them into moments |
+| Interpret | the Caller, StatWatcher and Analyst tools compute possession, pass length, shot speed, press height |
+| Explain | the Analyst reads stoppages through tools and returns structured claims; the Checker and Auditor recompute every number before it airs |
+| Render | one audio channel, two voices per language, the ball in sound, a screen-reader text mode, and a producer column on wide screens |
+| Personalize | Casual or Analyst mode, four languages, follow one stat, left-ear or both-ears output |
+
+Judging criteria, in one line each: the implementation is tested on 40 held-out matches with
+pass/fail written before the run (Technological Implementation); eight agents with distinct
+roles and one arbitrated channel (Agentic Design); described commentary reaches a fraction of
+matches today and Earshot covers every match in four languages (Real-World Impact); the demo
+video shows the real app and its own audio (User Experience); the entry is multi-agent by
+construction (Category adherence).
 
 ## Testing instructions
 
@@ -115,10 +142,12 @@ happened.
    loops all day, so you may join in the middle of it. Judges' link: [PASTE AT SUBMISSION: the link
    in judge-link.txt, which Stream 2 opened for you. It skips the per-visitor limits. It never
    goes in the repo.]
+6. The live-match worker is always on during the Judging Period (27 October to 10 November), so
+   joining is immediate.
 
 No sign-in. Every match, club and player is made up.
 
 ## Links
 
-- Code: [PENDING: public GitHub URL]
-- Video: [PENDING: YouTube URL, under two minutes]
+- Code: https://github.com/rodriguescarson/earshot (the rules require it public; it is private until the submit day)
+- Video: [CARSON: paste the YouTube URL of video/brag-output/brag.mp4, 72 seconds, after upload]
