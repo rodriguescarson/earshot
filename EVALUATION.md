@@ -334,6 +334,11 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
 | Gated causes on verified claims (what would have aired; `causes_aired = false`) | 3,387 | 324 | **0.096** | 62 (0.337) | 76.6 |
 | Baseline detector, same windows | 747 | 177 | **0.237** | 67 (0.364) | 14.3 |
 
+- **Intervals:** `uv run python scripts/explanations_ci.py reports/eval-heldout-of-record-9001-9040.matches.jsonl`
+  (bootstrap over matches, 10,000 draws, seed 20261026; output in
+  `reports/eval-heldout-of-record-9001-9040.ci.json`): gated accuracy 95% CI 7.4-11.8%,
+  proposed 5.9-10.0%, baseline 18.4-29.4%. Baseline minus gated: 14.1 points
+  (8.8-19.8). The gated Analyst beat the baseline in 6 of 40 matches.
 - **Reading, as pre-registered in section 4:** the Analyst's gated cause accuracy is reported next
   to the baseline's on the same windows. It is 0.096 against 0.237. Recall is level (62 versus 67
   of 184 changes found); the difference is false alarms, five times the baseline's. The gate

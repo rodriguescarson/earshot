@@ -92,8 +92,9 @@ happened.
   simple rule-based guess (4 in 7). So Earshot doesn't say why. The AI still picks which changes
   are worth hearing, and code checks every number in them. The run of record on the 40 unseen
   matches, finished on 26 October, says the same thing with real numbers: the causes that would have
-  aired were right 324 times out of 3,387, about 1 in 10, against 177 of 747 for the rule-based
-  baseline on the same stoppages, about 1 in 4. The model did find roughly as many of the real
+  aired were right 324 times out of 3,387, about 1 in 10 (95% interval 7.4 to 11.8 percent), against
+  177 of 747 for the rule-based baseline on the same stoppages, about 1 in 4 (18.4 to 29.4 percent).
+  The gap held in 34 of the 40 matches. The model did find roughly as many of the real
   changes as the baseline (62 versus 67 of 184) but raised five times as many false alarms. That
   is why causes stay off air.
 - Two targets we missed. We wanted 95% of shots and cards spoken within 3 seconds; on our live
