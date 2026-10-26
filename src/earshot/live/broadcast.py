@@ -20,6 +20,7 @@ from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Protocol
 
 from earshot.agents.analyst import AnalystResult
@@ -99,6 +100,22 @@ class LiveTracks:
             else:
                 out += [round(float(x), 1), round(float(y), 1)]
         return out
+
+
+def tracks_from_npz(path: Path, home_id: str, names: dict[str, str]) -> LiveTracks:
+    """Read the frames file ``earshot frames`` writes next to the match log (t_ms, period, one
+    (n, 2) array per player). Numpy only: the live side never imports the simulator."""
+    import numpy as np
+
+    with np.load(path, allow_pickle=False) as d:
+        ids = [k for k in d.files if k not in ("t_ms", "period")]
+        return LiveTracks(
+            ids=ids,
+            home=[pid.startswith(f"{home_id}-") for pid in ids],
+            names=[str(names.get(pid, pid)) for pid in ids],
+            t_ms=d["t_ms"],
+            xy=[d[pid] for pid in ids],
+        )
 
 
 DAILY_SPEECH_CHARS = 150_000
@@ -203,6 +220,7 @@ class LiveMatch:
         analyst: WindowAnalyst | None = None,
         speed: float = 1.0,
         cached_only: Callable[[], bool] = lambda: False,
+        tracks_path: Path | None = None,
     ) -> None:
         self.info, self.events = info, events
         self.cached_only = cached_only
@@ -219,9 +237,13 @@ class LiveMatch:
         self._loop: asyncio.AbstractEventLoop | None = None
         """The match loop's event loop, set when it starts; the tracks thread posts back through it."""
         """Player positions for the match view, from the engine's frames; None until the thread is done."""
-        if os.environ.get("EARSHOT_LIVE_TRACKS", "1") == "1":
+        if (
+            tracks_path is not None
+            and tracks_path.exists()
+            and os.environ.get("EARSHOT_LIVE_TRACKS", "1") == "1"
+        ):
             threading.Thread(
-                target=self._load_tracks, args=(info.seed, info.home.team_id, players), daemon=True
+                target=self._load_tracks, args=(tracks_path, info.home.team_id, players), daemon=True
             ).start()
         self.groups: dict[str, Group] = {}
         self.state = MatchState.start(info)
@@ -582,21 +604,10 @@ class LiveMatch:
             },
         )
 
-    def _load_tracks(self, seed: int, home_id: str, players: list[PlayerInfo]) -> None:
+    def _load_tracks(self, path: Path, home_id: str, players: list[PlayerInfo]) -> None:
         try:
-            from earshot.sim.frames import render_frames
-
-            fr = render_frames(seed)
-            names = {p.player_id: p.short_name for p in players}
-            ids = list(fr.players)
-            self.tracks = LiveTracks(
-                ids=ids,
-                home=[pid.startswith(f"{home_id}-") for pid in ids],
-                names=[names.get(pid, pid) for pid in ids],
-                t_ms=fr.t_ms,
-                xy=[fr.players[pid] for pid in ids],
-            )
-            log.info("player tracks ready for %s: %d players, %d frames", seed, len(ids), len(fr.t_ms))
+            self.tracks = tracks_from_npz(path, home_id, {p.player_id: p.short_name for p in players})
+            log.info("player tracks ready from %s: %d players", path.name, len(self.tracks.ids))
             # Listeners who joined before this point have no track metadata yet: one state message
             # to every group carries it (the next one would otherwise wait for a goal or a period).
             loop = self._loop
@@ -605,7 +616,7 @@ class LiveMatch:
                     lambda: [self._spawn(self._send_state(g)) for g in list(self.groups.values())]
                 )
         except Exception:  # the match view is a bonus; the match goes on without it
-            log.exception("player tracks failed for seed %s", seed)
+            log.exception("player tracks failed for %s", path)
 
     async def _send_ball(self) -> None:
         if not self.groups:

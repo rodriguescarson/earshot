@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from earshot.live.broadcast import LiveTracks
+from earshot.live.broadcast import LiveTracks, tracks_from_npz
 
 
 def tracks() -> LiveTracks:
@@ -23,3 +23,19 @@ def test_positions_follow_the_nearest_frame_and_subs_are_minus_one_until_they_co
 
 def test_meta_names_the_order_the_positions_use():
     assert tracks().meta() == {"ids": ["h-1", "a-9"], "home": [True, False], "names": ["One", "Nine"]}
+
+
+def test_tracks_load_from_the_frames_file_without_the_simulator(tmp_path):
+    path = tmp_path / "m00026.frames.npz"
+    np.savez_compressed(
+        path,
+        t_ms=np.array([0, 100]),
+        period=np.array([1, 1]),
+        **{"h-1": np.array([[1.0, 2.0], [3.0, 4.0]]), "a-9": np.array([[np.nan, np.nan], [9.0, 9.0]])},
+    )
+    tr = tracks_from_npz(path, "h", {"h-1": "One"})
+    assert tr.ids == ["h-1", "a-9"]
+    assert tr.home == [True, False]
+    assert tr.names == ["One", "a-9"]
+    assert tr.at(0) == [1.0, 2.0, -1.0, -1.0]
+    assert tr.at(150) == [3.0, 4.0, 9.0, 9.0]

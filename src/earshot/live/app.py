@@ -154,6 +154,9 @@ class Live:
                     analyst=GatedAnalyst(self.analyst, self.analyst_off) if self.analyst else None,
                     speed=self.speed,
                     cached_only=lambda: self.cached_only(),
+                    tracks_path=events_path.with_name(
+                        events_path.name.replace(".events.jsonl", ".frames.npz")
+                    ),
                 )
                 log.info("live: %s kicks off", info.match_id)
                 await self.match.run()
