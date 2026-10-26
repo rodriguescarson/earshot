@@ -3,7 +3,7 @@ the pan rides on the message for the browser, and the audio route resolves the c
 
 from pathlib import Path
 
-from earshot.contract import Language, Line, LineSource, ListeningMode, OutputMode
+from earshot.contract import Language, Line, LineSource, ListeningMode, OutputMode, VoiceRole
 from earshot.contract.wire import LineMsg
 from earshot.live.audio import AudioStore, streaming
 from earshot.voice.tts import MP3_BITRATE, Clip, mp3_duration_ms
@@ -73,7 +73,7 @@ def test_audio_route_name_rules(tmp_path, monkeypatch):
 def test_line_message_defaults_keep_old_clients_working():
     msg = LineMsg(
         id="x", priority=50, preempt=False, never_drop=False, audio_url=None, text="t", ssml_hash="",
-        deadline_ms=0, voice_role="facts",
+        deadline_ms=0, voice_role=VoiceRole.FACTS,
     )  # fmt: skip
     assert msg.codec == "m4a"
     assert msg.pan == 0.0
