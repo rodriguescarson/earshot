@@ -13,8 +13,12 @@ not Devpost. Judging 27 Oct to 10 Nov; winners by 20 Nov.
 - Azure HD voices, the match view (22 players + ball, recorded and live) and a streamed audio path
   behind a flag are on main and deployed; Stream 1 measures the flag on Oct 27.
 - Clean clone: `uv sync` 6 s, 1,259 tests pass in 88 s. Live site plays the clip from the deployed URL.
-- Stream 1 (session earshot-p0-p1-plan) runs the Oct 27 infra at about 10:00 IST: always-on
-  worker, 30-listener load test, judge-link check, then DEPLOY_ENABLED=false by 09:00 IST Oct 28.
+- Stream 1 (session earshot-p0-p1-plan) did the Oct 27 infra at 03:58-05:28 IST:
+  - the worker is always on at `f54bc56` (HD voices, match view, streaming off);
+  - the judges' link checks out;
+  - three 30-listener load tests: p95 2.80 s with HD, 2.75 s with streaming, 2.48 s with the
+    earlier voices (EVALUATION.md);
+  - DEPLOY_ENABLED=false.
 
 ## 1. Decide the voice (today)
 
@@ -41,7 +45,7 @@ but judges will look. Add one if you want (MIT is the usual pick) or leave it; y
 
 ## 4. Fill the form (Projects page)
 
-- Category: Best Multi-Agent System (also eligible for the Grand Prize).
+- Category: Best Multi-Agent Orchestration (also eligible for the Grand Prize).
 - Pitch, problem, what it does, how it's built, data, what we measured, testing instructions: copy
   from docs/submission.md, section by section.
 - Testing instructions: add the judges' link from
@@ -60,4 +64,8 @@ but judges will look. Add one if you want (MIT is the usual pick) or leave it; y
 - Tell both sessions it is in, so nothing on main, the video or the links moves until winners are
   announced (freeze).
 - Keep the worker always-on through 10 November (Stream 1's deploy). Budget: ₹1,953 of ₹4,800
-  spent on 26 Oct; judging adds roughly ₹1,500-2,500. Raise the budget only if you want headroom.
+  spent on 26 Oct, and ₹2,120 by early 27 Oct. Judging adds roughly ₹1,500-2,500. Raise the
+  budget only if you want headroom.
+- If you ever want the faster earlier voices for judging, it is one setting, not a deploy:
+  `az containerapp update -g rg-earshot -n ca-earshot-worker --set-env-vars EARSHOT_VOICE_TIER=standard`
+  (add `--subscription` from .env). Removing the variable goes back to HD.
