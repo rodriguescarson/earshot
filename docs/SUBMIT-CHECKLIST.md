@@ -9,7 +9,9 @@ not Devpost. Judging 27 Oct to 10 Nov; winners by 20 Nov.
 - Held-out Explanations run of record: 40/40, filed in EVALUATION.md and reports/ (PR #50, #51).
 - docs/submission.md: every field drafted, numbers final, "How it maps to the brief" added.
 - Architecture diagram: docs/img/architecture.png (3840x2160, official Azure icons).
-- Demo video: video/brag-output/brag.mp4, 72 s, result card swapped to the held-out number.
+- Demo video: video/brag-output/brag-narrated.mp4, 1:57, narrated, filmed on the current app (pitch
+  map, all 22 players, HD voices). https://youtu.be/j-MYF-HFq9k. It replaced the first cut (brag.mp4,
+  72 s, https://youtu.be/t_ZsD_Av0xw) on 27 Oct. The script is in docs/video-script.md.
 - Azure HD voices, the match view (22 players + ball, recorded and live) and a streamed audio path
   behind a flag are on main and deployed; Stream 1 measures the flag on Oct 27.
 - Clean clone: `uv sync` 6 s, 1,259 tests pass in 88 s. Live site plays the clip from the deployed URL.
@@ -38,10 +40,12 @@ but judges will look. Add one if you want (MIT is the usual pick) or leave it; y
 
 ## 3. Upload the video
 
-- File: video/brag-output/brag.mp4 (72 s; the rules cap it at 2 min). Poster: video/brag-output/brag.jpg.
-- YouTube, visibility Public (not unlisted). Title suggestion: "Earshot: live football you can
-  follow by ear (Inside the Game hackathon)". Description: paste share-copy.txt plus the live URL.
-- Paste the URL into docs/submission.md (the one [CARSON] marker) and into the form.
+- File: video/brag-output/brag-narrated.mp4 (1:57; the rules cap it at 2 min). Thumbnail:
+  video/brag-output/brag-narrated.jpg.
+- YouTube, visibility Public (not unlisted). Title, description and chapters:
+  video/brag-output/youtube-narrated.txt.
+- The URL, https://youtu.be/j-MYF-HFq9k, is in docs/submission.md. On the form, replace the old
+  video link with it and save.
 
 ## 4. Fill the form (Projects page)
 

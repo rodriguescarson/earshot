@@ -167,4 +167,5 @@ No sign-in. Every match, club and player is made up.
 ## Links
 
 - Code: https://github.com/rodriguescarson/earshot (public)
-- Video: https://youtu.be/t_ZsD_Av0xw (public, 72 seconds)
+- Video: https://youtu.be/j-MYF-HFq9k (public, 1:57, narrated, on the current app). It replaced
+  the first cut, https://youtu.be/t_ZsD_Av0xw, on 27 October.

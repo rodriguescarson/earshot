@@ -1,41 +1,48 @@
-# Earshot: demo video script (draft)
+# Earshot: the demo video
 
-DRAFT for Carson. Target length 1:50, under the rules' two-minute limit. The rules also ban third-party trademarks and
-copyrighted music. So: no club badges, no broadcaster names, no music, only Earshot's own sounds.
+Published 27 October 2026: https://youtu.be/j-MYF-HFq9k (1:57, public). It replaced the first cut,
+https://youtu.be/t_ZsD_Av0xw (72 s, captions only). That cut was filmed on the 24 October app,
+before the pitch map, the 22-player match view and the HD voices.
 
-## What Carson records (about 15 minutes)
+The rules ban third-party trademarks and copyrighted music. So the video has no music, no league,
+club or broadcaster names, and no club marks. Every sound is Earshot's own, except the narrator.
 
-1. **The phone, with VoiceOver on.** Screen recording with sound (Control Centre > Screen Recording, long-press,
-   Microphone off). Headphones in, so the stereo is real.
-   - Open the site and press **Listen now**. Let it run past the goal: the save is at 1:10 and the goal at 1:13.
-   - Lock the phone for ten seconds while it plays, then unlock it.
-   - Go back and choose **Choose language and style** > Arabic > My screen reader > Casual > Listen.
-2. **The narration**, read into the laptop mic in a quiet room. Each line below is one take, so a mistake only
-   costs one line. Save it as `narration.m4a`.
+## How it is made
 
-## What I assemble
+Everything is rendered from code on the current app (`main`, e93cc30). The render scripts live in
+`video/brag-output/work/`, which is gitignored:
 
-- Desktop captures of the producer column ("Behind the voice") and the live match. I record these myself.
-- The cut, the captions and the stereo mix, with ffmpeg, from the two recordings above.
-- The captions burned in, so a judge watching with the sound off still follows.
+- `capture2.mjs` drives the built web app in headless Chrome. It overrides the audio element's
+  clock, so each frame is the shipped UI at an exact clip time. It captures the English casual clip
+  from 1:02 to 1:33 (the save at 1:10 and the goal at 1:13), three seconds each of Arabic, Spanish
+  and Hindi, the landing page and the setup steps.
+- `narrate.py` synthesizes the narration one sentence at a time with Azure AI Speech, in the HD
+  voice `en-US-Ava:DragonHDLatestNeural`. The app's own English voices are en-GB Ryan and Sonia, so
+  the narrator never sounds like the commentary.
+- `timeline.py` places each sentence on the clock and writes `timeline.json` (the captions). It
+  mixes Earshot's own clip audio under the narration, ducked by a sidechain compressor, at -16 LUFS.
+- `comp2.html` composes the frames, captions and cards, and `render2.mjs` renders it at 30 fps.
+  ffmpeg encodes it, with the goal frame as frame 0 (the thumbnail).
 
 ## The script
 
-| Time | Picture | Sound |
+| Time | Picture | Narration (captioned on screen) |
 |---|---|---|
-| 0:00-0:08 | Black. A caption: "Headphones on. Eyes closed if you like." | Earshot on its own: the ball tone moving from the left ear to the right, the crowd rising, then "Varero shoots, saved by Barana!" (the clip's own line at 1:10) |
-| 0:08-0:22 | The phone on the landing screen. | **Narration:** "Blind fans follow football by ear. This season in the UK, described commentary covers about a hundred and nine of the three hundred and eighty league matches. Most matches get nothing, and most languages get nothing at all." |
-| 0:22-0:50 | The phone recording: Listen now, the score plate, the line on air, the goal. Hold on the goal. | Earshot's own audio, ducked under one line of **narration** at 0:24: "This is Earshot. Listen to where the ball is." Then let the goal play out, crowd and all. |
-| 0:50-1:02 | The phone locked, still playing. Then Arabic, right to left, with VoiceOver reading the lines. | **Narration:** "It keeps going with the screen locked. It speaks four languages. Or it can hand every line to your own screen reader, at your own speed." (Keep the locked-screen sentence only if the lock test passes on the iPhone; otherwise cut it and the locked shot.) |
-| 1:02-1:25 | The desktop: the "Behind the voice" column ticking through Spotter, Caller, Checker, Auditor and Director. | **Narration:** "Eight agents share one voice. Every name and number you hear comes from the match data, and it is checked twice before it plays. The AI only picks which changes are worth saying, in the stoppages, and code checks its numbers too." |
-| 1:25-1:42 | Plain cards, one fact each, big type: "63,430 wrong names and numbers planted. 63,430 caught." Then: "Can the AI say why? On 40 unseen matches, right 1 time in 10. A plain rule: 1 in 4. So it doesn't." | **Narration:** "We tried to break it. On forty matches it had never seen, we planted more than sixty thousand wrong facts. It caught every one. We also asked whether the AI could explain why a team changed. On forty unseen matches it was right one time in ten, and a plain rule did better. So Earshot doesn't guess." |
-| 1:42-1:50 | The live match on the desktop, then the site address. | **Narration:** "Earshot. Live description for every match, in your language." |
+| 0:00 | "Headphones on." / "Close your eyes. Follow the ball." A ball dot moves along a left-ear to right-ear line. | None. The ball tone pans from ear to ear. |
+| 0:06 | The landing page. | Blind fans follow football by ear. But live description needs a human describer, so most matches never get one. In the UK this season, about 109 of 380 league matches will. And only in English. |
+| 0:21 | The app playing the match: score plate, the pitch with all 22 players and the ball, the line on air, the "Behind the voice" panel. | This is Earshot. It turns live match data into commentary you can hear. |
+| 0:27 | The same, through the save (0:30) and the goal (0:33). | None. Earshot's own audio, unducked: the calls, the ball tone, the goal call. |
+| 0:40 | The goal replayed in sound. | The calls come straight from the data. Under them, a tone follows the ball from one ear to the other. The pitch shows the engine's own positions, for anyone watching with you. You don't need it to follow. |
+| 0:51 | Setup: the language step, then Arabic, Spanish and Hindi side by side, then the output step, then the detail step with Analyst chosen. | Pick English, Spanish, Arabic or Hindi. Each language has its own lines and its own voices. Earshot can speak, or send every line to your own screen reader. Analyst mode adds the numbers. |
+| 1:06 | A close-up of the "Behind the voice" agent table during the goal. | Behind the one voice are eight agents. The Caller writes each line from a fixed template. A Checker and a separate Auditor re-check every name and number, then the Director decides what airs. The AI model only suggests which changes are worth saying, and code checks its numbers too. |
+| 1:24 | Card: "On 40 matches Earshot had never seen, we planted 63,430 wrong names and numbers on purpose. It caught all 63,430." | We tried to break it. On 40 matches it had never seen, we planted 63,430 wrong names and numbers. It caught every one. |
+| 1:35 | Card: "Can the AI explain why a team changed its tactics? On 40 matches it had never seen: right 1 time in 10. A plain rule: 1 in 4. So Earshot doesn't guess." | We also asked the AI why teams changed tactics. It was right one time in ten. A simple rule did better, so Earshot doesn't guess. |
+| 1:44 | The Earshot plate, the Azure stack, the site address. | It's built on Azure AI Foundry, the Microsoft Agent Framework and Azure AI Speech. Earshot: live description for every match, in your language. |
 
-## Notes
+## Sources for the numbers
 
-- **The planted-defect number:** 63,430 is the total across the four injection points on the held-out seeds
-  (EVALUATION.md, runs of record). Recheck it against the final EVALUATION.md before recording.
-- **The 109 of 380 figure:** sourced from Broadband TV News, 2026-10-08. No broadcaster is named on screen.
-- **If the held-out Explanations result changes** the "1 time in 22" line, swap in the held-out number
-  (due about Oct 21).
-- **Upload:** YouTube, unlisted or public; the rules need a public URL on the project page. Carson uploads it.
+- **109 of 380:** Broadband TV News, 2026-10-08. No broadcaster is named on screen.
+- **63,430 planted, all caught:** the planted-defect run of record on the held-out seeds 9001-9040
+  (EVALUATION.md, Facts).
+- **1 time in 10, against 1 in 4:** the held-out Explanations run of record. The gated Analyst was
+  right 324 of 3,387 times (9.6%) and the baseline 177 of 747 (23.7%) (EVALUATION.md).
