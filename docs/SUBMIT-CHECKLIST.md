@@ -30,11 +30,10 @@ Stream 1 is told before it merges so the load test runs on the final audio.
 
 ## 2. Make the repo public (required by the rules, section on submission requirements)
 
-Decide first about the 42 squash commits authored as rodriguescarson@hotmail.com:
-- accept them (fastest), or
-- rewrite with a mailmap and force-push main (ask a session to do it; it is a 10-minute job but
-  it rewrites history the judges will clone).
-Then: GitHub → rodriguescarson/earshot → Settings → Danger Zone → Change visibility → Public.
+Done: the repo is public. Some early squash commits carry a personal author email in their
+metadata. That was accepted rather than rewritten, because a rewrite changes the commit ids
+that EVALUATION.md cites (for example eval-freeze f69549b). The address is not written in
+any file.
 Confirm the licence question: the repo has no LICENSE file today. The rules do not require one,
 but judges will look. Add one if you want (MIT is the usual pick) or leave it; your call.
 
