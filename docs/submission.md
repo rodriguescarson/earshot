@@ -1,7 +1,8 @@
 # Earshot: submission draft
 
-DRAFT for Carson to edit. Nothing here is submitted. Lines marked [PENDING] wait on a result or a
-deploy and must be filled in or cut before the form goes in.
+Submitted on Innovation Studio on 27 October 2026 as project 127126
+(https://innovationstudio.microsoft.com/hackathons/insidethegamedeveloperhackathon/project/127126).
+This file is the text of record; the form carries the same sections, the judges' link and the video.
 
 ## Project pitch
 
@@ -110,17 +111,21 @@ happened.
 - A streamed audio path exists behind a flag: the service's own compressed speech is served as it
   is and the browser places it between the ears. On 20 uncached lines it cut the per-line cost
   from 831 ms to 702 ms at the median and from 1,509 ms to 1,213 ms at the 95th percentile, with
-  files 18% smaller. It is measured, not yet the default; the numbers above are the file path.
+  files 18% smaller. Under load, with 30 listeners on 27 October, it made no clear difference
+  (2.75 against 2.80 seconds at the 95th percentile), so it stays off.
 - After that official run we changed how audio is prepared and gave the server the size it will
   have while judges use it. Measured the same way, with 30 listeners, 97% to 98% of shots and cards
   were spoken within 3 seconds, above the target. The first sound came within 2.3 seconds in 95% of
   cases, close to the target but still over it; what is left is calls waiting for the one voice.
   These numbers come from after we locked the code, so the official results stay the misses above.
+- The build judges hear has the Azure HD voices. On 27 October, the same test on it gave 2.8
+  seconds, and 2.5 seconds with the earlier voices. The HD voices take about a third of a second
+  longer on lines not yet cached. We kept them for how they sound.
 - We pre-registered a listening test with blind testers (protocol earshot-listening-v1 in EVALUATION.md, section 4.1). It did not run before the deadline, so there is no listener result in this submission. It is the first thing we do after.
 
 ## How it maps to the brief
 
-Category entered: **Best Multi-Agent System**. Eight agents share one audio channel, and the
+Category entered: **Best Multi-Agent Orchestration**. Eight agents share one audio channel, and the
 Director arbitrates who speaks; five of them are deterministic code and one is a model, which is
 the point: the model proposes and code decides what airs.
 
@@ -151,9 +156,9 @@ construction (Category adherence).
    from the engine's own positions; the line on air sits below it. On a screen 1024 px or wider,
    the agents' decisions appear in a second column.
 5. To hear a match as it happens, choose **Join the live match** on the first screen. The match
-   loops all day, so you may join in the middle of it. Judges' link: [PASTE AT SUBMISSION: the link
-   in judge-link.txt, which Stream 2 opened for you. It skips the per-visitor limits. It never
-   goes in the repo.]
+   loops all day, so you may join in the middle of it. Judges' link: pasted into the Innovation
+   Studio description at submission (27 October); it lives in judge-link.txt outside the repo and
+   never goes in here.
 6. The live-match worker is always on during the Judging Period (27 October to 10 November), so
    joining is immediate.
 
@@ -161,5 +166,5 @@ No sign-in. Every match, club and player is made up.
 
 ## Links
 
-- Code: https://github.com/rodriguescarson/earshot (the rules require it public; it is private until the submit day)
-- Video: [CARSON: paste the YouTube URL of video/brag-output/brag.mp4, 72 seconds, after upload]
+- Code: https://github.com/rodriguescarson/earshot (public)
+- Video: https://youtu.be/t_ZsD_Av0xw (public, 72 seconds)
