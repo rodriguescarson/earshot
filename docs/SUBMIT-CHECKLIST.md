@@ -72,3 +72,40 @@ but judges will look. Add one if you want (MIT is the usual pick) or leave it; y
 - If you ever want the faster earlier voices for judging, it is one setting, not a deploy:
   `az containerapp update -g rg-earshot -n ca-earshot-worker --set-env-vars EARSHOT_VOICE_TIER=standard`
   (add `--subscription` from .env). Removing the variable goes back to HD.
+
+## 6. State at wrap-up (29 Oct, 01:30 IST)
+
+Done:
+- Submitted on 27 Oct at 03:50 IST (Innovation Studio project 127126). The repo is public.
+- The video is the narrated 1:57 cut, https://youtu.be/j-MYF-HFq9k. It is both the file on the
+  project page and the link in its description; both were checked after a reload. The first cut,
+  https://youtu.be/t_ZsD_Av0xw, is no longer referenced anywhere.
+- The worker has been always on since 27 Oct 03:58 IST: `f54bc56`, HD voices, streaming off,
+  match view on. `DEPLOY_ENABLED=false`. The judging-worker load tests are in EVALUATION.md.
+- Secrets check on 28 Oct:
+  - gitleaks over all 163 commits on every branch: clean;
+  - none of the subscription id, tenant id, AI endpoint, judge code, storage keys, SAS tokens or
+    private keys appear in any file, commit, PR or issue;
+  - `.env` was never committed, only `.env.example` with placeholders;
+  - Earshot uses Entra sign-in throughout, so there are no API keys to leak.
+- The two forked sessions (Stream 2 and the submission session) are archived. All 24 local branches
+  were merged and are deleted. The Stream 2 worktree is removed.
+
+Left for Carson:
+1. **Delete 9 old Actions runs.** These deploy runs from 16 Oct printed the subscription, tenant
+   and client ids in their public logs: the workflow passes them as plain variables. They are ids,
+   not credentials, but they should not be public. Deleting runs is permanent, so it is yours:
+   `for id in 38910902329 38911146771 38912532992 38913894830 38914720376 38916904076 38929143461 38929176806 38930335972; do gh run delete $id --repo rodriguescarson/earshot; done`
+   If deploys are ever turned back on, move `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and
+   `AZURE_SUBSCRIPTION_ID` to repository secrets first, so they are masked.
+2. **Turn on secret scanning and push protection.** They are free on a public repo and both are
+   off: repo Settings, then Advanced Security.
+3. **Delete 7 merged remote branches.** All were squash-merged and the tips match their PRs:
+   `git push origin --delete chore/deploy-lowest chore/stream2-next-3 eval/post-queue feat/audio-queue feat/eval-harness-auditor feat/mono-centre feat/split-audio-queues`
+4. **Unlist the first video** (https://youtu.be/t_ZsD_Av0xw) whenever you like.
+5. **Take it to ₹0 after judging.** From 11 Nov 13:29 IST the worker can go to `--min-replicas 0`.
+   After the winners (by 21 Nov 13:29 IST) and any prize forms, delete `rg-earshot`, purge the
+   soft-deleted AI account and delete the budget. The commands are in `~/hackathons/README.md`.
+
+Kept on purpose: `~/earshot-eval-runs/heldout-2026-10-17`, the pinned checkout and raw outputs of
+the held-out run of record. Its summary and per-match counts are in `reports/`.
