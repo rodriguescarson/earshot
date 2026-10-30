@@ -29,7 +29,7 @@ dev = [
   "jsonschema>=4.23",
   "ruff>=0.7",
   "pyright>=1.1.385",
-  "azure-ai-evaluation>=1.18",
+  "azure-ai-evaluation>=1.18.10",
 ]
 
 [build-system]

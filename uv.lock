@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -169,7 +169,7 @@ wheels = [
 
 [[package]]
 name = "azure-ai-evaluation"
-version = "1.18.9"
+version = "1.18.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -185,9 +185,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "ruamel-yaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/41/be4279f3f94fb1a8cf34aaa09902e5ecdfb85277312233fd932fc7a861b6/azure_ai_evaluation-1.18.9.tar.gz", hash = "sha256:efe7699dfc8489b7d71942d2375f5993faa7c9a09a3425096f46f72e2ffbefa6", size = 2433765, upload-time = "2026-10-14T18:22:43.181Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/23/509ed6aafb80a4c4ecbc76ccc7b7ea39a2c6465e3e2683d7331bf0760d4e/azure_ai_evaluation-1.18.10.tar.gz", hash = "sha256:6d62c73a1926be13cf1ecadb0fb4a5f8f3ee09979a27f9162afe1199379833d3", size = 2499212, upload-time = "2026-10-23T23:33:57.047Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/49/218ecb1a1c25308529359d14867a2b98313aea5164692df2b137eca38a8e/azure_ai_evaluation-1.18.9-py3-none-any.whl", hash = "sha256:5965b5d9bfc1d711b5f3cb2fcdda38d3ddb735eff8680d297f01e9696db26f2d", size = 1251032, upload-time = "2026-10-14T18:22:45.528Z" },
+    { url = "https://files.pythonhosted.org/packages/82/10/1a76d3f836ff8cacbf962435c115d03a370ee0e00731118079966510b8c0/azure_ai_evaluation-1.18.10-py3-none-any.whl", hash = "sha256:29bcbb3c0325428ef319effb6adf10f5fb198f0071f60d5d8a0a4ab260caec33", size = 1273994, upload-time = "2026-10-23T23:33:59.58Z" },
 ]
 
 [[package]]
@@ -521,7 +521,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "azure-ai-evaluation", specifier = ">=1.18" },
+    { name = "azure-ai-evaluation", specifier = ">=1.18.10" },
     { name = "hypothesis", specifier = ">=6.112" },
     { name = "jsonschema", specifier = ">=4.23" },
     { name = "pyright", specifier = ">=1.1.385" },
