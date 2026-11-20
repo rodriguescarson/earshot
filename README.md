@@ -2,7 +2,33 @@
 
 Live AI audio-described football commentary for blind and partially sighted fans, built for the Microsoft x Premier League "Inside the Game" hackathon. Every match, club and player here is made up.
 
-Status: in development. The design and every review decision live in [docs/designs/earshot.md](docs/designs/earshot.md).
+## Status: retired (20 November 2026)
+
+Earshot was submitted on 27 October 2026 in the Best Multi-Agent Orchestration category. It did not
+place; the six winners were announced on 19 November 2026. The live demo and every Azure resource
+behind it were deleted on 20 November 2026, so the live links in [docs/submission.md](docs/submission.md)
+no longer work. The code, the documents and the results of record stay here.
+
+| What | Where |
+|---|---|
+| Demo video (1:57) | https://youtu.be/j-MYF-HFq9k |
+| Submission text | [docs/submission.md](docs/submission.md) |
+| Results of record | [EVALUATION.md](EVALUATION.md) and [reports/](reports/) |
+| Design and every review decision | [docs/designs/earshot.md](docs/designs/earshot.md) |
+| Architecture | [docs/img/architecture.png](docs/img/architecture.png) |
+| Everything not in git: demo clips, audio caches, the held-out run folder, load tests, the videos | the [archive-2026-11-20 release](https://github.com/rodriguescarson/earshot/releases/tag/archive-2026-11-20) |
+| The exact code the held-out Explanations run used | tag `heldout-run-of-record` (the same change is on `main` as #35) |
+
+What it measured, in one line each:
+
+- 63,430 wrong names and numbers planted across 40 held-out matches in four languages; every one was
+  caught before it aired, and no correct line was blocked.
+- Every goal, red card and penalty aired across a full 380-match season.
+- The AI's explanations of tactical changes were right about 1 time in 10, against 1 in 4 for a plain
+  rule, so they were never aired.
+
+To run it again you need your own Azure AI Foundry and Azure AI Speech resources; `infra/main.bicep`
+describes the stack and `infra/README.md` the deploy.
 
 ## Develop
 
