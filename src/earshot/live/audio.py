@@ -36,10 +36,18 @@ def bucket(pan: float) -> float:
     return min(PAN_BUCKETS, key=lambda b: abs(b - pan))
 
 
+def streaming() -> bool:
+    """``EARSHOT_AUDIO_STREAM=1``: serve the service's own mono MP3 and let the browser pan it."""
+    return os.environ.get("EARSHOT_AUDIO_STREAM") == "1"
+
+
 @dataclass(frozen=True)
 class Served:
     name: str
     duration_ms: int
+    pan: float = 0.0
+    """Only meaningful on the streamed path: the browser places the line at this pan."""
+    codec: str = "m4a"
 
 
 class AudioStore:
@@ -58,12 +66,15 @@ class AudioStore:
 
     def cached_ms(self, line: Line) -> int | None:
         """The duration if this line's speech is already cached (costs nothing to air)."""
-        clip = self.synth.cached(self.ssml(line))
+        ssml = self.ssml(line)
+        clip = self.synth.cached_mp3(ssml) if streaming() else self.synth.cached(ssml)
         return clip.duration_ms if clip else None
 
     def warm(self, line: Line) -> int:
         """Synthesize (or hit the cache) and return the duration: used before a match goes live."""
-        return self.synth.synthesize(self.ssml(line)).duration_ms
+        ssml = self.ssml(line)
+        clip = self.synth.synthesize_mp3(ssml) if streaming() else self.synth.synthesize(ssml)
+        return clip.duration_ms
 
     def serve(self, line: Line, output: OutputMode, *, synthesize: bool = True) -> Served | None:
         """The M4A for this line in this output mode (screen-reader mode has no app audio).
@@ -72,6 +83,13 @@ class AudioStore:
         """
         if output is OutputMode.SCREEN_READER:
             return None
+        if streaming():
+            ssml = self.ssml(line)
+            mp3 = self.synth.synthesize_mp3(ssml) if synthesize else self.synth.cached_mp3(ssml)
+            if mp3 is None:
+                return None
+            pan = 0.0 if output is OutputMode.ONE_EAR else bucket(line.pan)
+            return Served(mp3.path.name, mp3.duration_ms, pan=pan, codec="mp3")
         clip = self.synth.synthesize(self.ssml(line)) if synthesize else self.synth.cached(self.ssml(line))
         if clip is None:
             return None
@@ -100,6 +118,9 @@ class AudioStore:
         return Served(name, clip.duration_ms)
 
     def path(self, name: str) -> Path | None:
+        if len(name) == 39 and name.startswith("v3-") and name.endswith(".mp3") and name[3:35].isalnum():
+            p = self.synth.cache_dir / name
+            return p if p.exists() else None
         if len(name) != 28 or not name.endswith(".m4a") or not name[:24].isalnum():
             return None
         p = self.out_dir / name

@@ -19,6 +19,7 @@ RUN uv sync --frozen --no-dev
 RUN uv run --no-dev earshot sim --seed 26 --out data/mcp-replay >/dev/null \
  && uv run --no-dev earshot roster --out data/mcp-replay/roster.json \
  && for s in 26 28 31; do uv run --no-dev earshot sim --seed $s --out data/matches >/dev/null; done \
+ && for s in 26 28 31; do uv run --no-dev earshot frames --seed $s --out data/matches/m000$s.frames.npz >/dev/null; done \
  && test ! -e data/hidden
 
 ENV PATH=/app/.venv/bin:$PATH PORT=8080 EARSHOT_MCP_REPLAY=/app/data/mcp-replay \

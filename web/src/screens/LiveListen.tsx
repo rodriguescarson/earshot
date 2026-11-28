@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Dot } from "../components/Dot";
 import { type Announcer, LiveRegions } from "../components/LiveRegions";
+import { type BallPos, Pitch, type PlayerDot } from "../components/Pitch";
 import {
   audioUrl,
   connect,
@@ -47,6 +48,9 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
   const current = useRef<LineMessage | null>(null);
   const queue = useRef<Queued[]>([]);
   const layer = useRef<Continuous | null>(null);
+  const [ball, setBall] = useState<BallPos | null>(null);
+  const tracks = useRef<{ ids: string[]; home: boolean[]; names: string[] } | null>(null);
+  const [players, setPlayers] = useState<PlayerDot[]>([]);
   const reader = choices.output === "reader";
 
   const play = useCallback(
@@ -73,6 +77,12 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
       current.current = line;
       setOnAir(line);
       if (!url) return;
+      if (line.codec === "mp3") {
+        // Streamed path: the file is mono; the browser places it. crossOrigin must be set before src.
+        el.crossOrigin = "anonymous";
+        layer.current?.attach(el);
+        layer.current?.speechPan(line.pan ?? 0);
+      }
       el.src = url;
       layer.current?.duck(true);
       void el.play().catch(() => undefined);
@@ -112,10 +122,25 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
       group,
       (m) => {
         if (m.kind === "line") playRef.current(m);
-        else if (m.kind === "state")
+        else if (m.kind === "state") {
           setScore((s) => ({ home: m.home_score, away: m.away_score, minute: m.minute ?? s.minute }));
-        else if (m.kind === "ball") layer.current?.ball(m.x, m.danger, m.in_play ?? true);
-        else if (m.kind === "recap") {
+          if (m.tracks) tracks.current = m.tracks;
+        } else if (m.kind === "ball") {
+          layer.current?.ball(m.x, m.danger, m.in_play ?? true);
+          setBall({ x: m.x, y: m.y, inPlay: m.in_play ?? true, danger: m.danger });
+          const tr = tracks.current;
+          if (tr && m.players) {
+            const xy = m.players;
+            const dots: PlayerDot[] = [];
+            tr.ids.forEach((id, i) => {
+              const x = xy[2 * i];
+              const y = xy[2 * i + 1];
+              if (x !== undefined && y !== undefined && x >= 0 && y >= 0)
+                dots.push({ id, name: tr.names[i] ?? id, home: tr.home[i] ?? false, x, y });
+            });
+            setPlayers(dots);
+          }
+        } else if (m.kind === "recap") {
           // Recaps go to their own section, never through the live region line by line (design: Recaps).
           setRecaps((rs) => [...rs.filter((r) => r.period !== m.period), m]);
           announcer.current?.announce(tRef.current(`listen.recapReady.${m.period}`));
@@ -194,6 +219,7 @@ export function LiveListen({ choices, summary }: { choices: Choices; summary: Li
           </span>
         </h1>
       </section>
+      <Pitch ball={ball} players={players} home={summary.home.name} away={summary.away.name} />
       {refused && (
         <p className="plate busy" role="status">
           {t("listen.busy")}{" "}

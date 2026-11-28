@@ -1,3 +1,27 @@
 {
-  "buildPath": "code"
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "video/brag-output/work/comp.html"
+        ],
+        "createdAt": "2026-10-23T18:56:42.644Z",
+        "reason": "Claude: offline video render harness; the frame <img> gets its src per frame at render time, not shipped UI"
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          "video/brag-output/work/comp.html"
+        ],
+        "createdAt": "2026-10-23T18:56:42.693Z",
+        "reason": "Claude: fixed 1920x1080 video canvas clips by design; render harness, not shipped UI"
+      }
+    ]
+  }
 }
