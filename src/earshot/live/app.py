@@ -154,6 +154,9 @@ class Live:
                     analyst=GatedAnalyst(self.analyst, self.analyst_off) if self.analyst else None,
                     speed=self.speed,
                     cached_only=lambda: self.cached_only(),
+                    tracks_path=events_path.with_name(
+                        events_path.name.replace(".events.jsonl", ".frames.npz")
+                    ),
                 )
                 log.info("live: %s kicks off", info.match_id)
                 await self.match.run()
@@ -302,7 +305,9 @@ async def audio(request: Request) -> Response:
     if p is None:
         return JSONResponse({"error": "not found"}, status_code=404)
     return FileResponse(
-        p, media_type="audio/mp4", headers={"Cache-Control": "public, max-age=86400, immutable"}
+        p,
+        media_type="audio/mpeg" if p.suffix == ".mp3" else "audio/mp4",
+        headers={"Cache-Control": "public, max-age=86400, immutable"},
     )
 
 
