@@ -16,7 +16,7 @@ dependencies = [
   "uvicorn>=0.30",
   "azure-storage-blob>=12.23",
   "azure-messaging-webpubsubservice>=1.2",
-  "openai>=1.80",
+  "openai>=3.39.0",
 ]
 
 [project.scripts]
