@@ -501,3 +501,83 @@
 .tag--air {
   color: var(--spot);
 }
+
+/* Pitch map: a plate for sighted companions; the ball is already in sound. */
+.pitch {
+  margin: 0 0 calc(var(--cell) * 2);
+  padding: 0;
+}
+.pitch__svg {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  height: auto;
+}
+.pitch__turf {
+  fill: var(--dot);
+}
+.pitch__line {
+  fill: none;
+  stroke: var(--seam);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.pitch__goal {
+  fill: var(--seam);
+}
+.pitch__dot {
+  fill: var(--ink);
+  transition:
+    cx 180ms linear,
+    cy 180ms linear;
+}
+.pitch__ball--dead .pitch__dot {
+  fill: var(--ground);
+  stroke: var(--ink);
+  stroke-width: 0.8;
+}
+.pitch__danger {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.5;
+  opacity: 0.45;
+}
+.pitch__ends {
+  display: flex;
+  justify-content: space-between;
+  max-width: 36rem;
+  margin-top: calc(var(--cell) / 2);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* Players: home filled, away ringed; the ball sits on top, small, ground-filled. */
+.pitch__shirt {
+  transition:
+    cx 450ms linear,
+    cy 450ms linear;
+}
+.pitch__player--home .pitch__shirt {
+  fill: var(--ink);
+}
+.pitch__player--away .pitch__shirt {
+  fill: var(--ground);
+  stroke: var(--ink);
+  stroke-width: 0.6;
+}
+.pitch__ball .pitch__dot {
+  fill: var(--ground);
+  stroke: var(--ink);
+  stroke-width: 0.5;
+  r: 1.1;
+}
+.pitch__ball--dead .pitch__dot {
+  fill: var(--ground);
+  stroke: var(--seam);
+}
+@media (min-width: 64rem) {
+  .pitch__svg,
+  .pitch__ends {
+    max-width: 48rem;
+  }
+}

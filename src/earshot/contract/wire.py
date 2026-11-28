@@ -25,6 +25,9 @@ class LineMsg(_Msg):
     deadline_ms: int
     voice_role: VoiceRole
     late: bool = False
+    pan: float = 0.0
+    """Streamed path only: the browser places the line at this pan (-1 left, 1 right)."""
+    codec: Literal["m4a", "mp3"] = "m4a"
 
 
 class BallMsg(_Msg):

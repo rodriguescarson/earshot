@@ -1,0 +1,35 @@
+{
+ "source": "reports/eval-heldout-of-record-9001-9040.matches.jsonl",
+ "matches": 40,
+ "draws": 10000,
+ "seed": 20261026,
+ "baseline": {
+  "accuracy": 0.2369,
+  "ci95": [
+   0.1841,
+   0.2938
+  ]
+ },
+ "analyst_gated": {
+  "accuracy": 0.0957,
+  "ci95": [
+   0.074,
+   0.1184
+  ]
+ },
+ "analyst_proposed": {
+  "accuracy": 0.0786,
+  "ci95": [
+   0.0585,
+   0.0998
+  ]
+ },
+ "baseline_minus_gated": {
+  "points": 0.1413,
+  "ci95": [
+   0.0879,
+   0.1982
+  ]
+ },
+ "matches_gated_beats_baseline": 6
+}

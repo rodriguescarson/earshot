@@ -46,6 +46,27 @@ export class Continuous {
     noise.start();
   }
 
+  private speechSource: MediaElementAudioSourceNode | null = null;
+  private speechPanNode: StereoPannerNode | null = null;
+
+  /** Route the shared <audio> element through this context so a mono line can be placed at a pan.
+   * Done once per element (the Web Audio API allows one source per element) and only when the
+   * server serves the streamed codec, because a non-CORS element goes silent once attached. */
+  attach(el: HTMLAudioElement): void {
+    if (this.speechSource) return;
+    this.speechPanNode = this.ctx.createStereoPanner();
+    this.speechSource = this.ctx.createMediaElementSource(el);
+    this.speechSource.connect(this.speechPanNode).connect(this.master);
+  }
+
+  speechPan(p: number): void {
+    this.speechPanNode?.pan.setTargetAtTime(
+      this.oneEar ? 0 : Math.max(-1, Math.min(1, p)),
+      this.ctx.currentTime,
+      0.02,
+    );
+  }
+
   async resume(): Promise<void> {
     if (this.ctx.state !== "running") await this.ctx.resume();
   }

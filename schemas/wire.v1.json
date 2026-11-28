@@ -51,6 +51,15 @@
           ],
           "title": "Audio Url"
         },
+        "codec": {
+          "default": "m4a",
+          "enum": [
+            "m4a",
+            "mp3"
+          ],
+          "title": "Codec",
+          "type": "string"
+        },
         "deadline_ms": {
           "title": "Deadline Ms",
           "type": "integer"
@@ -73,6 +82,11 @@
         "never_drop": {
           "title": "Never Drop",
           "type": "boolean"
+        },
+        "pan": {
+          "default": 0.0,
+          "title": "Pan",
+          "type": "number"
         },
         "preempt": {
           "title": "Preempt",

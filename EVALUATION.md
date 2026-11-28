@@ -308,6 +308,80 @@ had no data on the slice; the grid maximum moved from 0.184 to 0.194.
   - G3 is informational on 40 matches. Yellow cards, 3.40 a match, fall outside their band
     (3.78-4.62).
 
+**Explanations, real Analyst on the held-out seeds (run of record):**
+- **Command:** `uv run earshot evaluate --seeds 9001-9040 --workers 1 --real-analyst
+  --tokens-per-hour 100000 --analyst-cache out/analyst-cache --resume --latency
+  out/latency-of-record.json --out out/eval-heldout-of-record.json`, harness `296138b` (frozen
+  paths identical to `eval-freeze`; `296138b` only changed the pacer and the stop-on-Analyst-down
+  rule, PR #35).
+- **Reports:** `reports/eval-heldout-of-record-9001-9040.json` (summary),
+  `reports/eval-heldout-of-record-9001-9040.matches.jsonl` (one row per match),
+  `reports/eval-heldout-of-record-9001-9040.progress.log`.
+- **When:** matches 9001-9022 between 2026-10-17 and 2026-10-24 across resumed attempts (the
+  first attempt was withdrawn after the kill switch tripped, see above; the resume kept only
+  matches whose Analyst calls succeeded), matches 9023-9040 from 2026-10-24 17:14 to
+  2026-10-26 17:56 IST in one tmux session. 40 of 40 matches, 0 failed. Wall clock 147,860 s
+  with 305,248 s of pacing pauses; median match 7,285 s at 100K tokens an hour.
+- **Analyst calls:** 2,322 analysis windows, 2,322 calls, 8,978,397 tokens (p50 3,930 a call),
+  latency p50 3,829 ms, p95 5,342 ms. 112 windows (4.8%) returned no claims because the call
+  failed: 70 timeouts, 39 API timeouts, 1 kill-switch 403, 1 Azure CLI credential error, 1
+  connection error, 1 malformed JSON. 194 windows were served from the analyst cache (re-runs of
+  the same window after a resume). 21 windows returned invalid claims and were dropped by code.
+
+| Causes, 40 held-out matches | Labels given | Correct | Accuracy | Recall (184 real changes) | False alarms a match |
+|---|---|---|---|---|---|
+| Model's raw causes (proposed) | 7,129 | 560 | **0.079** | 66 (0.359) | 164.2 |
+| Gated causes on verified claims (what would have aired; `causes_aired = false`) | 3,387 | 324 | **0.096** | 62 (0.337) | 76.6 |
+| Baseline detector, same windows | 747 | 177 | **0.237** | 67 (0.364) | 14.3 |
+
+- **Intervals:** `uv run python scripts/explanations_ci.py reports/eval-heldout-of-record-9001-9040.matches.jsonl`
+  (bootstrap over matches, 10,000 draws, seed 20261026; output in
+  `reports/eval-heldout-of-record-9001-9040.ci.json`): gated accuracy 95% CI 7.4-11.8%,
+  proposed 5.9-10.0%, baseline 18.4-29.4%. Baseline minus gated: 14.1 points
+  (8.8-19.8). The gated Analyst beat the baseline in 6 of 40 matches.
+- **Reading, as pre-registered in section 4:** the Analyst's gated cause accuracy is reported next
+  to the baseline's on the same windows. It is 0.096 against 0.237. Recall is level (62 versus 67
+  of 184 changes found); the difference is false alarms, five times the baseline's. The gate
+  dropped 3,721 of the 7,129 raw causes and raised accuracy from 0.079 to 0.096, so it helps but
+  does not close the gap. The development trial on seed 26 (1 of 22) pointed the same way; the
+  held-out result is the number of record.
+- **Consequence:** causes stay off air (`AIR_CAUSES = False`, decided 2026-10-16). The Analyst's
+  verified metric changes still air; this run does not grade those, the planted-defect harness
+  does.
+- **Limits:** one model (gpt-5.4-mini) at one prompt; 4.8% of windows lost to transport failures
+  are counted as windows with no claims, which lowers recall slightly for the model and not for
+  the baseline; the pacing pauses mean the run spans nine days of service, not one.
+
+**Changes after `eval-freeze` that touch what a listener hears (2026-10-26, not of record):**
+- **Voices:** Azure HD neural voices (`EARSHOT_VOICE_TIER=hd`, the default; `standard` restores the
+  frozen voices): English and Spanish on both roles, Arabic facts, Hindi explanations; the other two
+  roles stay on the standard voices (no native Arabic HD voice for a second role; the Hindi HD voices
+  read short lines about twice as slowly, measured on the same text). HD voices take no prosody
+  wrapper. A refused HD voice falls back to the standard voice for the same line. Chosen in a blind
+  A/B on one goal line and one routine line (`video/voice-ab/`, local only).
+- **Demo clips re-rendered** with the HD voices from the same fixture and the same cached Analyst
+  answers. Line durations changed, so the Director's choices moved on six of the sixteen clips by one
+  or two lines (an extra on-ball line fitted; one shot-speed line was dropped in Spanish and Arabic).
+- **Streamed audio path** (`EARSHOT_AUDIO_STREAM=1`, off by default): the service's own
+  24 kHz 96 kbit/s mono MP3 is served as it is; the message carries the pan and the browser places
+  the line through Web Audio. Cache-miss cost per line, 20 uncached English lines from India to
+  Sweden Central, one at a time (`uv run python scripts/bench_stream.py`, 2026-10-26 18:50 IST):
+
+  | Path | p50 | p95 | mean | file |
+  |---|---|---|---|---|
+  | File path (WAV from the service, pan, ffmpeg AAC) | 831 ms | 1,509 ms | 975 ms | 42.4 KB |
+  | Streamed (MP3 from the service, no encode) | 702 ms | 1,213 ms | 819 ms | 34.8 KB |
+
+  The service call dominates both; the encode and the second file are what the streamed path
+  removes. End-to-end event-to-first-audio-byte with 30 listeners is Stream 1's load test to run on
+  the deployed worker with the flag on; the coverage and latency numbers of record above are the
+  file path.
+- **Match view** on the listening screens: the ball (clip manifest or live ball messages) and all
+  22 players from the engine's 10 Hz frames, thinned to 2 Hz (clip manifests carry them; the live
+  worker renders the match's frames in a background thread at load, about 12 s of CPU, and adds
+  positions to the existing ball messages, `EARSHOT_LIVE_TRACKS=0` turns it off). Visual only; the
+  ball was already in sound.
+
 ### Planted-defect harness (development run, not of record)
 `uv run earshot planted --seeds 1-10 --languages en,es,ar,hi` (2026-10-16, main `20d6dd3` plus this
 branch): all four languages, both modes, 25% injection rate, against Stream 1's Caller, Checker and
@@ -681,6 +755,65 @@ Summaries: `reports/loadtest-2026-10-17-n30-1vcpu-a0a07e3.json` and `…-run2.js
   - Facts audit blocks 0 in en, es, ar and hi.
 - **Summaries:** `reports/eval-season-1vcpu-a0a07e3.json` and `reports/eval-season-1vcpu-pooled.json`.
   The latency models are `reports/latency-1vcpu-a0a07e3.json` and `reports/latency-1vcpu-pooled.json`.
+
+### After submission: the judging worker at `f54bc56` (2026-10-27, not of record)
+**The deploy:** `scripts/deploy.sh --infra` at 03:58 IST (22:28 UTC on 10-26), after local-ci passed on
+`f54bc56`. The image adds Azure HD voices (#53), the match view (#55) and a streamed-audio flag,
+`EARSHOT_AUDIO_STREAM`, which is off by default.
+- The worker runs always on (minReplicas 1) at 1 vCPU / 2 GiB.
+- The final revision is `ca-earshot-worker--0000029`. It has no overrides: HD voices, streaming
+  off, match view on.
+- `DEPLOY_ENABLED` was set to false at 05:28 IST.
+
+**Checks:**
+- **Judges' link:** the code gets a ticket (200), and a wrong code is refused (403). Over 40 s the
+  SSE stream sent ball messages twice a second, each carrying the players, plus lines and state.
+  The line audio returned 200 `audio/mp4` with a first byte in about 0.5 s.
+- **Every rg-earshot resource is up:**
+  - both container apps are Running;
+  - AI Services: public access Enabled, deployment `fast` Succeeded;
+  - Web PubSub, ACR, both storage accounts, the static site (200), App Insights and Log Analytics;
+  - all four kill alerts are enabled and the kill-switch automation is Ok.
+
+**Load tests:** the protocol of the Oct 17 judging-size runs.
+- **Command:** `earshot loadtest --url <worker> --listeners 30 --minutes 15`, after a 5-minute
+  warm-up, from the same machine.
+- **Match:** m00026, between about minutes 7 and 28.
+- **Runs:** one per arm, each switched by an environment variable on the worker (a new revision; the
+  match restarts).
+
+| 30 listeners, event to first audio byte (ms) | Oct 17, `a0a07e3`, run 1 / run 2 | HD voices, stream off (deployed) | HD voices, stream on | Standard voices, stream off |
+|---|---|---|---|---|
+| p50 / p95 | 984 / 2,280 · 951 / 2,341 | **1,168 / 2,802** | 1,159 / 2,749 | 928 / 2,476 |
+| Lines timed | 3,984 · 3,942 | 3,834 | 3,804 | 3,876 |
+| Audio ready (cache or speech), p95 | 153 · 162 | 744 | 834 | 199 |
+| Event to the Director's start, p50 / p95 | 230 / 1,681 · 234 / 1,746 | 461 / 2,122 | 509 / 2,126 | 220 / 1,789 |
+| Start to sent (encode), p95 | 232 · 219 | 240 | 3 | 213 |
+| SSE transit, p95 | 87 · 91 | 133 | 154 | 161 |
+| Audio first byte, p95 | 769 · 820 | 625 | 660 | 608 |
+| Errors / unmatched lines | 0 / 0 · 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+**Worker during the HD run:** CPU minute-mean 58 mc, peak 97 mc. Memory peak 385 MiB of 2,048.
+On Oct 17 it was 61 / 91 mc and 355 MiB.
+
+**Reading:**
+- **HD voices cost about 240 ms at p50 and 330 ms at p95.** Compare the HD and standard columns:
+  same image, same protocol. Nearly all of it is speech for lines not yet cached (audio ready p95
+  744 against 199 ms), and the Director's queue waits behind it. HD stays on: Carson chose it for
+  how it sounds, and 95% of lines still start within 2.8 s.
+- **Streaming is not clearly better under load:** p95 is 53 ms lower, inside the Oct 17 run-to-run
+  spread of 61 ms. It removes the encode step (240 to 3 ms at p95), but audio ready and transit grow
+  by about as much. The flag stays off.
+- **The match view** (players on every ball message) adds about 45-70 ms of SSE transit at p95.
+- **Limits:**
+  - one run per arm, from one load machine;
+  - two NTP clocks, skew not corrected;
+  - each arm's match minutes differ by a few minutes.
+  - The Latency criterion (p95 under 2.0 s) is a miss in every arm.
+
+**Summaries:**
+- Runs: `reports/loadtest-2026-10-27-n30-1vcpu-f54bc56-{hd,hd-stream,standard}.json`.
+- Latency models: `reports/latency-2026-10-27-1vcpu-f54bc56-{hd,hd-stream,standard}.json`.
 
 ### Template quality: Foundry evaluators (development, 2026-10-16)
 `earshot template-eval --seeds 26,28,31`, then `--previous` to re-judge the rows the kill-switch trip
